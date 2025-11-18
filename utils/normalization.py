@@ -1,5 +1,7 @@
 # ---------- NORMALIZATION HELPERS ----------
 
+from typing import List
+
 SKILL_ALIAS_MAP = {
     "py": "Python",
     "python3": "Python",
