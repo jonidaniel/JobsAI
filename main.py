@@ -1,5 +1,7 @@
+from agents.skill_assessor import SkillAssessor
+
 def main():
-    print("Hello from jobs-ai!")
+    assessor = SkillAssessor()
 
 
 if __name__ == "__main__":
