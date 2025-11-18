@@ -4,7 +4,7 @@
 
 - Initiated the project
 
-- Feeded the initial project idea of an autonomous job seeker system to a chat model and started refining it
+- Fed the initial project idea of an autonomous job seeker system to a chat model and started refining it
 
 - Came up with an end-to-end job searcher/
 
