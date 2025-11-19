@@ -1,4 +1,4 @@
-from agents.skill_assessor import SkillAssessor
+from agents import SkillAssessor
 
 def main():
     assessor = SkillAssessor()
