@@ -221,11 +221,13 @@ class SkillAssessor:
         if not existing:
             self.save(new_profile)
             return new_profile
+
         # Merge lists
         merged = existing.model_dump()
         for list_key in ["core_languages", "frameworks_and_libraries", "tools_and_platforms",
                          "agentic_ai_experience", "ai_ml_experience", "soft_skills", "projects_mentioned", "job_search_keywords"]:
             merged[list_key] = list(dict.fromkeys(existing.model_dump()[list_key] + new_profile.model_dump()[list_key]))
+
         # Merge experience levels (take max)
         el_existing = existing.experience_level.model_dump(by_alias=True)
         el_new = new_profile.experience_level.model_dump(by_alias=True)
@@ -245,6 +247,7 @@ class SkillAssessor:
         profile is the merged skill profile
         """
 
+        print("HIRVI GO!")
         # Write JSON to memory path
         out = json.loads(profile.model_dump_json(by_alias=True))
         with open(self.memory_path, "w", encoding="utf-8") as f:
@@ -255,16 +258,22 @@ class SkillAssessor:
     def load_existing(self) -> Optional[SkillProfile]:
         """
         Load existing SkillProfile.
+
+        Return None if skills.json is corrupt
+        Return the existing skill profile if skills.json is intact
         """
 
         if not self.memory_path.exists():
             return None
+
+        # Open memory/vector_db/skills.json
         with open(self.memory_path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-        try:
-            return SkillProfile(**data)
-        except ValidationError:
-            return None
+            try:
+                # Read the JSON file and turn it into a dictionary
+                data = json.load(f)
+                return SkillProfile(**data)
+            except:
+                return None
 
 # ---------- SIMPLE CLI USAGE ----------
 
