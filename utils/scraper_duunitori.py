@@ -1,8 +1,43 @@
 # ---------- DUUNITORI SCRAPER ----------
 
-# Returns a list of normalized job dicts (does not persist to disk)
-# Fetches the job detail page and extracts the full description for each listing (deep mode)
-# Pagination limit default is 10 pages
+# --- DESCRIPTION ---
+
+# 1. When given a query, fetches the job detail page and extracts the full description for each listing (deep mode)
+# 2. Pagination limit default is 10 pages
+# 3. Returns a list of normalized job dicts (doesn't persist to disk)
+
+# --- INPUT & OUTPUT ---
+
+# Input:            A query, like 'python developer'
+# Output:           {
+#                     "title": "...",
+#                     "company": "...",
+#                     "location": "...",
+#                     "url": "...",
+#                     "published_date": "...",
+#                     "description_snippet": "...",
+#                     "source": "duunitori",
+#                     "query_used": "python developer",
+#                   }
+
+# --- DUUNITORI.FI URL SCHEME ---
+
+# Template:         https://duunitori.fi/tyopaikat/haku/<QUERY>?sivu=<PAGE>
+# Example:          https://duunitori.fi/tyopaikat/haku/python-developer?sivu=2
+
+# --- HTML PARSING STRATEGY ---
+
+# Title:            <h3 class="job-box__title">
+# Company:          <div class="job-box__employer">
+# Location:         <div class="job-box__location">
+# Link:             <a class="job-box__title-link" href="...">
+# Published date:   <time datetime="...">
+
+# Notes / Suggestions
+# 	•	The scraper is intentionally defensive: Duunitori’s HTML may change; the parser uses several fallback selectors. If you see missed fields, inspect live HTML and tweak selectors.
+# 	•	Deep mode causes one extra HTTP request per listing — plan API call rate/intervals accordingly.
+# 	•	If you plan to run many queries frequently, add a persistent cache layer (disk/db) and respect robots.txt and Duunitori’s terms of service.
+# 	•	You can easily switch to light mode by calling fetch_search_results(..., deep=False).
 
 import time
 import logging
@@ -103,7 +138,13 @@ def fetch_job_detail(session: requests.Session, job_url: str, retries: int = 2) 
     """
     Fetch the job detail page and attempt to extract the full job description text.
 
-    Returns an empty string on failure.
+    Args:
+        session: asd
+        job_url: asd
+        retries: asd
+
+    Returns:
+        An empty string on failure.
     """
 
     resp = safe_get(session, job_url, retries=retries)
