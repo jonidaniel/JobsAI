@@ -1,5 +1,9 @@
 # ---------- DUUNITORI SCRAPER ----------
 
+# Returns a list of normalized job dicts (does not persist to disk)
+# Fetches the job detail page and extracts the full description for each listing (deep mode)
+# Pagination limit default is 10 pages
+
 import time
 import logging
 import requests
