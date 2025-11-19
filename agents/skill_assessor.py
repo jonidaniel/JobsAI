@@ -70,25 +70,31 @@ client.api_key = OPENAI_API_KEY
 MEMORY_PATH = Path("memory/vector_db/skills.json")
 MEMORY_PATH.parent.mkdir(parents=True, exist_ok=True)
 
-# assess
-# _call_llm
-# _extract_json
-# _normalize_parsed
-# save
-# load_existing
-# merge_update
 class SkillAssessor:
     def __init__(self, model: str = OPENAI_MODEL, memory_path: Path = MEMORY_PATH):
         self.model = model
         self.memory_path = memory_path
 
     def assess(self, input_text: str, name_hint: str = "") -> SkillProfile:
+        """ Assess the skills.
+        
+        Make an LLM call, extract JSON from the response,
+        parse the JSON, and normalize it.
+        Return a SkillProfile that's filled with the skills JSON.
+        """
+
+        # Inject the input text into the user prompt template
         user_prompt = USER_PROMPT_TEMPLATE.format(input_text=input_text)
+
+        # Retrieve the raw LLM response
         raw = self._call_llm(user_prompt)
-        # Ensure we get JSON: try to extract JSON substring
+
+        # Extract the JSON substring from the raw response
         json_text = self._extract_json(raw)
+
         if json_text is None:
             raise ValueError("LLM did not return parseable JSON.")
+
         parsed = json.loads(json_text)
         # Normalize lists and keys
         parsed = self._normalize_parsed(parsed)
@@ -104,11 +110,15 @@ class SkillAssessor:
         return profile
 
     def _call_llm(self, prompt: str, max_tokens: int = 800) -> str:
+        """ Call an LLM with the user prompt. """
+
         if not client.api_key:
             raise RuntimeError("OpenAI API key not configured. Set OPENAI_API_KEY env var.")
+
         logger.info("Calling LLM...")
-        resp = client.chat.completions.create(
-            model="gpt-4.1-mini", # !!!!!!!!!!!
+
+        response = client.chat.completions.create(
+            model=OPENAI_MODEL,
             messages=[
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": prompt}
@@ -116,16 +126,20 @@ class SkillAssessor:
             temperature=0.2,
         )
 
-        text = resp.choices[0].message.content
+        text = response.choices[0].message.content
         logger.debug("LLM response: %s", text[:500])
+
         return text
 
     def _extract_json(self, text: str) -> Optional[str]:
-        # crude extraction: find first { and the matching }
+        """ Extract the JSON substring from the raw LLM response. """
+
+        # Find the JSON starting point
         start = text.find("{")
+
         if start == -1:
             return None
-        # attempt to balance braces
+        # Attempt to balance braces
         brace = 0
         for i in range(start, len(text)):
             if text[i] == "{":
@@ -134,7 +148,7 @@ class SkillAssessor:
                 brace -= 1
                 if brace == 0:
                     return text[start:i+1]
-        # fallback: try direct load
+        # Fallback: try direct load
         try:
             json.loads(text)
             return text
@@ -142,15 +156,18 @@ class SkillAssessor:
             return None
 
     def _normalize_parsed(self, parsed: Dict[str, Any]) -> Dict[str, Any]:
-        # Ensure keys exist
+        """ Normalize the parsed JSON. """
+
         keys = [
             "name", "core_languages", "frameworks_and_libraries", "tools_and_platforms",
             "agentic_ai_experience", "ai_ml_experience", "soft_skills", "projects_mentioned",
             "experience_level", "job_search_keywords"
         ]
+        # Ensure all keys exist in the JSON the LLM generated
         for k in keys:
             if k not in parsed:
                 parsed[k] = [] if k != "experience_level" else {"Python": 0, "JavaScript": 0, "Agentic AI": 0, "AI/ML": 0}
+
         # Normalize lists
         for list_key in ["core_languages", "frameworks_and_libraries", "tools_and_platforms",
                          "agentic_ai_experience", "ai_ml_experience", "soft_skills", "projects_mentioned", "job_search_keywords"]:
@@ -158,6 +175,7 @@ class SkillAssessor:
                 parsed[list_key] = normalize_list(parsed[list_key])
             else:
                 parsed[list_key] = []
+
         # Normalize experience_level keys and values
         el = parsed.get("experience_level", {})
         norm_el = {
@@ -167,6 +185,7 @@ class SkillAssessor:
             "AI/ML": int(el.get("AI/ML") or el.get("AI_ML") or 0)
         }
         parsed["experience_level"] = norm_el
+
         # Name normalization
         if not parsed.get("name") or not isinstance(parsed["name"], str):
             parsed["name"] = ""
@@ -175,19 +194,24 @@ class SkillAssessor:
         return parsed
 
     def merge_update(self, new_profile: SkillProfile) -> SkillProfile:
-        """Merge new_profile into existing profile (union lists, max experience levels)."""
+        """ Merge new_profile into existing profile (union lists, max experience levels). """
+
         existing = self.load_existing()
         if not existing:
             self.save(new_profile)
             return new_profile
-        # merge lists
-        merged = existing.dict()
+        # Merge lists
+        # merged = existing.dict()
+        merged = existing.model_dump()
         for list_key in ["core_languages", "frameworks_and_libraries", "tools_and_platforms",
                          "agentic_ai_experience", "ai_ml_experience", "soft_skills", "projects_mentioned", "job_search_keywords"]:
-            merged[list_key] = list(dict.fromkeys(existing.dict()[list_key] + new_profile.dict()[list_key]))
-        # merge experience levels (take max)
-        el_existing = existing.experience_level.dict(by_alias=True)
-        el_new = new_profile.experience_level.dict(by_alias=True)
+            # merged[list_key] = list(dict.fromkeys(existing.dict()[list_key] + new_profile.dict()[list_key]))
+            merged[list_key] = list(dict.fromkeys(existing.model_dump()[list_key] + new_profile.model_dump()[list_key]))
+        # Merge experience levels (take max)
+        # el_existing = existing.experience_level.dict(by_alias=True)
+        el_existing = existing.experience_level.model_dump(by_alias=True)
+        # el_new = new_profile.experience_level.dict(by_alias=True)
+        el_new = new_profile.experience_level.model_dump(by_alias=True)
         merged_el = {}
         for k in ["Python", "JavaScript", "Agentic AI", "AI/ML"]:
             merged_el[k] = max(int(el_existing.get(k, 0) or 0), int(el_new.get(k, 0) or 0))
@@ -198,13 +222,19 @@ class SkillAssessor:
         return merged_profile
 
     def save(self, profile: SkillProfile):
+        """ Save the skills JSON to the vector database. """
+
         # Write JSON to memory path
-        out = json.loads(profile.json(by_alias=True))
+        # out = json.loads(profile.json(by_alias=True))
+        out = json.loads(profile.model_dump_json(by_alias=True))
         with open(self.memory_path, "w", encoding="utf-8") as f:
             json.dump(out, f, ensure_ascii=False, indent=2)
+
         logger.info("Saved skill profile to %s", self.memory_path)
 
     def load_existing(self) -> Optional[SkillProfile]:
+        """ Load existing SkillProfile. """
+
         if not self.memory_path.exists():
             return None
         with open(self.memory_path, "r", encoding="utf-8") as f:
@@ -217,6 +247,7 @@ class SkillAssessor:
 # ---------- SIMPLE CLI USAGE ----------
 
 if __name__ == "__main__":
+    print("KAKKA") # !!!!!!!!!!!!!!!!!!!!!!!!!!!
     import argparse
     parser = argparse.ArgumentParser(description="Run SkillAssessor on a resume text file.")
     parser.add_argument("file", help="Path to a plain-text resume or profile file.")
@@ -238,7 +269,9 @@ if __name__ == "__main__":
 
     if args.merge:
         merged = assessor.merge_update(profile)
-        logger.info("Merged profile saved. Summary: %s", merged.json(indent=2))
+        # logger.info("Merged profile saved. Summary: %s", merged.json(indent=2))
+        logger.info("Merged profile saved. Summary: %s", merged.model_dump_json(indent=2))
     else:
         assessor.save(profile)
-        logger.info("Profile saved. Summary: %s", profile.json(indent=2))
+        # logger.info("Profile saved. Summary: %s", profile.json(indent=2))
+        logger.info("Profile saved. Summary: %s", profile.model_dump_json(indent=2))
