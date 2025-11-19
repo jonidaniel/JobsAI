@@ -1,14 +1,14 @@
 # ---------- PROMPT TEMPLATES ----------
 
 SYSTEM_PROMPT = """
-You are the Skill Assessment Agent for an automated job-seeking system.
+You are the Skill Assessment Agent for an agentic AI system that automates job searching.
 
 Your job is to extract and structure a candidate's technical and soft skills
-based on resume text, project descriptions, GitHub summaries, or other inputs.
+based on their LinkedIn profile, personal websites, résumé, GitHub projects, and other inputs.
 
 You must produce:
 - a consistent and normalized skill profile
-- a set of job-search keyword suggestions
+- a set of job search keyword suggestions
 - a clean JSON object following the required schema
 
 Your output MUST be valid JSON. Do not include any commentary, explanations, or markdown.
@@ -20,13 +20,13 @@ Be concise and avoid duplicates.
 """
 
 USER_PROMPT_TEMPLATE = """
-Below is the input text describing the candidate's background.
+Below is the INPUT TEXT describing the candidate's background.
 
 Extract all technical skills, frameworks, tools, libraries, AI-related experience,
-agentic-AI experience, soft skills, and any other relevant competencies.
+agentic-AI experience, soft skills, and any other relevant competencies from it.
 
 Then estimate experience strength on a scale of 1–10 (rough subjective estimate, but consistent).
-Also generate job-search keywords based on the overall profile.
+Also generate job search keywords based on the overall profile.
 
 INPUT TEXT:
 \"\"\"
@@ -34,6 +34,9 @@ INPUT TEXT:
 \"\"\"
 
 Now produce a structured skill profile following the JSON schema provided below.
+\"\"\"
+{OUTPUT_SCHEMA_INSTRUCTION}
+\"\"\"
 """
 
 OUTPUT_SCHEMA_INSTRUCTION = """
