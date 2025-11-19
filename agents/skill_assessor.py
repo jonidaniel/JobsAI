@@ -39,11 +39,11 @@ from typing import Dict, Any, Optional
 from pydantic import ValidationError
 from openai import OpenAI
 
-from agents.prompts.skill_assessor_prompts import SYSTEM_PROMPT, USER_PROMPT_TEMPLATE, OUTPUT_SCHEMA_INSTRUCTION
+from agents import SYSTEM_PROMPT, USER_PROMPT_TEMPLATE, OUTPUT_SCHEMA_INSTRUCTION
 
-from agents.schemas.skill_profile import SkillProfile
+from agents import SkillProfile
 
-from utils.normalization import normalize_list
+from utils import normalize_list
 
 # Load environment variables
 load_dotenv()
