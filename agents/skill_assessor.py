@@ -1,4 +1,4 @@
-# ---------- SKILLASSESSOR ----------
+# ---------- SKILL ASSESSMENT AGENT ----------
 
 # DESCRIPTION:
 # • Builds a structured skill profile of the user, based on their résumé, web portfolio, GitHub repos, and any text inputs
