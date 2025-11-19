@@ -18,9 +18,18 @@ def main():
     He has little experience with Java, Kotlin, C++, and C#.
     He has little experience with LangChain, OpenAI Agents, and CrewAI.
     He has very good soft skills.
+    He is an AWS Certified Solutions Architect (SAA-C03).
+    He is an AWS Certified Cloud Practitioner (CLF-C02).
     """
     result = assessor.assess(text)
     print(result)
+
+    #assessor.save(result)
+    #loaded = assessor.load_existing()
+    #print(loaded == result)
+
+    loaded = assessor.load_existing()
+    print(loaded)
 
 if __name__ == "__main__":
     main()
