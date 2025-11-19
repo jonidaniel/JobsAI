@@ -76,15 +76,18 @@ class SkillAssessor:
         self.memory_path = memory_path
 
     def assess(self, input_text: str, name_hint: str = "") -> SkillProfile:
-        """ Assess the skills.
+        """
+        Assess the candidate's skills.
         
         Make an LLM call, extract JSON from the response,
         parse the JSON, and normalize it.
         Return a SkillProfile that's filled with the skills JSON.
+
+        input_text is the input text given by the user
         """
 
         # Inject the input text into the user prompt template
-        user_prompt = USER_PROMPT_TEMPLATE.format(input_text=input_text)
+        user_prompt = USER_PROMPT_TEMPLATE.format(input_text=input_text, OUTPUT_SCHEMA_INSTRUCTION=OUTPUT_SCHEMA_INSTRUCTION)
 
         # Retrieve the raw LLM response
         raw = self._call_llm(user_prompt)
@@ -110,7 +113,11 @@ class SkillAssessor:
         return profile
 
     def _call_llm(self, prompt: str, max_tokens: int = 800) -> str:
-        """ Call an LLM with the user prompt. """
+        """
+        Call an LLM with the user prompt.
+        
+        prompt is the user prompt template injected with an input text and an output schema instruction
+        """
 
         if not client.api_key:
             raise RuntimeError("OpenAI API key not configured. Set OPENAI_API_KEY env var.")
@@ -132,13 +139,19 @@ class SkillAssessor:
         return text
 
     def _extract_json(self, text: str) -> Optional[str]:
-        """ Extract the JSON substring from the raw LLM response. """
+        """
+        Extract the JSON substring from the raw LLM response.
+        
+        text is the raw LLM response
+        """
 
-        # Find the JSON starting point
+        # Find where the JSON starts
         start = text.find("{")
 
+        # If a brace isn't present
         if start == -1:
             return None
+
         # Attempt to balance braces
         brace = 0
         for i in range(start, len(text)):
@@ -156,7 +169,11 @@ class SkillAssessor:
             return None
 
     def _normalize_parsed(self, parsed: Dict[str, Any]) -> Dict[str, Any]:
-        """ Normalize the parsed JSON. """
+        """
+        Normalize the parsed JSON.
+        
+        parsed is the parsed skills JSON
+        """
 
         keys = [
             "name", "core_languages", "frameworks_and_libraries", "tools_and_platforms",
@@ -194,23 +211,23 @@ class SkillAssessor:
         return parsed
 
     def merge_update(self, new_profile: SkillProfile) -> SkillProfile:
-        """ Merge new_profile into existing profile (union lists, max experience levels). """
+        """
+        Merge new_profile into existing profile (union lists, max experience levels).
+        
+        new_profile is the new skill profile
+        """
 
         existing = self.load_existing()
         if not existing:
             self.save(new_profile)
             return new_profile
         # Merge lists
-        # merged = existing.dict()
         merged = existing.model_dump()
         for list_key in ["core_languages", "frameworks_and_libraries", "tools_and_platforms",
                          "agentic_ai_experience", "ai_ml_experience", "soft_skills", "projects_mentioned", "job_search_keywords"]:
-            # merged[list_key] = list(dict.fromkeys(existing.dict()[list_key] + new_profile.dict()[list_key]))
             merged[list_key] = list(dict.fromkeys(existing.model_dump()[list_key] + new_profile.model_dump()[list_key]))
         # Merge experience levels (take max)
-        # el_existing = existing.experience_level.dict(by_alias=True)
         el_existing = existing.experience_level.model_dump(by_alias=True)
-        # el_new = new_profile.experience_level.dict(by_alias=True)
         el_new = new_profile.experience_level.model_dump(by_alias=True)
         merged_el = {}
         for k in ["Python", "JavaScript", "Agentic AI", "AI/ML"]:
@@ -222,10 +239,13 @@ class SkillAssessor:
         return merged_profile
 
     def save(self, profile: SkillProfile):
-        """ Save the skills JSON to the vector database. """
+        """
+        Save the skills JSON to the vector database.
+        
+        profile is the merged skill profile
+        """
 
         # Write JSON to memory path
-        # out = json.loads(profile.json(by_alias=True))
         out = json.loads(profile.model_dump_json(by_alias=True))
         with open(self.memory_path, "w", encoding="utf-8") as f:
             json.dump(out, f, ensure_ascii=False, indent=2)
@@ -233,7 +253,9 @@ class SkillAssessor:
         logger.info("Saved skill profile to %s", self.memory_path)
 
     def load_existing(self) -> Optional[SkillProfile]:
-        """ Load existing SkillProfile. """
+        """
+        Load existing SkillProfile.
+        """
 
         if not self.memory_path.exists():
             return None
@@ -247,7 +269,6 @@ class SkillAssessor:
 # ---------- SIMPLE CLI USAGE ----------
 
 if __name__ == "__main__":
-    print("KAKKA") # !!!!!!!!!!!!!!!!!!!!!!!!!!!
     import argparse
     parser = argparse.ArgumentParser(description="Run SkillAssessor on a resume text file.")
     parser.add_argument("file", help="Path to a plain-text resume or profile file.")
@@ -269,9 +290,7 @@ if __name__ == "__main__":
 
     if args.merge:
         merged = assessor.merge_update(profile)
-        # logger.info("Merged profile saved. Summary: %s", merged.json(indent=2))
         logger.info("Merged profile saved. Summary: %s", merged.model_dump_json(indent=2))
     else:
         assessor.save(profile)
-        # logger.info("Profile saved. Summary: %s", profile.json(indent=2))
         logger.info("Profile saved. Summary: %s", profile.model_dump_json(indent=2))
