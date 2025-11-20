@@ -1,6 +1,6 @@
 import pytest
-from agents.scorer import ScorerAgent
-from agents.skill_assessor import SkillProfile
+from agents import ScorerAgent
+from agents import SkillProfile
 
 # ---------- MOCK DATA ----------
 
