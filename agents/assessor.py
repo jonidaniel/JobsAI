@@ -14,7 +14,7 @@ from agents import SkillProfile
 from utils import normalize_list
 
 # Init OpenAI client
-client = OpenAI()
+# client = OpenAI()
 
 # Logging configuration
 logging.basicConfig(level=logging.INFO)
@@ -29,6 +29,7 @@ class AssessorAgent:
             logger.warning("OPENAI_MODEL not found in environment. OpenAI calls will fail without it.")
         if not key:
             logger.warning("OPENAI_API_KEY not found in environment. OpenAI calls will fail without it.")
+        client = OpenAI()
         client.api_key = key
 
     def assess(self, input_text: str, name_hint: str = "") -> SkillProfile:
