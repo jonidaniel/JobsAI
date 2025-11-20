@@ -56,8 +56,14 @@ BASE_SEARCH_URL = "https://duunitori.fi/tyopaikat/haku/{query_slug}?sivu={page}"
 BASE_HOST = "https://duunitori.fi"
 
 DEFAULT_HEADERS = {
-    "User-Agent": "job-seeker-bot/1.0 (+https://example.com) Python-requests",
-    "Accept-Language": "en-US,en;q=0.9,fi;q=0.8"
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/122.0.0.0 Safari/537.36"
+    ),
+    "Accept-Language": "fi-FI,fi;q=0.9,en;q=0.8",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Connection": "keep-alive"
 }
 
 def slugify_query(query: str) -> str:
