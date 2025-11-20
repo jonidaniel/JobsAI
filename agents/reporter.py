@@ -12,7 +12,8 @@ class ReporterAgent:
     # -----------------------------
     # Public interface
     # -----------------------------
-    def generate_report(self, top_n: int = 10) -> str:
+    # def generate_report(self, top_n: int = 10) -> str:
+    def generate_report(self, top_n: int = 10):
         """
         Load scored jobs, generate a summary report (text),
         save it to REPORTS_DIR, and return the report text.
@@ -57,7 +58,7 @@ class ReporterAgent:
         except Exception as e:
             print(f"Failed to save report: {e}")
 
-        return report_text
+        #return report_text
 
     # -----------------------------
     # Internal helpers
