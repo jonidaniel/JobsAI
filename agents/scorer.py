@@ -1,133 +1,114 @@
 # ---------- SCORER AGENT ----------
 
-import logging
-
+import os
+import json
 from typing import List, Dict
+from .schemas.skill_profile import SkillProfile
+from utils.normalization import normalize_list
 
-from agents import SkillProfile
-from utils import normalize_list
-
-# Logging configuration
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+RAW_JOB_LISTINGS_DIR = "data/job_listings"
+SCORED_JOB_LISTINGS_DIR = "data/job_listings/scored"
 
 class ScorerAgent:
-    def __init__(self, weight_agentic_ai: float = 2.0):
+    def __init__(self):
+        os.makedirs(SCORED_JOB_LISTINGS_DIR, exist_ok=True)
+
+    # -----------------------------
+    # Public interface
+    # -----------------------------
+    def score_jobs(self, skill_profile: SkillProfile) -> None:
         """
-        Initialize the ScorerAgent.
-
-        Args:
-            weight_agentic_ai: Multiplier for agentic AI / LLM skills to prioritize them.
+        Fetch all raw job listings from /data/job_listings/,
+        score them based on the given skill profile, and save
+        scored jobs to SCORED_JOB_LISTINGS_DIR.
         """
-        self.weight_agentic_ai = weight_agentic_ai
+        job_listings = self.load_job_listings()
+        if not job_listings:
+            print("No job listings found to score.")
+            return
 
-    def score_jobs(self, job_listings: List[Dict], skill_profile: SkillProfile) -> List[Dict]:
-        """
-        Score and rank job listings based on the candidate's skills.
-
-        Args:
-            job_listings: List of job dicts from Searcher.
-            skill_profile: SkillProfile object from SkillAssessor.
-
-        Returns:
-            List of job dicts with added fields:
-                - score
-                - matched_skills
-                - missing_skills
-        """
-        scored_jobs = []
-        # Gather all keywords from the skill profile
-        profile_keywords = set(
-            normalize_list(skill_profile.core_languages)
-            + normalize_list(skill_profile.agentic_ai_experience)
-            + normalize_list(skill_profile.ai_ml_experience)
-            + normalize_list(skill_profile.job_search_keywords)
-        )
-
-        for job in job_listings:
-            # Normalize job text
-            text = " ".join([
-                job.get("title", ""),
-                job.get("description_snippet", ""),
-                job.get("full_description", "")
-            ]).lower()
-
-            # Match keywords
-            matched = [kw for kw in profile_keywords if kw.lower() in text]
-            missing = [kw for kw in profile_keywords if kw.lower() not in text]
-
-            # Base score
-            if profile_keywords:
-                score = len(matched) / len(profile_keywords) * 100
-            else:
-                score = 0
-
-            # Weight agentic AI / LLM skills
-            agentic_keywords = normalize_list(skill_profile.agentic_ai_experience)
-            agentic_matches = sum(1 for kw in agentic_keywords if kw.lower() in text)
-            if agentic_keywords:
-                score += (agentic_matches / len(agentic_keywords)) * 100 * (self.weight_agentic_ai - 1)
-
-            # Experience level adjustment (simple heuristic)
-            title = job.get("title", "").lower()
-            if "junior" in title or "entry level" in title:
-                score *= 1.1  # boost junior-friendly jobs
-            if "senior" in title or "lead" in title:
-                score *= 0.9  # penalize senior roles
-
-            # Cap score to 100
-            score = min(100, round(score, 2))
-
-            # Enrich job dict
-            job_copy = job.copy()
-            job_copy.update({
-                "score": score,
-                "matched_skills": matched,
-                "missing_skills": missing
-            })
-            scored_jobs.append(job_copy)
-
-        # Sort descending by score
+        scored_jobs = [self.compute_job_score(job, skill_profile) for job in job_listings]
+        # Sort by score descending
         scored_jobs.sort(key=lambda x: x["score"], reverse=True)
-        logger.info("Scored %d jobs", len(scored_jobs))
-        return scored_jobs
+        self.save_scored_jobs(scored_jobs)
+        print(f"Scored {len(scored_jobs)} jobs and saved to {SCORED_JOB_LISTINGS_DIR}")
 
-    def save_scored_jobs(self, scored_jobs: List[Dict], path: str):
+    # -----------------------------
+    # Internal helpers
+    # -----------------------------
+    def load_job_listings(self) -> List[Dict]:
         """
-        Save scored jobs to JSON file.
-
-        Args:
-            scored_jobs: List of scored job dicts.
-            path: File path to save.
+        Load all JSON files from RAW_JOB_LISTINGS_DIR and return as a list of jobs.
         """
-        import json
-        import os
+        jobs = []
+        for f in os.listdir(RAW_JOB_LISTINGS_DIR):
+            if not f.endswith(".json"):
+                continue
+            path = os.path.join(RAW_JOB_LISTINGS_DIR, f)
+            try:
+                with open(path, "r", encoding="utf-8") as file:
+                    data = json.load(file)
+                    if isinstance(data, list):
+                        jobs.extend(data)
+            except Exception as e:
+                print(f"Failed to load {path}: {e}")
+        # Deduplicate by URL
+        seen = set()
+        unique_jobs = []
+        for job in jobs:
+            url = job.get("url")
+            if url and url not in seen:
+                unique_jobs.append(job)
+                seen.add(url)
+        return unique_jobs
 
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump(scored_jobs, f, ensure_ascii=False, indent=2)
-        logger.info("Saved %d scored jobs to %s", len(scored_jobs), path)
+    def compute_job_score(self, job: Dict, skill_profile: SkillProfile) -> Dict:
+        """
+        Compute a simple matching score for the job based on the skill profile.
+        """
+        # Combine all skill keywords from the profile
+        profile_keywords = (
+            skill_profile.core_languages +
+            skill_profile.frameworks_and_libraries +
+            skill_profile.tools_and_platforms +
+            skill_profile.agentic_ai_experience +
+            skill_profile.ai_ml_experience +
+            skill_profile.soft_skills +
+            skill_profile.projects_mentioned +
+            skill_profile.job_search_keywords
+        )
+        profile_keywords = normalize_list(profile_keywords)
 
+        job_text = " ".join([
+            str(job.get("title", "")),
+            str(job.get("description_snippet", "")),
+            str(job.get("full_description", ""))
+        ]).lower()
 
-# ---------- SIMPLE CLI USAGE ----------
-if __name__ == "__main__":
-    import argparse
-    from pathlib import Path
+        matched_skills = [kw for kw in profile_keywords if kw.lower() in job_text]
+        missing_skills = [kw for kw in profile_keywords if kw.lower() not in job_text]
 
-    parser = argparse.ArgumentParser(description="Score job listings based on skills.")
-    parser.add_argument("job_json", help="Path to raw job listings JSON")
-    parser.add_argument("profile_json", help="Path to SkillProfile JSON")
-    parser.add_argument("--output", default="data/job_listings/scored_jobs.json", help="Path to save scored jobs")
-    args = parser.parse_args()
+        # Simple scoring: percentage of matched skills
+        score = int(len(matched_skills) / max(1, len(profile_keywords)) * 100)
 
-    import json
+        job_copy = job.copy()
+        job_copy.update({
+            "score": score,
+            "matched_skills": matched_skills,
+            "missing_skills": missing_skills
+        })
+        return job_copy
 
-    jobs = json.loads(Path(args.job_json).read_text(encoding="utf-8"))
-    profile_data = json.loads(Path(args.profile_json).read_text(encoding="utf-8"))
-
-    from agents import SkillProfile
-    profile = SkillProfile(**profile_data)
-
-    scorer = ScorerAgent()
-    scored = scorer.score_jobs(jobs, profile)
-    scorer.save_scored_jobs(scored, args.output)
+    def save_scored_jobs(self, scored_jobs: List[Dict]):
+        """
+        Save scored jobs into SCORED_JOB_LISTINGS_DIR as a JSON file.
+        """
+        if not scored_jobs:
+            return
+        filename = f"scored_jobs.json"
+        path = os.path.join(SCORED_JOB_LISTINGS_DIR, filename)
+        try:
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(scored_jobs, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            print(f"Failed to save scored jobs: {e}")
