@@ -1,8 +1,11 @@
+# ---------- TESTS FOR SCORER AGENT ----------
+
 import pytest
+
 from agents import ScorerAgent
 from agents import SkillProfile
 
-# ---------- MOCK DATA ----------
+# --- MOCK DATA ---
 
 mock_profile_data = {
     "name": "Joni",
@@ -46,7 +49,7 @@ def skill_profile():
 def scorer():
     return ScorerAgent()
 
-# ---------- TESTS ----------
+# --- TESTS ---
 
 def test_score_jobs_basic(scorer, skill_profile):
     scored = scorer.score_jobs(mock_jobs, skill_profile)
