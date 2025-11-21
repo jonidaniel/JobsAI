@@ -83,7 +83,7 @@ class ExperienceLevels(BaseModel):
 
 class SkillProfile(BaseModel):
     """
-    asd
+    A candidate's skill profile.
 
     Args:
         BaseModel:
