@@ -30,6 +30,9 @@ class SearcherAgent:
         self.save_path = save_path
         os.makedirs(self.save_path, exist_ok=True)
 
+    # ------------------------------
+    # Public interface
+    # ------------------------------
     def search_jobs(self, skill_profile: dict) -> List[Dict]:
         """
         Run searches on all job boards using queries from the skill profile.
@@ -53,9 +56,10 @@ class SearcherAgent:
 
         return self._deduplicate_jobs(all_jobs)
 
-    # ----------------------------
-    # Helpers
-    # ----------------------------
+    # ------------------------------
+    # Internal functions
+    # ------------------------------
+
     def _deduplicate_jobs(self, jobs: List[Dict]) -> List[Dict]:
         seen_urls = set()
         deduped = []
@@ -76,9 +80,10 @@ class SearcherAgent:
             json.dump(jobs, f, ensure_ascii=False, indent=2)
         logger.info("Saved %d raw jobs to %s", len(jobs), path)
 
-# ----------------------------
+# ------------------------------
 # Simple CLI usage
-# ----------------------------
+# ------------------------------
+
 if __name__ == "__main__":
     import argparse
 

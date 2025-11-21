@@ -11,10 +11,9 @@ class ReporterAgent:
         self.reports_path = reports_path
         os.makedirs(reports_path, exist_ok=True)
 
-    # -----------------------------
+    # ------------------------------
     # Public interface
-    # -----------------------------
-    # def generate_report(self, top_n: int = 10) -> str:
+    # ------------------------------
     def generate_report(self, top_n: int = 10):
         """
         Load scored jobs, generate a summary report (text),
@@ -60,11 +59,9 @@ class ReporterAgent:
         except Exception as e:
             print(f"Failed to save report: {e}")
 
-        #return report_text
-
-    # -----------------------------
-    # Internal helpers
-    # -----------------------------
+    # ------------------------------
+    # Internal function
+    # ------------------------------
     def load_scored_jobs(self) -> List[Dict]:
         """
         Load scored jobs JSON from SCORED_JOB_LISTINGS_DIR.

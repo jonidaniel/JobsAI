@@ -22,6 +22,9 @@ class AssessorAgent:
         self.key = key
         self.memory_path = memory_path
 
+    # ------------------------------
+    # Public interface
+    # ------------------------------
     def assess(self, prompt: str, system_prompt: str, name_hint: str = "") -> SkillProfile:
         """
         Assess the candidate's skills.
@@ -55,6 +58,10 @@ class AssessorAgent:
         if not profile.name and name_hint:
             profile.name = name_hint
         return profile
+
+    # ------------------------------
+    # Internal functions
+    # ------------------------------
 
     def _call_llm(self, prompt: str, system_prompt: str, max_tokens: int = 800) -> str:
         """
@@ -225,7 +232,9 @@ class AssessorAgent:
             except:
                 return None
 
-# ---------- SIMPLE CLI USAGE ----------
+# ------------------------------
+# Simple CLI usage
+# ------------------------------
 
 if __name__ == "__main__":
     import argparse

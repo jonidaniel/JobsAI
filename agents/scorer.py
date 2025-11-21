@@ -15,9 +15,9 @@ class ScorerAgent:
         self.jobs_scored_path = jobs_scored_path
         os.makedirs(jobs_raw_path, exist_ok=True)
 
-    # -----------------------------
+    # ------------------------------
     # Public interface
-    # -----------------------------
+    # ------------------------------
     def score_jobs(self, skill_profile: SkillProfile) -> None:
         """
         Fetch all raw job listings from /data/job_listings/,
@@ -35,9 +35,10 @@ class ScorerAgent:
         self.save_scored_jobs(scored_jobs)
         print(f"Scored {len(scored_jobs)} jobs and saved to {self.jobs_scored_path}")
 
-    # -----------------------------
-    # Internal helpers
-    # -----------------------------
+    # ------------------------------
+    # Internal functions
+    # ------------------------------
+
     def load_job_listings(self) -> List[Dict]:
         """
         Load all JSON files from RAW_JOB_LISTINGS_DIR and return as a list of jobs.
