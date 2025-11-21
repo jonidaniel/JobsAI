@@ -208,7 +208,6 @@ class AssessorAgent:
         profile is the merged skill profile
         """
 
-        print("HIRVI GO!")
         # Write JSON to memory path
         out = json.loads(profile.model_dump_json(by_alias=True))
         with open(self.memory_path, "w", encoding="utf-8") as f:

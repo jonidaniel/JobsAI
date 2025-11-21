@@ -31,7 +31,7 @@ class ScorerAgent:
 
         job_listings = self.load_job_listings()
         if not job_listings:
-            print("No job listings found to score.")
+            logger.warning(" No job listings found to score.")
             return
 
         scored_jobs = [self.compute_job_score(job, skill_profile) for job in job_listings]
@@ -60,7 +60,7 @@ class ScorerAgent:
                     if isinstance(data, list):
                         jobs.extend(data)
             except Exception as e:
-                print(f"Failed to load {path}: {e}")
+                logger.error(f" Failed to load {path}: {e}")
         # Deduplicate by URL (falling back to lightweight fingerprint when URL missing)
         seen = set()
         unique_jobs = []
@@ -120,7 +120,7 @@ class ScorerAgent:
             with open(path, "w", encoding="utf-8") as f:
                 json.dump(scored_jobs, f, ensure_ascii=False, indent=2)
         except Exception as e:
-            print(f"Failed to save scored jobs: {e}")
+            logger.error(f" Failed to save scored jobs: {e}")
 
     @staticmethod
     def _job_identity(job: Dict) -> str:

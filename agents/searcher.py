@@ -100,4 +100,5 @@ if __name__ == "__main__":
 
     agent = SearcherAgent(deep=args.deep)
     jobs = agent.search_jobs(skill_profile)
-    print(f"Found {len(jobs)} unique jobs.")
+
+    logger.info(f" Found {len(jobs)} unique jobs.")

@@ -26,7 +26,7 @@ class ReporterAgent:
 
         scored_jobs = self.load_scored_jobs()
         if not scored_jobs:
-            print("No scored jobs found for reporting.")
+            logger.warning(" No scored jobs found for reporting.")
             return ""
 
         # Sort jobs by score descending (already done in scorer, but safe)
@@ -81,5 +81,5 @@ class ReporterAgent:
                 data = json.load(f)
                 return data if isinstance(data, list) else []
         except Exception as e:
-            print(f"Failed to load scored jobs: {e}")
+            logger.error(f" Failed to load scored jobs: {e}")
             return []
