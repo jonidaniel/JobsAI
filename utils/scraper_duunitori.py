@@ -86,7 +86,7 @@ def fetch_search_results(
     results = []
     total_fetched = 0
 
-    # Iterate 10 times (by default)
+    # Iterate over a number of webpages (10 by default)
     for page in range(1, num_pages + 1):
         # Inject URL with slugified query and page number
         search_url = SEARCH_URL_BASE.format(query_slug=query_slug, page=page)

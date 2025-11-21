@@ -22,7 +22,7 @@ class SearcherAgent:
 
     def __init__(self, job_boards: List[str], deep_mode: bool, jobs_raw_path: str):
         """
-        asd
+        Initialize searcher agent
 
         Args:
             job_boards:
@@ -39,22 +39,24 @@ class SearcherAgent:
     # ------------------------------
     def search_jobs(self, skill_profile: dict) -> List[Dict]:
         """
-        Run searches on all job boards using queries from the skill profile.
+        Run searches on all job boards using queries from the skill profile
 
         Args:
             skill_profile:
 
         Returns:
-            self._deduplicate_jobs(all_jobs): a deduplicated list of jobs.
+            self._deduplicate_jobs(all_jobs): deduplicated list of jobs
         """
 
         logger.info(" WEB SCRAPING STARTING...\n")
 
         all_jobs = []
+
+        # Build deterministic job search queries from a structured skill profile
         queries = build_queries(skill_profile)
 
         for query in queries:
-            # Iterate over all job boards defined in /config/settings.py
+            # Iterate over all job boards (duunitori, jobly, etc.) defined in /config/settings.py
             for job_board in self.job_boards:
                 logger.info(" Searching %s for query '%s'", job_board, query)
                 if job_board.lower() == "duunitori":
@@ -76,17 +78,19 @@ class SearcherAgent:
 
     def _deduplicate_jobs(self, jobs: List[Dict]) -> List[Dict]:
         """
-        asd
+        Remove duplicate job listings
 
         Args:
             jobs:
 
         Returns:
-            deduped:
+            deduped: deduplicated list of jobs
         """
 
         seen_urls = set()
         deduped = []
+
+
         for job in jobs:
             url = job.get("url")
             if url and url not in seen_urls:
@@ -96,7 +100,7 @@ class SearcherAgent:
 
     def _save_raw_jobs(self, jobs: List[Dict], board: str, query: str):
         """
-        asd
+        Save raw job listings to /data/job_listings/raw/
 
         Args:
             jobs:
@@ -117,6 +121,7 @@ class SearcherAgent:
 # Simple CLI usage
 # ------------------------------
 
+# When directly this file is run 
 if __name__ == "__main__":
     import argparse
 
