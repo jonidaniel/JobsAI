@@ -19,7 +19,9 @@ from config.paths import SKILL_PROFILE_PATH, JOB_LISTINGS_RAW_PATH, JOB_LISTINGS
 from config.prompts import PROMPT, SYSTEM_PROMPT
 from config.settings import JOB_BOARDS, DEEP_MODE
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
+# For debug logging
+#logging.basicConfig(level=logging.DEBUG)
 
 load_dotenv()
 OPENAI_MODEL = os.getenv("OPENAI_MODEL")
