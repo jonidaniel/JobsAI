@@ -3,11 +3,9 @@
 import os
 import logging
 import json
-
 from typing import List, Dict
 
-from utils import build_queries
-from utils import fetch_search_results
+from utils import build_queries, fetch_search_results
 
 # Logging configuration
 logger = logging.getLogger(__name__)

@@ -2,15 +2,16 @@
 
 import logging
 import json
-
 from pathlib import Path
 from typing import Dict, Any, Optional
+
 from pydantic import ValidationError
+
 from openai import OpenAI
 
-from agents import SkillProfile
-
 from utils import normalize_list
+
+from config.schemas import SkillProfile
 
 # Logging configuration
 logging.basicConfig(level=logging.INFO)

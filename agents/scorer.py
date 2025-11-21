@@ -2,12 +2,11 @@
 
 import os
 import json
-
 from typing import List, Dict
 
-from .schemas.skill_profile import SkillProfile
+from utils import normalize_list
 
-from utils.normalization import normalize_list
+from config.schemas import SkillProfile
 
 class ScorerAgent:
     def __init__(self, jobs_raw_path, jobs_scored_path):
