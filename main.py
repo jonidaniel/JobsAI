@@ -13,11 +13,11 @@ import logging
 
 from dotenv import load_dotenv
 
-from agents import AssessorAgent, SearcherAgent, ScorerAgent,ReporterAgent
+from agents import AssessorAgent, SearcherAgent, ScorerAgent, ReporterAgent
 
-from config.paths import SKILL_PROFILE_PATH, JOB_LISTINGS_RAW_PATH, JOB_LISTINGS_SCORED_PATH, REPORTS_PATH
 from config.prompts import PROMPT, SYSTEM_PROMPT
 from config.settings import JOB_BOARDS, DEEP_MODE
+from config.paths import SKILL_PROFILE_PATH, JOB_LISTINGS_RAW_PATH, JOB_LISTINGS_SCORED_PATH, REPORTS_PATH
 
 logging.basicConfig(level=logging.INFO)
 # For debug logging
