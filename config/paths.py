@@ -1,14 +1,18 @@
 # ---------- PATHS ----------
 
+# ---------- LOCAL PATHS ----------
+
 from pathlib import Path
 
 SKILL_PROFILE_PATH = Path("memory/vector_db/skill_profile.json")
+JOB_LISTINGS_RAW_PATH = Path("data/job_listings/raw/")
+JOB_LISTINGS_SCORED_PATH = Path("data/job_listings/scored/")
+REPORTS_PATH = Path("data/reports/")
+
 SKILL_PROFILE_PATH.parent.mkdir(parents=True, exist_ok=True)
-
-JOB_LISTINGS_RAW_PATH = "data/job_listings/raw/"
-JOB_LISTINGS_SCORED_PATH = "data/job_listings/scored/"
-
-REPORTS_PATH = "data/reports/"
+JOB_LISTINGS_RAW_PATH.mkdir(parents=True, exist_ok=True)
+JOB_LISTINGS_SCORED_PATH.mkdir(parents=True, exist_ok=True)
+REPORTS_PATH.mkdir(parents=True, exist_ok=True)
 
 # ---------- URLS ----------
 
