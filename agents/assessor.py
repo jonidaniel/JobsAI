@@ -285,34 +285,3 @@ class AssessorAgent:
                 return SkillProfile(**data)
             except:
                 return None
-
-# ------------------------------
-# Simple CLI usage
-# ------------------------------
-
-if __name__ == "__main__":
-    import argparse
-    parser = argparse.ArgumentParser(description="Run SkillAssessor on a resume text file.")
-    parser.add_argument("file", help="Path to a plain-text resume or profile file.")
-    parser.add_argument("--name", help="Candidate name hint", default="")
-    parser.add_argument("--merge", action="store_true", help="Merge with existing profile instead of overwriting.")
-    args = parser.parse_args()
-
-    if not Path(args.file).exists():
-        logger.error(" Input file not found: %s", args.file)
-        raise SystemExit(1)
-
-    text = Path(args.file).read_text(encoding="utf-8")
-    assessor = AssessorAgent()
-    try:
-        profile = assessor.assess(text, name_hint=args.name)
-    except Exception as e:
-        logger.exception(" Assessment failed: %s", e)
-        raise
-
-    if args.merge:
-        merged = assessor.merge_update(profile)
-        logger.info(" Merged profile saved. Summary: %s", merged.model_dump_json(indent=2))
-    else:
-        assessor.save(profile)
-        logger.info(" Profile saved. Summary: %s", profile.model_dump_json(indent=2))

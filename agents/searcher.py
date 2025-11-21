@@ -116,27 +116,3 @@ class SearcherAgent:
         with open(path, "w", encoding="utf-8") as f:
             json.dump(jobs, f, ensure_ascii=False, indent=2)
         logger.info(" Saved %d raw jobs to /%s\n", len(jobs), path)
-
-# ------------------------------
-# Simple CLI usage
-# ------------------------------
-
-# When directly this file is run 
-if __name__ == "__main__":
-    import argparse
-
-    parser = argparse.ArgumentParser(description="Run SearcherAgent using a skill profile JSON.")
-    parser.add_argument("profile", help="Path to skill profile JSON")
-    parser.add_argument("--deep", action="store_true", help="Fetch full job descriptions")
-    args = parser.parse_args()
-
-    if not os.path.exists(args.profile):
-        raise FileNotFoundError(f"Skill profile not found: {args.profile}")
-
-    with open(args.profile, "r", encoding="utf-8") as f:
-        skill_profile = json.load(f)
-
-    agent = SearcherAgent(deep=args.deep)
-    jobs = agent.search_jobs(skill_profile)
-
-    logger.info(f" Found {len(jobs)} unique jobs.")
