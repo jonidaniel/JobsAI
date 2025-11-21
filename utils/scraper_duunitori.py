@@ -48,7 +48,7 @@ from urllib.parse import quote_plus, urljoin
 
 from bs4 import BeautifulSoup
 
-from config.paths import HOST_URL, SEARCH_URL_BASE
+from config.paths import HOST_URL_DUUNITORI, SEARCH_URL_BASE_DUUNITORI
 from config.headers import HEADERS_DUUNITORI
 
 logger = logging.getLogger(__name__)
@@ -89,7 +89,7 @@ def fetch_search_results(
     # Iterate over a number of webpages (10 by default)
     for page in range(1, num_pages + 1):
         # Inject URL with slugified query and page number
-        search_url = SEARCH_URL_BASE.format(query_slug=query_slug, page=page)
+        search_url = SEARCH_URL_BASE_DUUNITORI.format(query_slug=query_slug, page=page)
 
         logger.info(" Fetching Duunitori search page: %s", search_url)
 
@@ -247,7 +247,7 @@ def parse_job_card(card: BeautifulSoup) -> Dict:
     title_tag = card.select_one(".job-box__title a, .job-box__title-link, h3 a")
     title = title_tag.get_text(strip=True) if title_tag else (card.select_one(".job-box__title").get_text(strip=True) if card.select_one(".job-box__title") else "")
     href = title_tag.get("href") if title_tag and title_tag.has_attr("href") else ""
-    full_url = urljoin(HOST_URL, href) if href else ""
+    full_url = urljoin(HOST_URL_DUUNITORI, href) if href else ""
 
     # Company
     company_tag = card.select_one(".job-box__employer, .job-box__employer a")
