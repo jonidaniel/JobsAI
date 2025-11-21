@@ -48,21 +48,10 @@ from urllib.parse import quote_plus, urljoin
 
 from bs4 import BeautifulSoup
 
+from config.paths import HOST_URL, SEARCH_URL_BASE
+from config.headers import HEADERS_DUUNITORI
+
 logger = logging.getLogger(__name__)
-
-BASE_SEARCH_URL = "https://duunitori.fi/tyopaikat/haku/{query_slug}?sivu={page}"
-BASE_HOST = "https://duunitori.fi"
-
-DEFAULT_HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/122.0.0.0 Safari/537.36"
-    ),
-    "Accept-Language": "fi-FI,fi;q=0.9,en;q=0.8",
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-    "Connection": "keep-alive"
-}
 
 def slugify_query(query: str) -> str:
     """
@@ -110,7 +99,7 @@ def parse_job_card(card: BeautifulSoup) -> Dict:
     title_tag = card.select_one(".job-box__title a, .job-box__title-link, h3 a")
     title = title_tag.get_text(strip=True) if title_tag else (card.select_one(".job-box__title").get_text(strip=True) if card.select_one(".job-box__title") else "")
     href = title_tag.get("href") if title_tag and title_tag.has_attr("href") else ""
-    full_url = urljoin(BASE_HOST, href) if href else ""
+    full_url = urljoin(HOST_URL, href) if href else ""
 
     # Company
     company_tag = card.select_one(".job-box__employer, .job-box__employer a")
@@ -204,14 +193,14 @@ def fetch_search_results(
 
     if session is None:
         session = requests.Session()
-    session.headers.update(headers or DEFAULT_HEADERS)
+    session.headers.update(headers or HEADERS_DUUNITORI)
 
     query_slug = slugify_query(query)
     results = []
     total_fetched = 0
 
     for page in range(1, max_pages + 1):
-        search_url = BASE_SEARCH_URL.format(query_slug=query_slug, page=page)
+        search_url = SEARCH_URL_BASE.format(query_slug=query_slug, page=page)
         logger.info(" Fetching Duunitori search page: %s", search_url)
         resp = safe_get(session, search_url)
         if not resp:
