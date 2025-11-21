@@ -29,31 +29,29 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 def main():
     """
-    asd
+    Launch JobsAI.
     """
 
+    # Initialize agents with constant values
     assessor = AssessorAgent(OPENAI_MODEL, OPENAI_API_KEY, SKILL_PROFILE_PATH)
     searcher = SearcherAgent(JOB_BOARDS, DEEP_MODE, JOB_LISTINGS_RAW_PATH)
     scorer = ScorerAgent(JOB_LISTINGS_RAW_PATH, JOB_LISTINGS_SCORED_PATH)
     reporter = ReporterAgent(JOB_LISTINGS_SCORED_PATH, REPORTS_PATH)
 
-    # 1. Assess candidate
-    # Returns a SkillProfile object
+    # 1. Assess a candidate and return a skill profile of them
     skill_profile = assessor.assess(PROMPT, SYSTEM_PROMPT)
 
-    # 2. Search jobs based on assessment
-    # Uses skill_profile to form keyword searches
-    # The keyword searches are then used to scrape popular job listing websites
-    # Stores acquired job listings as JSON to /data/job_listings/raw/*.json
+    # 2. Build search queries based on the skill profile
+    # Then scrape job boards for job listings
+    # Store the raw listings to /data/job_listings/raw/
     searcher.search_jobs(skill_profile.model_dump())
 
-    # 3. Score the jobs
-    # Loads raw job listings JSON from /data/job_listings/raw/*.json
-    # Saves scored job listings as JSON to /data/job_listings/scored/*.json
+    # 3. Load the raw listings from /data/job_listings/raw/
+    # Then score them based on relevancy to the candidate's skill profile
+    # Save the scored listings to /data/job_listings/scored/scored_jobs.json
     scorer.score_jobs(skill_profile=skill_profile)
 
-    # 4. Write a job listing report
-    # Saves the report to /data/reports/job_report.txt
+    # 4. Write a report/an analysis on the findings and save it to /data/reports/job_report.txt
     reporter.generate_report(top_n=10)
 
 if __name__ == "__main__":

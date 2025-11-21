@@ -9,12 +9,16 @@ logger = logging.getLogger(__name__)
 
 class ReporterAgent:
     """
-    asd
+    ReporterAgent class orchestrates reporting job findings.
+
+    Responsibilities:
+    1. Load scored job listings
+    2. Write a report/an analysis of the scored job listings
     """
 
     def __init__(self, jobs_scored_path: str, reports_path: str):
         """
-        asd
+        Construct the ReporterAgent class.
 
         Args:
             jobs_scored_path:

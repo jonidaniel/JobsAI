@@ -17,17 +17,23 @@ logger = logging.getLogger(__name__)
 
 class AssessorAgent:
     """
-    asd
+    AssessorAgent class orchestrates candidate assessment.
+
+    Responsibilities:
+    1. Assess the candidate's skills
+    2. Form a skill profile of the candidate
+    3. Merge the profile with existing profile
+    4. Save the profile
     """
 
     def __init__(self, model: str, key: str, profile_path: Path):
         """
-        asd
+        Construct the AssessorAgent class.
 
         Args:
-            model:
-            key:
-            profile_path:
+            model: the OpenAI model
+            key: the OpenAI API key
+            profile_path: the path to the candidate's skill profile
         """
 
         self.model = model
@@ -37,23 +43,19 @@ class AssessorAgent:
     # ------------------------------
     # Public interface
     # ------------------------------
-    def assess(self, prompt: str, system_prompt: str, name_hint: str = "") -> SkillProfile:
+    def assess(self, prompt: str, system_prompt: str) -> SkillProfile:
         """
         Assess the candidate's skills.
-        
+
         Make an LLM call, extract JSON from the response,
         parse the JSON, and normalize it.
-        Return a SkillProfile that's filled with the skills JSON.
-
-        input_text is the input text given by the user
 
         Args:
-            prompt:
-            system_prompt:
-            name_hint:
+            prompt: the complete user prompt for the LLM
+            system_prompt: the system prompt for the LLM
 
         Returns:
-            profile:
+            profile: the candidate's skill profile
         """
 
         # Retrieve the raw LLM response
@@ -68,15 +70,12 @@ class AssessorAgent:
         parsed = json.loads(json_text)
         # Normalize lists and keys
         parsed = self._normalize_parsed(parsed)
-        # Validate with pydantic
+        # Validate with Pydantic
         try:
             profile = SkillProfile(**parsed)
         except ValidationError as e:
             logger.error(" Validation error: %s", e)
             raise
-        # If name empty, fill from hint
-        if not profile.name and name_hint:
-            profile.name = name_hint
 
         print()
         logger.info(" SKILL ASSESSMENT COMPLETED\n")
@@ -90,16 +89,14 @@ class AssessorAgent:
     def _call_llm(self, prompt: str, system_prompt: str, max_tokens: int = 800) -> str:
         """
         Call an LLM with the user prompt.
-        
-        prompt is the user prompt template injected with an input text and an output schema instruction
 
         Args:
-            prompt:
-            system_prompt:
-            max_tokens:
+            prompt: complete user prompt for the LLM
+            system_prompt: system prompt for the LLM
+            max_tokens: the maximum amount of tokens reserved for the LLM call
 
         Returns:
-            text:
+            text: the complete LLM response text
         """
 
         if not self.model:
@@ -114,12 +111,14 @@ class AssessorAgent:
         print()
         logger.info(" SKILL ASSESSMENT STARTING...\n")
 
+        # Get response from LLM
         response = client.chat.completions.create(
             model=self.model,
             messages=[
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": prompt}
             ],
+            max_tokens=max_tokens,
             temperature=0.2,
         )
 
@@ -131,15 +130,13 @@ class AssessorAgent:
     def _extract_json(self, text: str) -> Optional[str]:
         """
         Extract the JSON substring from the raw LLM response.
-        
-        text is the raw LLM response
 
         Args:
-            text:
+            text: the raw LLM response
 
         Returns:
-            text:
-            None
+            text: the extracted JSON
+            None: if JSON cannot be extracted from the response
         """
 
         # Find where the JSON starts
@@ -168,14 +165,12 @@ class AssessorAgent:
     def _normalize_parsed(self, parsed: Dict[str, Any]) -> Dict[str, Any]:
         """
         Normalize the parsed JSON.
-        
-        parsed is the parsed skills JSON
 
         Args:
-            parsed:
+            parsed: parsed skills JSON
 
         Returns:
-            parsed:
+            parsed: the normalized parsed skills JSON
         """
 
         keys = [
@@ -215,19 +210,18 @@ class AssessorAgent:
 
     def merge_update(self, new_profile: SkillProfile) -> SkillProfile:
         """
-        Merge new_profile into existing profile (union lists, max experience levels).
-        
-        new_profile is the new skill profile
+        Merge new_profile into existing profile (e.g. union lists and max experience levels).
 
         Args:
-            new_profile:
+            new_profile: the new skill profile
 
         Returns:
-            new_profile:
-            merged_profile:
+            new_profile: the new skill profile
+            merged_profile: the merged skill profile
         """
-
+        # Load existing skill profile from /memory/vector_db/skill_profile.json
         existing = self.load_existing()
+
         if not existing:
             self.save(new_profile)
             return new_profile
@@ -247,7 +241,10 @@ class AssessorAgent:
         merged["experience_level"] = merged_el
         merged["name"] = new_profile.name or existing.name
         merged_profile = SkillProfile(**merged)
+
+        # Save merged skill profile to /memory/vector_db/skill_profile.json
         self.save(merged_profile)
+
         return merged_profile
 
     def save(self, profile: SkillProfile):
@@ -258,8 +255,11 @@ class AssessorAgent:
             profile: the merged skill profile
         """
 
-        # Write JSON to memory path
+        # Write JSON to /memory/vector_db/skill_profile.json
+        # Convert a JSON-formatted string into a Python object (dict, list, etc.).
         out = json.loads(profile.model_dump_json(by_alias=True))
+
+        # Open /memory/vector_db/skill_profile.json
         with open(self.profile_path, "w", encoding="utf-8") as f:
             json.dump(out, f, ensure_ascii=False, indent=2)
 
@@ -270,14 +270,14 @@ class AssessorAgent:
         Load existing SkillProfile.
 
         Returns:
-            SkillProfile(**data): the existing skill profile if skills.json is intact
-            None: if skills.json is corrupt
+            SkillProfile(**data): the existing skill profile if skill_profile.json is intact
+            None: if skill_profile.json is corrupt
         """
 
         if not self.profile_path.exists():
             return None
 
-        # Open memory/vector_db/skills.json
+        # Open memory/vector_db/skill_profile.json
         with open(self.profile_path, "r", encoding="utf-8") as f:
             try:
                 # Read the JSON file and turn it into a dictionary

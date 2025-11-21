@@ -13,12 +13,16 @@ logger = logging.getLogger(__name__)
 
 class ScorerAgent:
     """
-    asd
+    ScorerAgent class orchestrates scoring the raw job listings.
+
+    Responsibilities:
+    1. Score job listings based on the candidate's skill profile
+    2. Save the scored job listings
     """
 
     def __init__(self, jobs_raw_path: str, jobs_scored_path: str):
         """
-        asd
+        Construct the ScorerAgent class.
 
         Args:
             jobs_raw_path:
