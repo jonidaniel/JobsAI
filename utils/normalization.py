@@ -1,20 +1,8 @@
-# ---------- NORMALIZATION HELPERS ----------
+# ---------- NORMALIZATION FUNCTIONS ----------
 
 from typing import List
 
-SKILL_ALIAS_MAP = {
-    "py": "Python",
-    "python3": "Python",
-    "python": "Python",
-    "js": "JavaScript",
-    "node": "Node.js",
-    "nodejs": "Node.js",
-    "reactjs": "React",
-    "fastapi": "FastAPI",
-    "flask": "Flask",
-    "postgres": "PostgreSQL",
-    "sql": "SQL",
-}
+from config.schemas import SKILL_ALIAS_MAP
 
 def normalize_token(tok: str) -> str:
     t = tok.strip()
