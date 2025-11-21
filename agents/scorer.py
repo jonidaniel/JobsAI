@@ -1,12 +1,15 @@
 # ---------- SCORER AGENT ----------
 
 import os
+import logging
 import json
 from typing import List, Dict
 
 from utils import normalize_list
 
 from config.schemas import SkillProfile
+
+logger = logging.getLogger(__name__)
 
 class ScorerAgent:
     def __init__(self, jobs_raw_path, jobs_scored_path):
@@ -23,6 +26,9 @@ class ScorerAgent:
         score them based on the given skill profile, and save
         scored jobs to SCORED_JOB_LISTINGS_DIR.
         """
+
+        logger.info(" SCORING JOBS STARTING...")
+
         job_listings = self.load_job_listings()
         if not job_listings:
             print("No job listings found to score.")
@@ -32,7 +38,8 @@ class ScorerAgent:
         # Sort by score descending
         scored_jobs.sort(key=lambda x: x["score"], reverse=True)
         self.save_scored_jobs(scored_jobs)
-        print(f"Scored {len(scored_jobs)} jobs and saved to {self.jobs_scored_path}")
+
+        logger.info(f" SCORING JOBS COMPLETED: Scored {len(scored_jobs)} jobs and saved them to /{self.jobs_scored_path}\n")
 
     # ------------------------------
     # Internal functions

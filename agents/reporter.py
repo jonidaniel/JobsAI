@@ -1,8 +1,11 @@
 # ---------- REPORTER AGENT ----------
 
 import os
+import logging
 import json
 from typing import List, Dict
+
+logger = logging.getLogger(__name__)
 
 class ReporterAgent:
     def __init__(self, jobs_scored_path: str, reports_path: str):
@@ -18,6 +21,9 @@ class ReporterAgent:
         Load scored jobs, generate a summary report (text),
         save it to REPORTS_DIR, and return the report text.
         """
+
+        logger.info(" WRITING JOB LISTINGS REPORT STARTING...")
+
         scored_jobs = self.load_scored_jobs()
         if not scored_jobs:
             print("No scored jobs found for reporting.")
@@ -54,9 +60,10 @@ class ReporterAgent:
         try:
             with open(path, "w", encoding="utf-8") as f:
                 f.write(report_text)
-            print(f"Report saved to {path}")
+
+            logger.info(f" WRITING JOB LISTINGS REPORT COMPLETED: Report saved to /{path} successfully\n")
         except Exception as e:
-            print(f"Failed to save report: {e}")
+            logger.info(f" WRITING JOB LISTINGS REPORT FAILED: {e}\n")
 
     # ------------------------------
     # Internal function

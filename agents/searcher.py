@@ -35,12 +35,14 @@ class SearcherAgent:
         Returns a deduplicated list of jobs.
         """
 
+        logger.info(" WEB SCRAPING STARTING...\n")
+
         all_jobs = []
         queries = build_queries(skill_profile)
 
         for query in queries:
             for board in self.job_boards:
-                logger.info("Searching %s for query '%s'", board, query)
+                logger.info(" Searching %s for query '%s'", board, query)
                 if board.lower() == "duunitori":
                     jobs = fetch_search_results(query, deep=self.deep)
                 else:
@@ -49,6 +51,8 @@ class SearcherAgent:
 
                 all_jobs.extend(jobs)
                 self._save_raw_jobs(jobs, board, query)
+
+        logger.info(" WEB SCRAPING COMPLETED\n")
 
         return self._deduplicate_jobs(all_jobs)
 
@@ -74,7 +78,7 @@ class SearcherAgent:
         path = os.path.join(self.save_path, filename)
         with open(path, "w", encoding="utf-8") as f:
             json.dump(jobs, f, ensure_ascii=False, indent=2)
-        logger.info("Saved %d raw jobs to %s", len(jobs), path)
+        logger.info(" Saved %d raw jobs to /%s\n", len(jobs), path)
 
 # ------------------------------
 # Simple CLI usage

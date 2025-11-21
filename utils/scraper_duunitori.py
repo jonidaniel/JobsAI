@@ -89,13 +89,13 @@ def safe_get(session: requests.Session, url: str, retries: int = 3, backoff: flo
             if resp.status_code == 200:
                 return resp
             elif resp.status_code in (429, 503):
-                logger.warning("Rate-limited or service unavailable (status %s) for %s. Backing off.", resp.status_code, url)
+                logger.warning(" Rate-limited or service unavailable (status %s) for %s. Backing off.", resp.status_code, url)
                 time.sleep(backoff * attempt)
             else:
-                logger.debug("Non-200 status %s for %s", resp.status_code, url)
+                logger.debug(" Non-200 status %s for %s", resp.status_code, url)
                 return resp  # return to allow caller to handle non-200
         except requests.RequestException as e:
-            logger.warning("Request failed (attempt %s/%s) for %s: %s", attempt, retries, url, e)
+            logger.warning(" Request failed (attempt %s/%s) for %s: %s", attempt, retries, url, e)
             time.sleep(backoff * attempt)
     return None
 
@@ -153,7 +153,7 @@ def fetch_job_detail(session: requests.Session, job_url: str, retries: int = 2) 
 
     resp = safe_get(session, job_url, retries=retries)
     if not resp or resp.status_code != 200:
-        logger.debug("Failed to fetch job detail: %s (status=%s)", job_url, getattr(resp, "status_code", None))
+        logger.debug(" Failed to fetch job detail: %s (status=%s)", job_url, getattr(resp, "status_code", None))
         return ""
 
     soup = BeautifulSoup(resp.text, "html.parser")
@@ -212,13 +212,13 @@ def fetch_search_results(
 
     for page in range(1, max_pages + 1):
         search_url = BASE_SEARCH_URL.format(query_slug=query_slug, page=page)
-        logger.info("Fetching Duunitori search page: %s", search_url)
+        logger.info(" Fetching Duunitori search page: %s", search_url)
         resp = safe_get(session, search_url)
         if not resp:
-            logger.warning("Failed to fetch search page %s — stopping.", search_url)
+            logger.warning(" Failed to fetch search page %s — stopping.", search_url)
             break
         if resp.status_code != 200:
-            logger.warning("Non-200 status (%s) for %s — stopping.", resp.status_code, search_url)
+            logger.warning(" Non-200 status (%s) for %s — stopping.", resp.status_code, search_url)
             break
 
         soup = BeautifulSoup(resp.text, "html.parser")
@@ -226,7 +226,7 @@ def fetch_search_results(
         cards = soup.select(".job-box, .job-list-item, .search-result__item, .job-card")
         if not cards:
             # No results on this page — likely end
-            logger.info("No job cards found on page %s for query '%s' — stopping pagination.", page, query)
+            logger.info(" No job cards found on page %s for query '%s' — stopping pagination.", page, query)
             break
 
         for card in cards:
@@ -238,7 +238,7 @@ def fetch_search_results(
                     if detail:
                         job["full_description"] = detail
                 except Exception as e:
-                    logger.warning("Error fetching detail for %s: %s", job.get("url"), e)
+                    logger.warning(" Error fetching detail for %s: %s", job.get("url"), e)
                     job["full_description"] = ""
             else:
                 job["full_description"] = ""
@@ -249,11 +249,11 @@ def fetch_search_results(
             total_fetched += 1
 
             if per_page_limit and total_fetched >= per_page_limit:
-                logger.info("Reached per_page_limit (%s). Stopping.", per_page_limit)
+                logger.info(" Reached per_page_limit (%s). Stopping.", per_page_limit)
                 return results
 
         # polite delay to avoid hammering the site
         time.sleep(0.8)
 
-    logger.info("Fetched %s listings for query '%s'", len(results), query)
+    logger.info(" Fetched %s listings for query '%s'", len(results), query)
     return results

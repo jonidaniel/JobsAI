@@ -51,11 +51,15 @@ class AssessorAgent:
         try:
             profile = SkillProfile(**parsed)
         except ValidationError as e:
-            logger.error("Validation error: %s", e)
+            logger.error(" Validation error: %s", e)
             raise
         # If name empty, fill from hint
         if not profile.name and name_hint:
             profile.name = name_hint
+
+        print()
+        logger.info(" SKILL ASSESSMENT COMPLETED\n")
+
         return profile
 
     # ------------------------------
@@ -70,15 +74,16 @@ class AssessorAgent:
         """
 
         if not self.model:
-            logger.warning("OPENAI_MODEL not found in environment. OpenAI calls will fail without it.")
+            logger.warning(" OPENAI_MODEL not found in environment. OpenAI calls will fail without it.")
         if not self.key:
-            logger.warning("OPENAI_API_KEY not found in environment. OpenAI calls will fail without it.")
+            logger.warning(" OPENAI_API_KEY not found in environment. OpenAI calls will fail without it.")
         client = OpenAI()
         client.api_key = self.key
         if not client.api_key:
             raise RuntimeError("OpenAI API key not configured. Set OPENAI_API_KEY env var.")
 
-        logger.info("Calling LLM...")
+        print()
+        logger.info(" SKILL ASSESSMENT STARTING...\n")
 
         response = client.chat.completions.create(
             model=self.model,
@@ -90,7 +95,7 @@ class AssessorAgent:
         )
 
         text = response.choices[0].message.content
-        logger.debug("LLM response: %s", text[:500])
+        logger.debug(" LLM response: %s", text[:500])
 
         return text
 
@@ -209,7 +214,7 @@ class AssessorAgent:
         with open(self.memory_path, "w", encoding="utf-8") as f:
             json.dump(out, f, ensure_ascii=False, indent=2)
 
-        logger.info("Saved skill profile to %s", self.memory_path)
+        logger.info(" Saved skill profile to %s", self.memory_path)
 
     def load_existing(self) -> Optional[SkillProfile]:
         """
@@ -244,7 +249,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if not Path(args.file).exists():
-        logger.error("Input file not found: %s", args.file)
+        logger.error(" Input file not found: %s", args.file)
         raise SystemExit(1)
 
     text = Path(args.file).read_text(encoding="utf-8")
@@ -252,12 +257,12 @@ if __name__ == "__main__":
     try:
         profile = assessor.assess(text, name_hint=args.name)
     except Exception as e:
-        logger.exception("Assessment failed: %s", e)
+        logger.exception(" Assessment failed: %s", e)
         raise
 
     if args.merge:
         merged = assessor.merge_update(profile)
-        logger.info("Merged profile saved. Summary: %s", merged.model_dump_json(indent=2))
+        logger.info(" Merged profile saved. Summary: %s", merged.model_dump_json(indent=2))
     else:
         assessor.save(profile)
-        logger.info("Profile saved. Summary: %s", profile.model_dump_json(indent=2))
+        logger.info(" Profile saved. Summary: %s", profile.model_dump_json(indent=2))
