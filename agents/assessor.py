@@ -9,19 +9,14 @@ from pydantic import ValidationError
 from openai import OpenAI
 
 from agents import SkillProfile
-#from agents import SYSTEM_PROMPT, USER_PROMPT_TEMPLATE, OUTPUT_SCHEMA_INSTRUCTION
 
 from utils import normalize_list
-
-# Init OpenAI client
-# client = OpenAI()
 
 # Logging configuration
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class AssessorAgent:
-    # def __init__(self, model: str = OPENAI_MODEL, memory_path: Path = MEMORY_PATH):
     def __init__(self, model: str, key: str, memory_path: Path):
         self.model = model
         self.key = key
@@ -37,9 +32,6 @@ class AssessorAgent:
 
         input_text is the input text given by the user
         """
-
-        # # Inject the input text into the user prompt template
-        # user_prompt = USER_PROMPT_TEMPLATE.format(input_text=input_text, OUTPUT_SCHEMA_INSTRUCTION=OUTPUT_SCHEMA_INSTRUCTION)
 
         # Retrieve the raw LLM response
         raw = self._call_llm(prompt, system_prompt)
@@ -80,13 +72,9 @@ class AssessorAgent:
         if not client.api_key:
             raise RuntimeError("OpenAI API key not configured. Set OPENAI_API_KEY env var.")
 
-        # if not client.api_key:
-        #     raise RuntimeError("OpenAI API key not configured. Set OPENAI_API_KEY env var.")
-
         logger.info("Calling LLM...")
 
         response = client.chat.completions.create(
-            # model=OPENAI_MODEL,
             model=self.model,
             messages=[
             {"role": "system", "content": system_prompt},
