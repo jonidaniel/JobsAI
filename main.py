@@ -8,6 +8,8 @@
 # enter your skills and preferences to the system once and get job recommendations and cover letters delivered to you continuously.
 # Checks input resources consistently and updates search queries autonomously.
 
+import os
+
 from dotenv import load_dotenv
 
 from agents import (
@@ -18,19 +20,20 @@ from agents import (
     )
 
 from config import (
-    USER_PROMPT,
-    OPENAI_MODEL,
-    OPENAI_API_KEY,
+    PROMPT,
     SKILL_PROFILE_PATH,
     JOB_BOARDS,
     DEEP_MODE,
     JOB_LISTINGS_RAW_PATH,
     JOB_LISTINGS_SCORED_PATH,
-    REPORTS_PATH
+    REPORTS_PATH,
+    SYSTEM_PROMPT
     )
 
 def main():
     load_dotenv()
+    OPENAI_MODEL = os.getenv("OPENAI_MODEL")
+    OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
     assessor = AssessorAgent(OPENAI_MODEL, OPENAI_API_KEY, SKILL_PROFILE_PATH)
     searcher = SearcherAgent(JOB_BOARDS, DEEP_MODE)
@@ -39,7 +42,7 @@ def main():
 
     # 1. Assess candidate
     # Returns a SkillProfile object
-    skill_profile = assessor.assess(USER_PROMPT)
+    skill_profile = assessor.assess(PROMPT, SYSTEM_PROMPT)
     print("Skill assessment complete")
 
     # 2. Search jobs based on assessment
