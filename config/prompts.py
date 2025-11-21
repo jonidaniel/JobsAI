@@ -87,5 +87,5 @@ Now produce a structured skill profile following the JSON schema provided below.
 \"\"\"
 """
 
-# Inject user prompt and output schema into the user prompt base
+# Inject the user prompt and the output schema into the user prompt base to create the final prompt
 PROMPT = USER_PROMPT_BASE.format(user_prompt=USER_PROMPT, output_schema=OUTPUT_SCHEMA)

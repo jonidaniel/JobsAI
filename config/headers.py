@@ -1,6 +1,6 @@
 # ---------- HEADERS ----------
 
-# ---------- DUUNITORI HEADERS ----------
+# ----- DUUNITORI -----
 
 HEADERS_DUUNITORI = {
     "User-Agent": (

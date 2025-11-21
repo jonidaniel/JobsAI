@@ -1,4 +1,4 @@
-# ---------- SCHEMA (PYDANTIC) ----------
+# ---------- SCHEMAS (PYDANTIC) ----------
 
 from typing import List
 
