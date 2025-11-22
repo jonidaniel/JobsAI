@@ -92,47 +92,16 @@ def fetch_search_results(
         # Parse the HTML text with a HTML parser
         soup = BeautifulSoup(response.text, "html.parser")
 
-        # Select CSS classes (here: job cards)
-        # cards = soup.select(".job-box, .job-list-item, .search-result__item, .job-card")
-        cards = soup.select(".gtm-search-result")
+        # Select all job cards (ignore cards in 'Duunitori suosittelee' section)
+        cards = soup.select(".grid-sandbox.grid-sandbox--tight-bottom.grid-sandbox--tight-top .grid.grid--middle.job-box.job-box--lg")
 
         # If no results on current page
         if not cards:
             logger.info(" No job cards found on page %s for query '%s' — stopping pagination", page, query)
             break
 
-        print("A")
-        print("A")
-        print("A")
-        print("A")
-        print("A")
-        print("A")
-        print("A")
-        print("A")
-        print("A")
-        print("A")
-        for card in cards:
-            print("B")
-            print("B")
-            print("B")
-            print(card.prettify())
-            print("B")
-            print("B")
-            print("B")
-        print("A")
-        print("A")
-        print("A")
-        print("A")
-        print("A")
-        print("A")
-        print("A")
-        print("A")
-        print("A")
-        print("A")
-
         # Iterate over job cards
         for card in cards:
-            # Parse job card to a dictionary, containing title, company, location, etc
             job = parse_job_card(card)
 
             # If in deep mode, and we have a URL
@@ -254,11 +223,10 @@ def parse_job_card(card: BeautifulSoup) -> Dict:
 
     # Title
     title_tag = card.select_one(".job-box__title")
-    title = title_tag.get_text(strip=True) if title_tag else (card.select_one(".job-box__title").get_text(strip=True) if card.select_one(".job-box__title") else "")
+    title = title_tag.get_text(strip=True) if title_tag else ""
 
     # Company
-    #job_tag = card.select_one(".job_box__hover, .gtm-search-result")
-    job_tag = card.select_one(".gtm-search-result")
+    job_tag = card.select_one(".job-box__hover.gtm-search-result")
     company = job_tag.get("data-company") if job_tag and job_tag.has_attr("data-company") else ""
 
     # Location
@@ -319,6 +287,8 @@ def fetch_job_detail(session: requests.Session, job_url: str, retries: int = 2) 
     description = description_tag.get_text(strip=True) if description_tag else ""
     if description:
         return description
+
+    # --- FALLBACK SECTION ---
 
     # # Look for the main description container by guessing class names
     # # desc_candidates = soup.select(".job-body, .job__description, .job-description, .job-detail__content, .advert-content")
