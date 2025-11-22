@@ -1,4 +1,8 @@
-# ---------- DETERMINISTIC KEYWORD GENERATOR ----------
+# ---------- QUERY BUILDER ----------
+
+# --- DESCRIPTION ---
+
+# A deterministic keyword generator
 
 def build_queries(skill_profile: dict) -> list[str]:
     """
