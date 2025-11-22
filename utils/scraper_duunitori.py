@@ -93,38 +93,46 @@ def fetch_search_results(
         soup = BeautifulSoup(response.text, "html.parser")
 
         # Select CSS classes (here: job cards)
-        cards = soup.select(".job-box, .job-list-item, .search-result__item, .job-card")
-        # print()
-        # print()
-        # print()
-        # print()
-        # print()
-        # print(cards)
-        # print()
-        # print()
-        # print()
-        # print()
-        # print()
+        # cards = soup.select(".job-box, .job-list-item, .search-result__item, .job-card")
+        cards = soup.select(".gtm-search-result")
 
         # If no results on current page
         if not cards:
             logger.info(" No job cards found on page %s for query '%s' — stopping pagination", page, query)
             break
 
+        print("A")
+        print("A")
+        print("A")
+        print("A")
+        print("A")
+        print("A")
+        print("A")
+        print("A")
+        print("A")
+        print("A")
+        for card in cards:
+            print("B")
+            print("B")
+            print("B")
+            print(card.prettify())
+            print("B")
+            print("B")
+            print("B")
+        print("A")
+        print("A")
+        print("A")
+        print("A")
+        print("A")
+        print("A")
+        print("A")
+        print("A")
+        print("A")
+        print("A")
+
         # Iterate over job cards
         for card in cards:
-            # print()
-            # print()
-            # print()
-            # print()
-            # print()
-            # print(card.prettify())
-            # print()
-            # print()
-            # print()
-            # print()
-            # print()
-            # Parse job card to a dictionary containing title, company, location, etc
+            # Parse job card to a dictionary, containing title, company, location, etc
             job = parse_job_card(card)
 
             # If in deep mode, and we have a URL
@@ -249,7 +257,8 @@ def parse_job_card(card: BeautifulSoup) -> Dict:
     title = title_tag.get_text(strip=True) if title_tag else (card.select_one(".job-box__title").get_text(strip=True) if card.select_one(".job-box__title") else "")
 
     # Company
-    job_tag = card.select_one(".job_box__hover, .gtm-search-result")
+    #job_tag = card.select_one(".job_box__hover, .gtm-search-result")
+    job_tag = card.select_one(".gtm-search-result")
     company = job_tag.get("data-company") if job_tag and job_tag.has_attr("data-company") else ""
 
     # Location
@@ -290,6 +299,7 @@ def fetch_job_detail(session: requests.Session, job_url: str, retries: int = 2) 
         retries: number of retries to fetch job detail
 
     Returns:
+        description: the full job description
         best_guess: best guess for full description div
         "": empty string on failure
     """
@@ -304,49 +314,41 @@ def fetch_job_detail(session: requests.Session, job_url: str, retries: int = 2) 
     # Parse the HTML text with a HTML parser
     soup = BeautifulSoup(response.text, "html.parser")
 
-    # Look for the main description container by guessing class names
-    # gtm-apply-clicks description description--jobentry
-    # desc_candidates = soup.select(".job-body, .job__description, .job-description, .job-detail__content, .advert-content")
-    desc_candidates = soup.select(".gtm-apply-clicks, .description, .description--jobentry, .job-body, .job__description, .job-description, .job-detail__content, .advert-content")
+    # Find the full job description
+    description_tag = soup.select_one(".description, .description--jobentry")
+    description = description_tag.get_text(strip=True) if description_tag else ""
+    if description:
+        return description
 
-    # for desc_candidate in desc_candidates:
-    #     print()
-    #     print()
-    #     print()
-    #     print()
-    #     print()
-    #     print(desc_candidate.prettify())
-    #     print()
-    #     print()
-    #     print()
-    #     print()
-    #     print()
+    # # Look for the main description container by guessing class names
+    # # desc_candidates = soup.select(".job-body, .job__description, .job-description, .job-detail__content, .advert-content")
+    # desc_candidates = soup.select(".gtm-apply-clicks, .description, .description--jobentry, .job-body, .job__description, .job-description, .job-detail__content, .advert-content")
 
-    # If no class was found, go to fallback
-    if not desc_candidates:
-        # Get all divs
-        divs = soup.find_all("div")
+    # # If no class was found, go to fallback
+    # if not desc_candidates:
+    #     # Get all divs
+    #     divs = soup.find_all("div")
 
-        best_guess = ""
-        longest = 0
+    #     best_guess = ""
+    #     longest = 0
 
-        # Iterate over all divs on webpage
-        for div in divs:
-            # Extract all text
-            txt = div.get_text(" ", strip=True) # If child nodes, use space as separator, also strip trailing whitespace
-            # Find longest textual div
-            if len(txt) > longest:
-                longest = len(txt)
-                best_guess = txt
+    #     # Iterate over all divs on webpage
+    #     for div in divs:
+    #         # Extract all text
+    #         txt = div.get_text(" ", strip=True) # If child nodes, use space as separator, also strip trailing whitespace
+    #         # Find longest textual div
+    #         if len(txt) > longest:
+    #             longest = len(txt)
+    #             best_guess = txt
 
-        # return best_guess or ""
-        return best_guess
+    #     # return best_guess or ""
+    #     return best_guess
 
-    # Prefer the first candidate with enough text
-    for cand in desc_candidates:
-        text = cand.get_text(" ", strip=True)
-        if len(text) > 50:
-            return text
+    # # Prefer the first candidate with enough text
+    # for cand in desc_candidates:
+    #     text = cand.get_text(" ", strip=True)
+    #     if len(text) > 50:
+    #         return text
 
-    # Fallback to concatenation
-    return " ".join(c.get_text(" ", strip=True) for c in desc_candidates)
+    # # Fallback to concatenation
+    # return " ".join(c.get_text(" ", strip=True) for c in desc_candidates)
