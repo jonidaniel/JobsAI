@@ -77,10 +77,14 @@ class AssessorAgent:
             logger.error(" Validation error: %s", e)
             raise
 
+        # Merge the profile with an existing profile
+        merged_profile = self.merge_update(profile)
+
         print()
         logger.info(" SKILL ASSESSMENT COMPLETED\n")
 
-        return profile
+        # return the merged profile
+        return merged_profile
 
     # ------------------------------
     # Internal functions
