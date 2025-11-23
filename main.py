@@ -13,7 +13,7 @@ import logging
 
 from dotenv import load_dotenv
 
-from agents import AssessorAgent, SearcherAgent, ScorerAgent, ReporterAgent
+from agents import AssessorAgent, SearcherAgent, ScorerAgent, ReporterAgent, GeneratorAgent
 
 from config.prompts import PROMPT, SYSTEM_PROMPT
 from config.settings import JOB_BOARDS, DEEP_MODE
@@ -37,6 +37,7 @@ def main():
     searcher = SearcherAgent(JOB_BOARDS, DEEP_MODE, JOB_LISTINGS_RAW_PATH)
     scorer = ScorerAgent(JOB_LISTINGS_RAW_PATH, JOB_LISTINGS_SCORED_PATH)
     reporter = ReporterAgent(JOB_LISTINGS_SCORED_PATH, REPORTS_PATH)
+    generator = GeneratorAgent()
 
     # 1. Assess a candidate and return a skill profile of them
     skill_profile = assessor.assess(PROMPT, SYSTEM_PROMPT)
@@ -53,6 +54,9 @@ def main():
 
     # 4. Write a report/an analysis on the findings and save it to /data/reports/job_report.txt
     report_text = reporter.generate_report(top_n=10)
+
+    # 5. Generate
+    generator.generate_application(report_text)
 
 if __name__ == "__main__":
     main()
