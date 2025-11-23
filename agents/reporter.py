@@ -31,13 +31,16 @@ class ReporterAgent:
     # ------------------------------
     # Public interface
     # ------------------------------
-    def generate_report(self, top_n: int = 10):
+    def generate_report(self, top_n: int = 10) -> str:
         """
         Load scored jobs, generate a summary report (text),
         save it to REPORTS_DIR, and return the report text.
 
         Args:
-            top_n:
+            top_n: the number of top jobs to include
+
+        Returns:
+            report_text: the generated report as a string
         """
 
         logger.info(" WRITING JOB LISTINGS REPORT STARTING...")
@@ -82,6 +85,8 @@ class ReporterAgent:
             logger.info(f" WRITING JOB LISTINGS REPORT COMPLETED: Report saved to /{path} successfully\n")
         except Exception as e:
             logger.info(f" WRITING JOB LISTINGS REPORT FAILED: {e}\n")
+
+        return report_text
 
     # ------------------------------
     # Internal function
