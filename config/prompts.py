@@ -32,6 +32,8 @@ He has 1.5 years of experience with SQL.
 He has 1 year of experience with AWS.
 He has 1 year of experience with Python.
 He has 1 year of experience with React.
+He has 0.5 years of experience with Scikit-learn.
+He has 0.5 years of experience with PyTorch.
 He has little experience with React Native.
 He has little experience with Java, Kotlin, C++, and C#.
 He has little experience with LangChain, OpenAI Agents, and CrewAI.
