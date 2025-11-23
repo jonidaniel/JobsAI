@@ -4,6 +4,7 @@ from typing import List
 
 from config.schemas import SKILL_ALIAS_MAP
 
+
 def normalize_token(tok: str) -> str:
     """
     Normalize token
@@ -26,6 +27,7 @@ def normalize_token(tok: str) -> str:
     if low.isupper():
         return token
     return token if any(c.isupper() for c in token) else token.capitalize()
+
 
 def normalize_list(items: List[str]) -> List[str]:
     """

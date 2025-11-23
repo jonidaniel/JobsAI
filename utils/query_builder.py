@@ -4,6 +4,7 @@
 
 # A deterministic keyword generator
 
+
 def build_queries(skill_profile: dict) -> list[str]:
     """
     Build deterministic job search queries from a structured skill profile.

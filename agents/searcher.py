@@ -9,6 +9,7 @@ from utils import build_queries, fetch_search_results
 
 logger = logging.getLogger(__name__)
 
+
 class SearcherAgent:
     """
     SearcherAgent class orchestrates the job listings search using a skill profile.
@@ -89,7 +90,6 @@ class SearcherAgent:
 
         seen_urls = set()
         deduped = []
-
 
         for job in jobs:
             url = job.get("url")

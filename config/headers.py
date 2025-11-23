@@ -10,5 +10,5 @@ HEADERS_DUUNITORI = {
     ),
     "Accept-Language": "fi-FI,fi;q=0.9,en;q=0.8",
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-    "Connection": "keep-alive"
+    "Connection": "keep-alive",
 }

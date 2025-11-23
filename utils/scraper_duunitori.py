@@ -39,13 +39,14 @@ from config.headers import HEADERS_DUUNITORI
 
 logger = logging.getLogger(__name__)
 
+
 def fetch_search_results(
     query: str,
     num_pages: int = 10,
     deep_mode: bool = True,
     session: Optional[requests.Session] = None,
-    per_page_limit: Optional[int] = None
-    ) -> List[Dict]:
+    per_page_limit: Optional[int] = None,
+) -> List[Dict]:
     """
     Fetch job listings from Duunitori for the given query.
 
@@ -86,18 +87,28 @@ def fetch_search_results(
             logger.warning(" Failed to fetch search page %s — stopping", search_url)
             break
         if response.status_code != 200:
-            logger.warning(" Non-200 status (%s) for %s — stopping", response.status_code, search_url)
+            logger.warning(
+                " Non-200 status (%s) for %s — stopping",
+                response.status_code,
+                search_url,
+            )
             break
 
         # Parse the HTML text with a HTML parser
         soup = BeautifulSoup(response.text, "html.parser")
 
         # Select all job cards (ignore cards in 'Duunitori suosittelee' section)
-        cards = soup.select(".grid-sandbox.grid-sandbox--tight-bottom.grid-sandbox--tight-top .grid.grid--middle.job-box.job-box--lg")
+        cards = soup.select(
+            ".grid-sandbox.grid-sandbox--tight-bottom.grid-sandbox--tight-top .grid.grid--middle.job-box.job-box--lg"
+        )
 
         # If no results on current page
         if not cards:
-            logger.info(" No job cards found on page %s for query '%s' — stopping pagination", page, query)
+            logger.info(
+                " No job cards found on page %s for query '%s' — stopping pagination",
+                page,
+                query,
+            )
             break
 
         # Iterate over job cards
@@ -114,7 +125,9 @@ def fetch_search_results(
                         # Save the full job description under its own key
                         job["full_description"] = detail
                 except Exception as e:
-                    logger.warning(" Error fetching detail for %s: %s", job.get("url"), e)
+                    logger.warning(
+                        " Error fetching detail for %s: %s", job.get("url"), e
+                    )
                     job["full_description"] = ""
             else:
                 job["full_description"] = ""
@@ -134,6 +147,7 @@ def fetch_search_results(
     logger.info(" Fetched %s listings for query '%s'", len(results), query)
 
     return results
+
 
 def slugify_query(query: str) -> str:
     """
@@ -155,15 +169,16 @@ def slugify_query(query: str) -> str:
     # Replace whitespace with hyphens and remove unsafe chars
     q = re.sub(r"\s+", "-", query.strip().lower())
 
-    return quote_plus(q, safe="-") # Percent-encode remaining unsafe chars
+    return quote_plus(q, safe="-")  # Percent-encode remaining unsafe chars
+
 
 def safe_get(
     session: requests.Session,
     url: str,
     retries: int = 3,
     backoff: float = 1.0,
-    timeout: float = 10.0
-    ) -> Optional[requests.Response]:
+    timeout: float = 10.0,
+) -> Optional[requests.Response]:
     """
     asd
 
@@ -176,7 +191,7 @@ def safe_get(
 
     Returns:
         resp:
-        None: 
+        None:
     """
 
     # Iterate 3 times (by default)
@@ -189,16 +204,23 @@ def safe_get(
                 return resp
             # If 'too many requests' or 'unavailable', wait a bit and continue
             elif resp.status_code in (429, 503):
-                logger.warning(" Rate-limited or service unavailable (status %s) for %s. Backing off", resp.status_code, url)
+                logger.warning(
+                    " Rate-limited or service unavailable (status %s) for %s. Backing off",
+                    resp.status_code,
+                    url,
+                )
                 time.sleep(backoff * attempt)
             # If error, return response
             else:
                 logger.debug(" Non-200 status %s for %s", resp.status_code, url)
                 return resp  # return to allow caller to handle non-200
         except requests.RequestException as e:
-            logger.warning(" Request failed (attempt %s/%s) for %s: %s", attempt, retries, url, e)
+            logger.warning(
+                " Request failed (attempt %s/%s) for %s: %s", attempt, retries, url, e
+            )
             time.sleep(backoff * attempt)
     return None
+
 
 def parse_job_card(card: BeautifulSoup) -> Dict:
     """
@@ -227,11 +249,23 @@ def parse_job_card(card: BeautifulSoup) -> Dict:
 
     # Company
     job_tag = card.select_one(".job-box__hover.gtm-search-result")
-    company = job_tag.get("data-company") if job_tag and job_tag.has_attr("data-company") else ""
+    company = (
+        job_tag.get("data-company")
+        if job_tag and job_tag.has_attr("data-company")
+        else ""
+    )
 
     # Location
     location_tag = card.select_one(".job-box__job-location")
-    location = location_tag.get_text(strip=True) if location_tag else (card.select_one(".job-box__job-location").get_text(strip=True) if card.select_one(".job-box__job-location") else "")
+    location = (
+        location_tag.get_text(strip=True)
+        if location_tag
+        else (
+            card.select_one(".job-box__job-location").get_text(strip=True)
+            if card.select_one(".job-box__job-location")
+            else ""
+        )
+    )
 
     # URL
     href = job_tag.get("href") if job_tag and job_tag.has_attr("href") else ""
@@ -242,10 +276,22 @@ def parse_job_card(card: BeautifulSoup) -> Dict:
 
     # Published
     published_tag = card.select_one(".job-box__job-posted")
-    published = published_tag.get_text(strip=True) if published_tag else (card.select_one(".job-box__job-posted").get_text(strip=True) if card.select_one(".job-box__job-posted") else "")
+    published = (
+        published_tag.get_text(strip=True)
+        if published_tag
+        else (
+            card.select_one(".job-box__job-posted").get_text(strip=True)
+            if card.select_one(".job-box__job-posted")
+            else ""
+        )
+    )
 
     # Category
-    category = job_tag.get("data-category") if job_tag and job_tag.has_attr("data-category") else ""
+    category = (
+        job_tag.get("data-category")
+        if job_tag and job_tag.has_attr("data-category")
+        else ""
+    )
 
     return {
         "title": title,
@@ -254,8 +300,9 @@ def parse_job_card(card: BeautifulSoup) -> Dict:
         "url": full_url,
         "description_snippet": snippet,
         "published_date": published,
-        "source": "duunitori"
+        "source": "duunitori",
     }
+
 
 def fetch_job_detail(session: requests.Session, job_url: str, retries: int = 2) -> str:
     """
@@ -276,7 +323,11 @@ def fetch_job_detail(session: requests.Session, job_url: str, retries: int = 2) 
     response = safe_get(session, job_url, retries=retries)
 
     if not response or response.status_code != 200:
-        logger.debug(" Failed to fetch job detail: %s (status=%s)", job_url, getattr(response, "status_code", None))
+        logger.debug(
+            " Failed to fetch job detail: %s (status=%s)",
+            job_url,
+            getattr(response, "status_code", None),
+        )
         return ""
 
     # Parse the HTML text with a HTML parser

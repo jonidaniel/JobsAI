@@ -7,6 +7,7 @@ from typing import List, Dict
 
 logger = logging.getLogger(__name__)
 
+
 class ReporterAgent:
     """
     ReporterAgent class orchestrates reporting job findings.
@@ -82,7 +83,9 @@ class ReporterAgent:
             with open(path, "w", encoding="utf-8") as f:
                 f.write(report_text)
 
-            logger.info(f" WRITING JOB LISTINGS REPORT COMPLETED: Report saved to /{path} successfully\n")
+            logger.info(
+                f" WRITING JOB LISTINGS REPORT COMPLETED: Report saved to /{path} successfully\n"
+            )
         except Exception as e:
             logger.info(f" WRITING JOB LISTINGS REPORT FAILED: {e}\n")
 

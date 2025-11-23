@@ -11,6 +11,7 @@ from config.schemas import SkillProfile
 
 logger = logging.getLogger(__name__)
 
+
 class ScorerAgent:
     """
     ScorerAgent class orchestrates scoring the raw job listings.
@@ -52,12 +53,16 @@ class ScorerAgent:
             logger.warning(" No job listings found to score.")
             return
 
-        scored_jobs = [self.compute_job_score(job, skill_profile) for job in job_listings]
+        scored_jobs = [
+            self.compute_job_score(job, skill_profile) for job in job_listings
+        ]
         # Sort by score descending
         scored_jobs.sort(key=lambda x: x["score"], reverse=True)
         self.save_scored_jobs(scored_jobs)
 
-        logger.info(f" SCORING JOBS COMPLETED: Scored {len(scored_jobs)} jobs and saved them to /{self.jobs_scored_path}/\n")
+        logger.info(
+            f" SCORING JOBS COMPLETED: Scored {len(scored_jobs)} jobs and saved them to /{self.jobs_scored_path}/\n"
+        )
 
     # ------------------------------
     # Internal functions
@@ -107,22 +112,24 @@ class ScorerAgent:
 
         # Combine all skill keywords from the profile
         profile_keywords = (
-            skill_profile.core_languages +
-            skill_profile.frameworks_and_libraries +
-            skill_profile.tools_and_platforms +
-            skill_profile.agentic_ai_experience +
-            skill_profile.ai_ml_experience +
-            skill_profile.soft_skills +
-            skill_profile.projects_mentioned +
-            skill_profile.job_search_keywords
+            skill_profile.core_languages
+            + skill_profile.frameworks_and_libraries
+            + skill_profile.tools_and_platforms
+            + skill_profile.agentic_ai_experience
+            + skill_profile.ai_ml_experience
+            + skill_profile.soft_skills
+            + skill_profile.projects_mentioned
+            + skill_profile.job_search_keywords
         )
         profile_keywords = normalize_list(profile_keywords)
 
-        job_text = " ".join([
-            str(job.get("title", "")),
-            str(job.get("description_snippet", "")),
-            str(job.get("full_description", ""))
-        ]).lower()
+        job_text = " ".join(
+            [
+                str(job.get("title", "")),
+                str(job.get("description_snippet", "")),
+                str(job.get("full_description", "")),
+            ]
+        ).lower()
 
         matched_skills = [kw for kw in profile_keywords if kw.lower() in job_text]
         missing_skills = [kw for kw in profile_keywords if kw.lower() not in job_text]
@@ -131,11 +138,13 @@ class ScorerAgent:
         score = int(len(matched_skills) / max(1, len(profile_keywords)) * 100)
 
         job_copy = job.copy()
-        job_copy.update({
-            "score": score,
-            "matched_skills": matched_skills,
-            "missing_skills": missing_skills
-        })
+        job_copy.update(
+            {
+                "score": score,
+                "matched_skills": matched_skills,
+                "missing_skills": missing_skills,
+            }
+        )
         return job_copy
 
     def save_scored_jobs(self, scored_jobs: List[Dict]):

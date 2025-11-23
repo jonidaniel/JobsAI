@@ -17,4 +17,6 @@ REPORTS_PATH.mkdir(parents=True, exist_ok=True)
 # ----- URLS -----
 
 HOST_URL_DUUNITORI = "https://duunitori.fi"
-SEARCH_URL_BASE_DUUNITORI = "https://duunitori.fi/tyopaikat/haku/{query_slug}?sivu={page}"
+SEARCH_URL_BASE_DUUNITORI = (
+    "https://duunitori.fi/tyopaikat/haku/{query_slug}?sivu={page}"
+)

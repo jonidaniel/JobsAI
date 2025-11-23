@@ -15,6 +15,7 @@ from config.schemas import SkillProfile
 
 logger = logging.getLogger(__name__)
 
+
 class AssessorAgent:
     """
     AssessorAgent class orchestrates candidate assessment.
@@ -104,13 +105,19 @@ class AssessorAgent:
         """
 
         if not self.model:
-            logger.warning(" OPENAI_MODEL not found in environment. OpenAI calls will fail without it.")
+            logger.warning(
+                " OPENAI_MODEL not found in environment. OpenAI calls will fail without it."
+            )
         if not self.key:
-            logger.warning(" OPENAI_API_KEY not found in environment. OpenAI calls will fail without it.")
+            logger.warning(
+                " OPENAI_API_KEY not found in environment. OpenAI calls will fail without it."
+            )
         client = OpenAI()
         client.api_key = self.key
         if not client.api_key:
-            raise RuntimeError("OpenAI API key not configured. Set OPENAI_API_KEY env var.")
+            raise RuntimeError(
+                "OpenAI API key not configured. Set OPENAI_API_KEY env var."
+            )
 
         print()
         logger.info(" SKILL ASSESSMENT STARTING...\n")
@@ -119,8 +126,8 @@ class AssessorAgent:
         response = client.chat.completions.create(
             model=self.model,
             messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": prompt}
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": prompt},
             ],
             max_tokens=max_tokens,
             temperature=0.2,
@@ -158,7 +165,7 @@ class AssessorAgent:
             elif text[i] == "}":
                 brace -= 1
                 if brace == 0:
-                    return text[start:i+1]
+                    return text[start : i + 1]
         # Fallback: try direct load
         try:
             json.loads(text)
@@ -178,18 +185,37 @@ class AssessorAgent:
         """
 
         keys = [
-            "name", "core_languages", "frameworks_and_libraries", "tools_and_platforms",
-            "agentic_ai_experience", "ai_ml_experience", "soft_skills", "projects_mentioned",
-            "experience_level", "job_search_keywords"
+            "name",
+            "core_languages",
+            "frameworks_and_libraries",
+            "tools_and_platforms",
+            "agentic_ai_experience",
+            "ai_ml_experience",
+            "soft_skills",
+            "projects_mentioned",
+            "experience_level",
+            "job_search_keywords",
         ]
         # Ensure all keys exist in the JSON the LLM generated
         for k in keys:
             if k not in parsed:
-                parsed[k] = [] if k != "experience_level" else {"Python": 0, "JavaScript": 0, "Agentic AI": 0, "AI/ML": 0}
+                parsed[k] = (
+                    []
+                    if k != "experience_level"
+                    else {"Python": 0, "JavaScript": 0, "Agentic AI": 0, "AI/ML": 0}
+                )
 
         # Normalize lists
-        for list_key in ["core_languages", "frameworks_and_libraries", "tools_and_platforms",
-                         "agentic_ai_experience", "ai_ml_experience", "soft_skills", "projects_mentioned", "job_search_keywords"]:
+        for list_key in [
+            "core_languages",
+            "frameworks_and_libraries",
+            "tools_and_platforms",
+            "agentic_ai_experience",
+            "ai_ml_experience",
+            "soft_skills",
+            "projects_mentioned",
+            "job_search_keywords",
+        ]:
             if isinstance(parsed.get(list_key), list):
                 parsed[list_key] = normalize_list(parsed[list_key])
             else:
@@ -201,7 +227,7 @@ class AssessorAgent:
             "Python": int(el.get("Python") or 0),
             "JavaScript": int(el.get("JavaScript") or 0),
             "Agentic AI": int(el.get("Agentic AI") or el.get("Agentic_Ai") or 0),
-            "AI/ML": int(el.get("AI/ML") or el.get("AI_ML") or 0)
+            "AI/ML": int(el.get("AI/ML") or el.get("AI_ML") or 0),
         }
         parsed["experience_level"] = norm_el
 
@@ -232,16 +258,30 @@ class AssessorAgent:
 
         # Merge lists
         merged = existing.model_dump()
-        for list_key in ["core_languages", "frameworks_and_libraries", "tools_and_platforms",
-                         "agentic_ai_experience", "ai_ml_experience", "soft_skills", "projects_mentioned", "job_search_keywords"]:
-            merged[list_key] = list(dict.fromkeys(existing.model_dump()[list_key] + new_profile.model_dump()[list_key]))
+        for list_key in [
+            "core_languages",
+            "frameworks_and_libraries",
+            "tools_and_platforms",
+            "agentic_ai_experience",
+            "ai_ml_experience",
+            "soft_skills",
+            "projects_mentioned",
+            "job_search_keywords",
+        ]:
+            merged[list_key] = list(
+                dict.fromkeys(
+                    existing.model_dump()[list_key] + new_profile.model_dump()[list_key]
+                )
+            )
 
         # Merge experience levels (take max)
         el_existing = existing.experience_level.model_dump(by_alias=True)
         el_new = new_profile.experience_level.model_dump(by_alias=True)
         merged_el = {}
         for k in ["Python", "JavaScript", "Agentic AI", "AI/ML"]:
-            merged_el[k] = max(int(el_existing.get(k, 0) or 0), int(el_new.get(k, 0) or 0))
+            merged_el[k] = max(
+                int(el_existing.get(k, 0) or 0), int(el_new.get(k, 0) or 0)
+            )
         merged["experience_level"] = merged_el
         merged["name"] = new_profile.name or existing.name
         merged_profile = SkillProfile(**merged)

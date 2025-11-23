@@ -53,6 +53,7 @@ Notes:
 
 # ----- PYDANTIC -----
 
+
 class ExperienceLevels(BaseModel):
     """
     asd
@@ -73,13 +74,9 @@ class ExperienceLevels(BaseModel):
 
         validate_by_name = True
         json_schema_extra = {
-            "example": {
-                "Python": 7,
-                "JavaScript": 6,
-                "Agentic AI": 5,
-                "AI/ML": 4
-            }
+            "example": {"Python": 7, "JavaScript": 6, "Agentic AI": 5, "AI/ML": 4}
         }
+
 
 class SkillProfile(BaseModel):
     """
