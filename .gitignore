@@ -1,6 +1,9 @@
 # Data from web scraping job listing sites
 data/
 
+# The candidate's skill profile
+memory/vector_db/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
