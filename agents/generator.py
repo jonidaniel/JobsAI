@@ -10,11 +10,12 @@ import logging
 from typing import Optional
 
 from utils import call_llm  # BUILD THIS !!!
-from utils import normalize_text # BUILD THIS !!!
+from utils import normalize_text  # BUILD THIS !!!
 
 from config.schemas import SkillProfile
 
 logger = logging.getLogger(__name__)
+
 
 class GeneratorAgent:
     """
@@ -30,6 +31,13 @@ class GeneratorAgent:
     """
 
     def __init__(self, model: str = "gpt-4.1"):
+        """
+        Contruct the GeneratorAgent class.
+
+        Args:
+            model:
+        """
+
         self.model = model
 
     # ------------------------------
@@ -41,26 +49,35 @@ class GeneratorAgent:
         job_report: str,
         employer: Optional[str] = None,
         job_title: Optional[str] = None,
-        style: str = "professional"
-        ) -> str:
+        style: str = "professional",
+    ) -> str:
         """
         Produce a tailored job-application message based on
         the candidate's skills and the job report.
+
+        Args:
+            skill_profile:
+            job_report:
+            employer:
+            job_title:
+            style:
 
         Returns:
             output: the generated text
         """
 
         system_prompt = self._build_system_prompt(style)
-        user_prompt = self._build_user_prompt(skill_profile, job_report, employer, job_title)
+        user_prompt = self._build_user_prompt(
+            skill_profile, job_report, employer, job_title
+        )
 
-        logger.info(" Generating application text...")
+        logger.info(" GENERATING APPLICATION TEXT...")
 
         raw = call_llm(user_prompt, system_prompt, model=self.model)
 
         output = normalize_text(raw)
 
-        logger.info(" Application text generated.\n")
+        logger.info(" APPLICATION TEXT GENERATION COMPLETED\n")
 
         return output
 
@@ -71,20 +88,21 @@ class GeneratorAgent:
     def _build_system_prompt(self, style: str) -> str:
         """
         System prompt defines *how* the assistant writes.
+
+        Args:
+            style:
         """
 
         tone_instructions = {
             "professional": (
                 "Write in a clear, respectful, concise, professional tone. "
                 "Use well-structured paragraphs. Avoid exaggerations."
-                ),
-                "friendly": (
-                    "Write in a warm, positive tone but keep it professional."
-                    ),
-                    "confident": (
-                        "Write with a confident, proactive tone without sounding arrogant."
-                        ),
-                        }
+            ),
+            "friendly": ("Write in a warm, positive tone but keep it professional."),
+            "confident": (
+                "Write with a confident, proactive tone without sounding arrogant."
+            ),
+        }
 
         base_style = tone_instructions.get(style, tone_instructions["professional"])
 
@@ -93,15 +111,15 @@ class GeneratorAgent:
             "Your goal is to produce polished text suitable for real-world job applications.\n"
             "Follow this style:\n"
             f"{base_style}\n"
-            )
+        )
 
     def _build_user_prompt(
         self,
         skill_profile: SkillProfile,
         job_report: str,
         employer: Optional[str],
-        job_title: Optional[str]
-        ) -> str:
+        job_title: Optional[str],
+    ) -> str:
         """
         Constructs the full user prompt including:
         - candidate skills
@@ -109,10 +127,10 @@ class GeneratorAgent:
         - optional job title / employer info
 
         Args:
-            skill_profile: 
-            job_report: 
-            employer: 
-            job_title: 
+            skill_profile:
+            job_report:
+            employer:
+            job_title:
 
         Returns:
             "
