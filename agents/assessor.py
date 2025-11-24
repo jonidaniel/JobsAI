@@ -26,7 +26,7 @@ class AssessorAgent:
     4. Save the profile
     """
 
-    def __init__(self, model: str, key: str, profile_path: Path):
+    def __init__(self, profile_path: Path):
         """
         Construct the AssessorAgent class.
 
@@ -36,8 +36,6 @@ class AssessorAgent:
             profile_path: the path to the candidate's skill profile
         """
 
-        self.model = model
-        self.key = key
         self.profile_path = profile_path
 
     # ------------------------------
