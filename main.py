@@ -8,7 +8,6 @@
 # enter your skills and preferences to the system once and get job recommendations and cover letters delivered to you continuously.
 # Checks input resources consistently and updates search queries autonomously.
 
-import os
 import logging
 
 from agents import (
@@ -19,7 +18,7 @@ from agents import (
     GeneratorAgent,
 )
 
-from config.prompts import PROMPT, SYSTEM_PROMPT
+from config.prompts import SYSTEM_PROMPT, USER_PROMPT
 from config.settings import JOB_BOARDS, DEEP_MODE
 from config.paths import (
     SKILL_PROFILE_PATH,
@@ -46,7 +45,7 @@ def main():
     generator = GeneratorAgent()
 
     # 1. Assess a candidate and return a skill profile of them
-    skill_profile = assessor.assess(PROMPT, SYSTEM_PROMPT)
+    skill_profile = assessor.assess(SYSTEM_PROMPT, USER_PROMPT)
 
     # 2. Build search queries based on the skill profile
     # Then scrape job boards for job listings
