@@ -9,7 +9,7 @@
 import logging
 from typing import Optional
 
-# from utils.llms import call_llm
+from utils.llms import call_llm
 from utils.normalization import normalize_text
 
 from config.schemas import SkillProfile
@@ -30,15 +30,10 @@ class GeneratorAgent:
     - motivation/explanation of fit
     """
 
-    def __init__(self, model: str = "gpt-4.1"):
+    def __init__(self):
         """
-        Contruct the GeneratorAgent class.
-
-        Args:
-            model:
+        Construct the GeneratorAgent class.
         """
-
-        self.model = model
 
     # ------------------------------
     # Public interface
@@ -73,8 +68,7 @@ class GeneratorAgent:
 
         logger.info(" GENERATING APPLICATION TEXT...")
 
-        # raw = call_llm(user_prompt, system_prompt, model=self.model)
-        raw = "KAKKA"
+        raw = call_llm(user_prompt, system_prompt)
 
         output = normalize_text(raw)
 
