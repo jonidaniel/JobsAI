@@ -68,7 +68,8 @@ def main():
     report_text = reporter.generate_report(top_n=10)
 
     # 5. Generate
-    generator.generate_application(report_text)
+    kakka = generator.generate_application(report_text)
+    print(kakka)
 
 
 if __name__ == "__main__":
