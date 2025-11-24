@@ -41,7 +41,7 @@ class AssessorAgent:
     # ------------------------------
     # Public interface
     # ------------------------------
-    def assess(self, prompt: str, system_prompt: str) -> SkillProfile:
+    def assess(self, system_prompt: str, user_prompt: str) -> SkillProfile:
         """
         Assess the candidate's skills.
 
@@ -49,16 +49,18 @@ class AssessorAgent:
         parse the JSON, and normalize it.
 
         Args:
-            prompt: the complete user prompt for the LLM
-            system_prompt: the system prompt for the LLM
+            system_prompt: system prompt for the LLM
+            user_prompt: user prompt for the LLM
 
         Returns:
             profile: the candidate's skill profile
         """
 
-        # Retrieve the raw LLM response
-        # raw = self._call_llm(prompt, system_prompt)
-        raw = call_llm(prompt, system_prompt)
+        print()
+        logger.info(" SKILL ASSESSMENT STARTING...\n")
+
+        # Retrieve raw LLM response that contains the skill profile
+        raw = call_llm(system_prompt, user_prompt)
 
         # Extract the JSON substring from the raw response
         json_text = self._extract_json(raw)
