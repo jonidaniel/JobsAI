@@ -11,8 +11,6 @@
 import os
 import logging
 
-from dotenv import load_dotenv
-
 from agents import (
     AssessorAgent,
     SearcherAgent,
@@ -34,10 +32,6 @@ logging.basicConfig(level=logging.INFO)
 # For debug logging
 # logging.basicConfig(level=logging.DEBUG)
 
-load_dotenv()
-OPENAI_MODEL = os.getenv("OPENAI_MODEL")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-
 
 def main():
     """
@@ -45,7 +39,7 @@ def main():
     """
 
     # Initialize agents with constant values
-    assessor = AssessorAgent(OPENAI_MODEL, OPENAI_API_KEY, SKILL_PROFILE_PATH)
+    assessor = AssessorAgent(SKILL_PROFILE_PATH)
     searcher = SearcherAgent(JOB_BOARDS, DEEP_MODE, JOB_LISTINGS_RAW_PATH)
     scorer = ScorerAgent(JOB_LISTINGS_RAW_PATH, JOB_LISTINGS_SCORED_PATH)
     reporter = ReporterAgent(JOB_LISTINGS_SCORED_PATH, REPORTS_PATH)
