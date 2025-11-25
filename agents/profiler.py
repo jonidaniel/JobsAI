@@ -8,7 +8,6 @@
 import os
 import logging
 import json
-from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
@@ -33,7 +32,7 @@ class ProfilerAgent:
     4. Save the profile
     """
 
-    def __init__(self, profile_path: Path):
+    def __init__(self, profile_path: Path, timestamp: str):
         """
         Construct the AssessorAgent class.
 
@@ -44,6 +43,7 @@ class ProfilerAgent:
         """
 
         self.profile_path = profile_path
+        self.timestamp = timestamp
 
     # ------------------------------
     # Public interface
@@ -191,8 +191,7 @@ class ProfilerAgent:
         out = json.loads(profile.model_dump_json(by_alias=True))
 
         # Form a dated filename
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"{timestamp}_skill_profile.json"
+        filename = f"{self.timestamp}_skill_profile.json"
 
         # Join the skill profile path and the dated filename
         path = os.path.join(self.profile_path, filename)
@@ -202,7 +201,7 @@ class ProfilerAgent:
                 json.dump(out, f, ensure_ascii=False, indent=2)
 
             logger.info(
-                " SKILL PROFILE CREATED: Saved to %s\n",
+                f" SKILL PROFILE CREATED: Saved to /%s/{filename}\n",
                 self.profile_path,
             )
         except Exception as e:
