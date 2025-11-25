@@ -1,5 +1,9 @@
 # ---------- NORMALIZATION FUNCTIONS ----------
 
+# normalize_token
+# normalize_list
+# normalize_text
+
 import re
 from typing import List
 
