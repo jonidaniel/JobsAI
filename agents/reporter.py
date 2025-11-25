@@ -1,5 +1,8 @@
 # ---------- REPORTER AGENT ----------
 
+# generate_report
+# _load_scored_jobs
+
 import os
 import logging
 import json
@@ -46,7 +49,7 @@ class ReporterAgent:
 
         logger.info(" WRITING JOB LISTINGS REPORT STARTING...")
 
-        scored_jobs = self.load_scored_jobs()
+        scored_jobs = self._load_scored_jobs()
         if not scored_jobs:
             logger.warning(" No scored jobs found for reporting.")
             return ""
@@ -94,7 +97,7 @@ class ReporterAgent:
     # ------------------------------
     # Internal function
     # ------------------------------
-    def load_scored_jobs(self) -> List[Dict]:
+    def _load_scored_jobs(self) -> List[Dict]:
         """
         Load scored jobs JSON from SCORED_JOB_LISTINGS_DIR.
 

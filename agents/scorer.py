@@ -1,5 +1,11 @@
 # ---------- SCORER AGENT ----------
 
+# score_jobs
+# _load_job_listings
+# _compute_job_score
+# _save_scored_jobs
+# _job_identity
+
 import os
 import logging
 import json
@@ -48,17 +54,17 @@ class ScorerAgent:
 
         logger.info(" SCORING JOBS STARTING...")
 
-        job_listings = self.load_job_listings()
+        job_listings = self._load_job_listings()
         if not job_listings:
             logger.warning(" No job listings found to score.")
             return
 
         scored_jobs = [
-            self.compute_job_score(job, skill_profile) for job in job_listings
+            self._compute_job_score(job, skill_profile) for job in job_listings
         ]
         # Sort by score descending
         scored_jobs.sort(key=lambda x: x["score"], reverse=True)
-        self.save_scored_jobs(scored_jobs)
+        self._save_scored_jobs(scored_jobs)
 
         logger.info(
             f" SCORING JOBS COMPLETED: Scored {len(scored_jobs)} jobs and saved them to /{self.jobs_scored_path}/\n"
@@ -68,7 +74,7 @@ class ScorerAgent:
     # Internal functions
     # ------------------------------
 
-    def load_job_listings(self) -> List[Dict]:
+    def _load_job_listings(self) -> List[Dict]:
         """
         Load all JSON files from RAW_JOB_LISTINGS_DIR and return as a list of jobs.
 
@@ -98,7 +104,7 @@ class ScorerAgent:
                 seen.add(fingerprint)
         return unique_jobs
 
-    def compute_job_score(self, job: Dict, skill_profile: SkillProfile) -> Dict:
+    def _compute_job_score(self, job: Dict, skill_profile: SkillProfile) -> Dict:
         """
         Compute a simple matching score for the job based on the skill profile.
 
@@ -147,7 +153,7 @@ class ScorerAgent:
         )
         return job_copy
 
-    def save_scored_jobs(self, scored_jobs: List[Dict]):
+    def _save_scored_jobs(self, scored_jobs: List[Dict]):
         """
         Save scored jobs into SCORED_JOB_LISTINGS_DIR as a JSON file.
 

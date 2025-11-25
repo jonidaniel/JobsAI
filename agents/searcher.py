@@ -1,5 +1,9 @@
 # ---------- SEARCHER AGENT ----------
 
+# search_jobs
+# _deduplicate_jobs
+# _save_raw_jobs
+
 import os
 import logging
 import json
@@ -13,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 class SearcherAgent:
     """
-    SearcherAgent class orchestrates the job listings search using a skill profile.
+    Orchestrate the job listings search.
 
     Responsibilities:
     1. Build queries from skill profile
