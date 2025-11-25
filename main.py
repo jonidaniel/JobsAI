@@ -20,7 +20,7 @@ from agents import (
 )
 
 from config.prompts import SYSTEM_PROMPT, USER_PROMPT
-from config.settings import JOB_BOARDS, DEEP_MODE, LETTER_STYLE
+from config.settings import JOB_BOARDS, DEEP_MODE, LETTER_STYLE, CONTACT_INFORMATION
 from config.paths import (
     SKILL_PROFILES_PATH,
     JOB_LISTINGS_RAW_PATH,
@@ -66,7 +66,9 @@ def main():
     job_report = reporter.generate_report(skill_profile, top_n=10)
 
     # 5. Generate cover letters for each job
-    generator.generate_letters(skill_profile, job_report, LETTER_STYLE)
+    generator.generate_letters(
+        skill_profile, job_report, LETTER_STYLE, CONTACT_INFORMATION
+    )
 
 
 if __name__ == "__main__":
