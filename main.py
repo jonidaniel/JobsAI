@@ -60,8 +60,8 @@ def main():
     # 4. Write a report/an analysis on the findings and save it to /data/reports/job_report.txt
     report_text = reporter.generate_report(top_n=10)
 
-    # 5. Generate documents for each job
-    documents = generator.generate_application(skill_profile, report_text)
+    # 5. Generate cover letters for each job
+    documents = generator.generate_letters(skill_profile, report_text)
     print(documents)
 
 
