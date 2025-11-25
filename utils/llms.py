@@ -1,9 +1,12 @@
 # --------- LLM FUNCTIONS ----------
 
 # call_llm
+# extract_json
 
 import os
 import logging
+import json
+from typing import Optional
 
 from dotenv import load_dotenv
 
@@ -56,3 +59,39 @@ def call_llm(system_prompt: str, user_prompt: str, max_tokens: int = 800) -> str
     logger.debug(" LLM response: %s", text[:500])
 
     return text
+
+
+def extract_json(text: str) -> Optional[str]:
+    """
+    Extract the JSON substring from the raw LLM response.
+
+    Args:
+        text: the raw LLM response
+
+    Returns:
+        text: the extracted JSON
+        None: if JSON cannot be extracted from the response
+    """
+
+    # Find where the JSON starts
+    start = text.find("{")
+
+    # If a brace isn't present
+    if start == -1:
+        return None
+
+    # Attempt to balance braces
+    brace = 0
+    for i in range(start, len(text)):
+        if text[i] == "{":
+            brace += 1
+        elif text[i] == "}":
+            brace -= 1
+            if brace == 0:
+                return text[start : i + 1]
+    # Fallback: try direct load
+    try:
+        json.loads(text)
+        return text
+    except Exception:
+        return None
