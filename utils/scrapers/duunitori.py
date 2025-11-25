@@ -46,6 +46,9 @@ from config.headers import HEADERS_DUUNITORI
 logger = logging.getLogger(__name__)
 
 
+# ------------------------------
+# Public interface
+# ------------------------------
 def fetch_duunitori_results(
     query: str,
     num_pages: int = 10,
@@ -153,6 +156,11 @@ def fetch_duunitori_results(
     logger.info(" Fetched %s listings for query '%s'", len(results), query)
 
     return results
+
+
+# ------------------------------
+# Internal functions
+# ------------------------------
 
 
 def _slugify_query(query: str) -> str:
