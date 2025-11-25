@@ -19,16 +19,16 @@
 # --- HTML PARSING STRATEGY ---
 
 # Title:            <h3 class="job-box__title">
-# Company:          <div class="job-box__employer">
-# Location:         <div class="job-box__location">
-# URL:              <a class="job-box__title-link" href="...">
-# Published date:   <time datetime="...">
+# Company:          <a class="job-box__hover gtm-search-result">
+# Location:         <span class="job-box__job-location">
+# URL:              <a class="job-box__hover gtm-search-result">
+# Published date:   <span class="job-box__job-posted">
 
 # Duunitori’s HTML may change; the parser uses several fallback selectors
 # If you see missed fields, inspect live HTML and tweak selectors
-# Deep mode causes one extra HTTP request per listing — plan API call rate/intervals accordingly
-# If you plan to run many queries frequently, add a persistent cache layer (disk/db) and respect robots.txt and Duunitori’s terms of service
-# You can easily switch to light mode by calling scrape_duunitori(..., deep=False)
+# Select between light and deep mode
+# Light mode scrapes only
+# You can easily switch to light mode by setting DEEP_MODE=False in /config/settings.py
 
 import time
 import logging
@@ -75,13 +75,10 @@ def scrape_duunitori(
     # Update default headers
     session.headers.update(HEADERS_DUUNITORI)
 
-    # Make query URL compliant
+    # Slugify query (i.e. make it URL compliant)
     # Replace whitespace with hyphens and remove unsafe chars
     q = re.sub(r"\s+", "-", query.strip().lower())
     query_slug = quote_plus(q, safe="-")
-
-    # Make query URL compliant
-    # query_slug = _slugify_query(query)
 
     results = []
     total_fetched = 0
@@ -111,12 +108,12 @@ def scrape_duunitori(
         soup = BeautifulSoup(response.text, "html.parser")
 
         # Select all job cards (ignore cards in 'Duunitori suosittelee' section)
-        cards = soup.select(
+        job_cards = soup.select(
             ".grid-sandbox.grid-sandbox--tight-bottom.grid-sandbox--tight-top .grid.grid--middle.job-box.job-box--lg"
         )
 
         # If no results on current page
-        if not cards:
+        if not job_cards:
             logger.info(
                 " No job cards found on page %s for query '%s' — stopping pagination",
                 page,
@@ -125,8 +122,8 @@ def scrape_duunitori(
             break
 
         # Iterate over job cards
-        for card in cards:
-            job = _parse_job_card(card)
+        for job_card in job_cards:
+            job = _parse_job_card(job_card)
 
             # If in deep mode, and we have a URL
             if deep_mode and job.get("url"):
@@ -167,26 +164,6 @@ def scrape_duunitori(
 # ------------------------------
 
 
-# def _slugify_query(query: str) -> str:
-#     """
-#     Make query URL compliant (e.g. turn 'python developer' into 'python-developer').
-
-#     Also encode special characters safely.
-
-#     Args:
-#         query: query to be slugified
-
-#     Returns:
-#         "": if there wasn't a query
-#         quote_plus(q, safe="-"): URL compliant query
-#     """
-
-#     if not query:
-#         return ""
-
-#     return   # Percent-encode remaining unsafe chars
-
-
 def _fetch_page(
     session: requests.Session,
     url: str,
@@ -213,22 +190,22 @@ def _fetch_page(
     for attempt in range(1, retries + 1):
         try:
             # Get response
-            resp = session.get(url, timeout=timeout)
+            response = session.get(url, timeout=timeout)
             # If OK, return response
-            if resp.status_code == 200:
-                return resp
+            if response.status_code == 200:
+                return response
             # If 'too many requests' or 'unavailable', wait a bit and continue
-            elif resp.status_code in (429, 503):
+            elif response.status_code in (429, 503):
                 logger.warning(
                     " Rate-limited or service unavailable (status %s) for %s. Backing off",
-                    resp.status_code,
+                    response.status_code,
                     url,
                 )
                 time.sleep(backoff * attempt)
             # If error, return response
             else:
-                logger.debug(" Non-200 status %s for %s", resp.status_code, url)
-                return resp  # return to allow caller to handle non-200
+                logger.debug(" Non-200 status %s for %s", response.status_code, url)
+                return response  # return to allow caller to handle non-200
         except requests.RequestException as e:
             logger.warning(
                 " Request failed (attempt %s/%s) for %s: %s", attempt, retries, url, e
@@ -237,7 +214,7 @@ def _fetch_page(
     return None
 
 
-def _parse_job_card(card: BeautifulSoup) -> Dict:
+def _parse_job_card(job_card: BeautifulSoup) -> Dict:
     """
     Parse a search-result job card into a partial job dict
 
@@ -258,54 +235,44 @@ def _parse_job_card(card: BeautifulSoup) -> Dict:
         }:
     """
 
-    # Title
-    title_tag = card.select_one(".job-box__title")
+    # Parse title from job card
+    title_tag = job_card.select_one(".job-box__title")
     title = title_tag.get_text(strip=True) if title_tag else ""
 
-    # Company
-    job_tag = card.select_one(".job-box__hover.gtm-search-result")
+    # Parse company from job card
+    job_tag = job_card.select_one(".job-box__hover.gtm-search-result")
     company = (
         job_tag.get("data-company")
         if job_tag and job_tag.has_attr("data-company")
         else ""
     )
 
-    # Location
-    location_tag = card.select_one(".job-box__job-location")
+    # Parse location from job card
+    location_tag = job_card.select_one(".job-box__job-location")
     location = (
         location_tag.get_text(strip=True)
         if location_tag
         else (
-            card.select_one(".job-box__job-location").get_text(strip=True)
-            if card.select_one(".job-box__job-location")
+            job_card.select_one(".job-box__job-location").get_text(strip=True)
+            if job_card.select_one(".job-box__job-location")
             else ""
         )
     )
 
-    # URL
+    # Parse URL from job card
     href = job_tag.get("href") if job_tag and job_tag.has_attr("href") else ""
     full_url = urljoin(HOST_URL_DUUNITORI, href) if href else ""
 
-    # Description
-    snippet = ""
-
-    # Published
-    published_tag = card.select_one(".job-box__job-posted")
+    # Parse published date from job card
+    published_tag = job_card.select_one(".job-box__job-posted")
     published = (
         published_tag.get_text(strip=True)
         if published_tag
         else (
-            card.select_one(".job-box__job-posted").get_text(strip=True)
-            if card.select_one(".job-box__job-posted")
+            job_card.select_one(".job-box__job-posted").get_text(strip=True)
+            if job_card.select_one(".job-box__job-posted")
             else ""
         )
-    )
-
-    # Category
-    category = (
-        job_tag.get("data-category")
-        if job_tag and job_tag.has_attr("data-category")
-        else ""
     )
 
     return {
@@ -313,7 +280,7 @@ def _parse_job_card(card: BeautifulSoup) -> Dict:
         "company": company,
         "location": location,
         "url": full_url,
-        "description_snippet": snippet,
+        "description_snippet": None,
         "published_date": published,
         "source": "duunitori",
     }
@@ -327,11 +294,11 @@ def _fetch_full_job_description(
 
     Args:
         session: current HTTP session
-        job_url: current job URL
-        retries: number of retries to fetch job detail
+        job_url: URL of the job to get full description of
+        retries: number of retries to fetch full description
 
     Returns:
-        description: the full job description
+        description: full job description
         best_guess: best guess for full description div
         "": empty string on failure
     """
