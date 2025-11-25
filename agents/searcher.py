@@ -29,7 +29,13 @@ class SearcherAgent:
     4. Store the job listings
     """
 
-    def __init__(self, job_boards: List[str], deep_mode: bool, jobs_raw_path: Path):
+    def __init__(
+        self,
+        job_boards: List[str],
+        deep_mode: bool,
+        jobs_raw_path: Path,
+        timestamp: str,
+    ):
         """
         Construct the SearcherAgent class.
 
@@ -42,6 +48,7 @@ class SearcherAgent:
         self.job_boards = job_boards
         self.deep_mode = deep_mode
         self.jobs_raw_path = jobs_raw_path
+        self.timestamp = timestamp
 
     # ------------------------------
     # Public interface
@@ -57,7 +64,7 @@ class SearcherAgent:
             self._deduplicate_jobs(all_jobs): deduplicated list of jobs
         """
 
-        logger.info(" WEB SCRAPING STARTING...\n")
+        logger.info(" WEB SCRAPING STARTING...")
 
         all_jobs = []
 
@@ -67,6 +74,7 @@ class SearcherAgent:
         for query in queries:
             # Iterate over all job boards (duunitori, jobly, etc.) defined in /config/settings.py
             for job_board in self.job_boards:
+                print()
                 logger.info(" Searching %s for query '%s'", job_board, query)
                 if job_board.lower() == "duunitori":
                     jobs = scrape_duunitori(query, deep_mode=self.deep_mode)
@@ -77,6 +85,7 @@ class SearcherAgent:
                 all_jobs.extend(jobs)
                 self._save_raw_jobs(jobs, job_board, query)
 
+        print()
         logger.info(" WEB SCRAPING COMPLETED\n")
 
         return self._deduplicate_jobs(all_jobs)
@@ -102,7 +111,7 @@ class SearcherAgent:
         safe_query = query.replace(" ", "_").replace("/", "_")
 
         # Form the filename (<job_board><query>.json)
-        filename = f"{board.lower()}_{safe_query}.json"
+        filename = f"{self.timestamp}_{board.lower()}_{safe_query}.json"
 
         # Form the path where to save
         path = os.path.join(self.jobs_raw_path, filename)
@@ -111,7 +120,7 @@ class SearcherAgent:
         with open(path, "w", encoding="utf-8") as f:
             json.dump(jobs, f, ensure_ascii=False, indent=2)
 
-        logger.info(" Saved %d raw jobs to /%s\n", len(jobs), path)
+        logger.info(" Saved %d raw jobs to /%s", len(jobs), path)
 
     def _deduplicate_jobs(self, jobs: List[Dict]) -> List[Dict]:
         """
