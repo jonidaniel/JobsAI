@@ -19,9 +19,9 @@ from agents import (
 )
 
 from config.prompts import SYSTEM_PROMPT, USER_PROMPT
-from config.settings import JOB_BOARDS, DEEP_MODE
+from config.settings import JOB_BOARDS, DEEP_MODE, LETTER_STYLE
 from config.paths import (
-    SKILL_PROFILE_PATH,
+    SKILL_PROFILES_PATH,
     JOB_LISTINGS_RAW_PATH,
     JOB_LISTINGS_SCORED_PATH,
     REPORTS_PATH,
@@ -39,7 +39,7 @@ def main():
     """
 
     # Initialize agents with constant values
-    profiler = ProfilerAgent(SKILL_PROFILE_PATH)
+    profiler = ProfilerAgent(SKILL_PROFILES_PATH)
     searcher = SearcherAgent(JOB_BOARDS, DEEP_MODE, JOB_LISTINGS_RAW_PATH)
     scorer = ScorerAgent(JOB_LISTINGS_RAW_PATH, JOB_LISTINGS_SCORED_PATH)
     reporter = ReporterAgent(JOB_LISTINGS_SCORED_PATH, REPORTS_PATH)
@@ -59,10 +59,10 @@ def main():
     scorer.score_jobs(skill_profile=skill_profile)
 
     # 4. Write a report/an analysis on the findings and save it to /data/reports/job_report.txt
-    report_text = reporter.generate_report(top_n=10)
+    job_report = reporter.generate_report(top_n=10)
 
     # 5. Generate cover letters for each job
-    documents = generator.generate_letters(skill_profile, report_text)
+    documents = generator.generate_letters(skill_profile, job_report, LETTER_STYLE)
     print(documents)
 
 
