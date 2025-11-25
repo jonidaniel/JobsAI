@@ -47,7 +47,7 @@ class ReporterAgent:
             report_text: the generated report as a string
         """
 
-        logger.info(" WRITING JOB LISTINGS REPORT STARTING...")
+        logger.info(" WRITING JOB LISTINGS REPORT...")
 
         scored_jobs = self._load_scored_jobs()
         if not scored_jobs:
@@ -86,9 +86,7 @@ class ReporterAgent:
             with open(path, "w", encoding="utf-8") as f:
                 f.write(report_text)
 
-            logger.info(
-                f" WRITING JOB LISTINGS REPORT COMPLETED: Report saved to /{path} successfully\n"
-            )
+            logger.info(f" JOB LISTINGS REPORT WRITTEN: Report saved to /{path}\n")
         except Exception as e:
             logger.info(f" WRITING JOB LISTINGS REPORT FAILED: {e}\n")
 
