@@ -66,8 +66,7 @@ def main():
     job_report = reporter.generate_report(top_n=10)
 
     # 5. Generate cover letters for each job
-    documents = generator.generate_letters(skill_profile, job_report, LETTER_STYLE)
-    print(documents)
+    generator.generate_letters(skill_profile, job_report, LETTER_STYLE)
 
 
 if __name__ == "__main__":
