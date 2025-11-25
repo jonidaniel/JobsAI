@@ -1,6 +1,6 @@
 # ---------- GENERATOR AGENT ----------
 
-# generate_application
+# generate_letters
 # _build_system_prompt
 # _build_system_prompt
 
@@ -17,15 +17,7 @@ logger = logging.getLogger(__name__)
 
 class GeneratorAgent:
     """
-    Generates human-quality output based on:
-    - the skill profile
-    - the job analysis report
-    - optional job-specific context (e.g., job title or employer)
-
-    Typical generation targets:
-    - job application email
-    - cover letter
-    - motivation/explanation of fit
+    Generate cover letter.
     """
 
     def __init__(self):
@@ -36,7 +28,7 @@ class GeneratorAgent:
     # ------------------------------
     # Public interface
     # ------------------------------
-    def generate_application(
+    def generate_letters(
         self,
         skill_profile: SkillProfile,
         job_report: str,
@@ -80,7 +72,7 @@ class GeneratorAgent:
 
     def _build_system_prompt(self, style: str) -> str:
         """
-        System prompt defines *how* the assistant writes.
+        Build system prompt.
 
         Args:
             style:
@@ -100,7 +92,7 @@ class GeneratorAgent:
         base_style = tone_instructions.get(style, tone_instructions["professional"])
 
         return (
-            "You are a professional job-application generator. "
+            "You are a professional cover letter writer. "
             "Your goal is to produce polished text suitable for real-world job applications.\n"
             "Follow this style:\n"
             f"{base_style}\n"
@@ -114,10 +106,7 @@ class GeneratorAgent:
         job_title: Optional[str],
     ) -> str:
         """
-        Constructs the full user prompt including:
-        - candidate skills
-        - job analysis report
-        - optional job title / employer info
+        Build user prompt.
 
         Args:
             skill_profile:
