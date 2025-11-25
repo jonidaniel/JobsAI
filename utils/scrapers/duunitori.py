@@ -117,6 +117,9 @@ def scrape_duunitori(
             ".grid-sandbox.grid-sandbox--tight-bottom.grid-sandbox--tight-top .grid.grid--middle.job-box.job-box--lg"
         )
 
+        # EHKÄ TURHA KOSKA VÄHÄN MYÖHEMMIN ON?
+        #  if len(job_cards) < 20:
+        #    break
         # If no results on current page
         if not job_cards:
             logger.info(
@@ -158,6 +161,11 @@ def scrape_duunitori(
 
         # Add delay to avoid hammering the website
         time.sleep(0.8)
+
+        # Break if less than 20 job cards on page
+        # (there's no next page)
+        if len(job_cards) < 20:
+            break
 
     logger.info(" Fetched %s listings for query '%s'", len(results), query)
 
