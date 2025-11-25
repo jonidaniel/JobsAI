@@ -9,3 +9,12 @@ DEEP_MODE = True  # Choose from True or False
 REPORT_SIZE = 10
 # The style or tone of the cover letters
 LETTER_STYLE = "professional"  # Choose from "professional", "friendly", or "confident"
+
+# The candidate's contact information for the cover letters
+CONTACT_INFORMATION = {
+    "website": "jonimakinen.com",
+    "linkedin": "linkedin.com/in/joni-daniel-makinen",
+    "github": "github.com/jonidaniel",
+    "email": "joni-makinen@live.fi",
+    "phone": "+358405882001",
+}
