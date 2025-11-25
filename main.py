@@ -11,7 +11,7 @@
 import logging
 
 from agents import (
-    AssessorAgent,
+    ProfilerAgent,
     SearcherAgent,
     ScorerAgent,
     ReporterAgent,
@@ -38,14 +38,14 @@ def main():
     """
 
     # Initialize agents with constant values
-    assessor = AssessorAgent(SKILL_PROFILE_PATH)
+    profiler = ProfilerAgent(SKILL_PROFILE_PATH)
     searcher = SearcherAgent(JOB_BOARDS, DEEP_MODE, JOB_LISTINGS_RAW_PATH)
     scorer = ScorerAgent(JOB_LISTINGS_RAW_PATH, JOB_LISTINGS_SCORED_PATH)
     reporter = ReporterAgent(JOB_LISTINGS_SCORED_PATH, REPORTS_PATH)
     generator = GeneratorAgent()
 
     # 1. Assess a candidate and return a skill profile of them
-    skill_profile = assessor.assess(SYSTEM_PROMPT, USER_PROMPT)
+    skill_profile = profiler.create_profile(SYSTEM_PROMPT, USER_PROMPT)
 
     # 2. Build search queries based on the skill profile
     # Then scrape job boards for job listings
@@ -60,9 +60,9 @@ def main():
     # 4. Write a report/an analysis on the findings and save it to /data/reports/job_report.txt
     report_text = reporter.generate_report(top_n=10)
 
-    # 5. Generate
-    kakka = generator.generate_application(report_text)
-    print(kakka)
+    # 5. Generate documents for each job
+    documents = generator.generate_application(skill_profile, report_text)
+    print(documents)
 
 
 if __name__ == "__main__":
