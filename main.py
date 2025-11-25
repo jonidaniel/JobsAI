@@ -25,6 +25,7 @@ from config.paths import (
     JOB_LISTINGS_RAW_PATH,
     JOB_LISTINGS_SCORED_PATH,
     REPORTS_PATH,
+    LETTERS_PATH,
 )
 
 logging.basicConfig(level=logging.INFO)
@@ -42,7 +43,7 @@ def main():
     searcher = SearcherAgent(JOB_BOARDS, DEEP_MODE, JOB_LISTINGS_RAW_PATH)
     scorer = ScorerAgent(JOB_LISTINGS_RAW_PATH, JOB_LISTINGS_SCORED_PATH)
     reporter = ReporterAgent(JOB_LISTINGS_SCORED_PATH, REPORTS_PATH)
-    generator = GeneratorAgent()
+    generator = GeneratorAgent(LETTERS_PATH)
 
     # 1. Assess a candidate and return a skill profile of them
     skill_profile = profiler.create_profile(SYSTEM_PROMPT, USER_PROMPT)
