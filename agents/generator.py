@@ -24,12 +24,13 @@ class GeneratorAgent:
     Generate cover letters.
     """
 
-    def __init__(self, letters_path: Path):
+    def __init__(self, letters_path: Path, timestamp: str):
         """
         Construct GeneratorAgent.
         """
 
         self.letters_path = letters_path
+        self.timestamp = timestamp
 
     # ------------------------------
     # Public interface
@@ -58,11 +59,9 @@ class GeneratorAgent:
         """
 
         system_prompt = self._build_system_prompt(letter_style)
-        user_prompt = self._build_user_prompt(
-            skill_profile, job_report, employer, job_title
-        )
+        user_prompt = self._build_user_prompt(skill_profile, job_report)
 
-        self._write_letter(job_title)
+        self._write_letter()
 
         logger.info(" GENERATING APPLICATION TEXT...")
 
@@ -163,7 +162,7 @@ class GeneratorAgent:
             - Keep it truthful, specific, and readable.
             """
 
-    def _write_letter(self, job_title: str):
+    def _write_letter(self):
         doc = Document()
 
         p = doc.add_paragraph()
@@ -184,7 +183,7 @@ class GeneratorAgent:
         for paragraph in body:
             doc.add_paragraph(paragraph)
 
-        filename = f"{job_title}.docx"
+        filename = f"{self.timestamp}_cover_letter.docx"
 
         # Save the cover letter
         doc.save(f"{self.letters_path}{filename}")
