@@ -20,7 +20,13 @@ from agents import (
 )
 
 from config.prompts import SYSTEM_PROMPT, USER_PROMPT
-from config.settings import JOB_BOARDS, DEEP_MODE, LETTER_STYLE, CONTACT_INFORMATION
+from config.settings import (
+    JOB_BOARDS,
+    DEEP_MODE,
+    REPORT_SIZE,
+    LETTER_STYLE,
+    CONTACT_INFORMATION,
+)
 from config.paths import (
     SKILL_PROFILES_PATH,
     JOB_LISTINGS_RAW_PATH,
@@ -63,7 +69,7 @@ def main():
     scorer.score_jobs(skill_profile=skill_profile)
 
     # 4. Write a report/an analysis on the findings and save it to /data/reports/job_report.txt
-    job_report = reporter.generate_report(skill_profile, top_n=10)
+    job_report = reporter.generate_report(skill_profile, REPORT_SIZE)
 
     # 5. Generate cover letters for each job
     generator.generate_letters(
