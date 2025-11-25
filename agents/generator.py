@@ -5,6 +5,7 @@
 # _build_system_prompt
 # _write_letter
 
+import os
 import logging
 from pathlib import Path
 from typing import Optional
@@ -42,7 +43,8 @@ class GeneratorAgent:
         letter_style: str,
         # employer: Optional[str] = None,
         # job_title: Optional[str] = None,
-    ) -> str:
+        # ) -> str:
+    ):
         """
         Produce a tailored job-application message based on
         the candidate's skills and the job report.
@@ -71,7 +73,7 @@ class GeneratorAgent:
 
         logger.info(" APPLICATION TEXT GENERATION COMPLETED\n")
 
-        return output
+        # return output
 
     # ------------------------------
     # Internal functions
@@ -109,8 +111,8 @@ class GeneratorAgent:
         self,
         skill_profile: SkillProfile,
         job_report: str,
-        employer: Optional[str],
-        job_title: Optional[str],
+        # employer: Optional[str],
+        # job_title: Optional[str],
     ) -> str:
         """
         Build user prompt.
@@ -141,8 +143,10 @@ class GeneratorAgent:
             "
         """
 
-        employer_text = f"Employer: {employer}\n" if employer else ""
-        title_text = f"Target job title: {job_title}\n" if job_title else ""
+        # employer_text = f"Employer: {employer}\n" if employer else ""
+        employer_text = f"Employer: empty\n"
+        # title_text = f"Target job title: {job_title}\n" if job_title else ""
+        title_text = f"Target job title: empty\n"
 
         return f"""
             Generate a tailored job-application message.
@@ -185,5 +189,7 @@ class GeneratorAgent:
 
         filename = f"{self.timestamp}_cover_letter.docx"
 
+        path = os.path.join(self.letters_path, filename)
+
         # Save the cover letter
-        doc.save(f"{self.letters_path}{filename}")
+        doc.save(path)
