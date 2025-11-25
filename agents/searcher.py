@@ -10,7 +10,7 @@ import json
 from typing import List, Dict
 
 from utils.queries import build_queries
-from utils.scrapers.duunitori import fetch_search_results
+from utils.scrapers.duunitori import fetch_duunitori_results
 
 logger = logging.getLogger(__name__)
 
@@ -66,7 +66,7 @@ class SearcherAgent:
             for job_board in self.job_boards:
                 logger.info(" Searching %s for query '%s'", job_board, query)
                 if job_board.lower() == "duunitori":
-                    jobs = fetch_search_results(query, deep_mode=self.deep_mode)
+                    jobs = fetch_duunitori_results(query, deep_mode=self.deep_mode)
                 else:
                     # Placeholder for other boards
                     jobs = []
