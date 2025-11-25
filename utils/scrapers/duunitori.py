@@ -1,5 +1,11 @@
 # ---------- DUUNITORI SCRAPER ----------
 
+# fetch_duunitori_results
+# _slugify_query
+# _safe_get
+# _parse_job_card
+# _fetch_job_detail
+
 # --- DESCRIPTION ---
 
 # 1. When given a query, fetches the job detail page and extracts the full description for each listing (deep mode)
@@ -10,7 +16,7 @@
 # If you see missed fields, inspect live HTML and tweak selectors
 # Deep mode causes one extra HTTP request per listing — plan API call rate/intervals accordingly
 # If you plan to run many queries frequently, add a persistent cache layer (disk/db) and respect robots.txt and Duunitori’s terms of service
-# You can easily switch to light mode by calling fetch_search_results(..., deep=False)
+# You can easily switch to light mode by calling fetch_duunitori_results(..., deep=False)
 
 # --- URL SCHEME ---
 
@@ -40,7 +46,7 @@ from config.headers import HEADERS_DUUNITORI
 logger = logging.getLogger(__name__)
 
 
-def fetch_search_results(
+def fetch_duunitori_results(
     query: str,
     num_pages: int = 10,
     deep_mode: bool = True,
@@ -68,7 +74,7 @@ def fetch_search_results(
     session.headers.update(HEADERS_DUUNITORI)
 
     # Make query URL compliant
-    query_slug = slugify_query(query)
+    query_slug = _slugify_query(query)
 
     results = []
     total_fetched = 0
@@ -81,7 +87,7 @@ def fetch_search_results(
         logger.info(" Fetching Duunitori search page: %s", search_url)
 
         # Get response safely
-        response = safe_get(session, search_url)
+        response = _safe_get(session, search_url)
 
         if not response:
             logger.warning(" Failed to fetch search page %s — stopping", search_url)
@@ -113,13 +119,13 @@ def fetch_search_results(
 
         # Iterate over job cards
         for card in cards:
-            job = parse_job_card(card)
+            job = _parse_job_card(card)
 
             # If in deep mode, and we have a URL
             if deep_mode and job.get("url"):
                 try:
                     # Fetch full job description
-                    detail = fetch_job_detail(session, job["url"])
+                    detail = _fetch_job_detail(session, job["url"])
 
                     if detail:
                         # Save the full job description under its own key
@@ -149,7 +155,7 @@ def fetch_search_results(
     return results
 
 
-def slugify_query(query: str) -> str:
+def _slugify_query(query: str) -> str:
     """
     Make query URL compliant (e.g. turn 'python developer' into 'python-developer').
 
@@ -172,7 +178,7 @@ def slugify_query(query: str) -> str:
     return quote_plus(q, safe="-")  # Percent-encode remaining unsafe chars
 
 
-def safe_get(
+def _safe_get(
     session: requests.Session,
     url: str,
     retries: int = 3,
@@ -222,7 +228,7 @@ def safe_get(
     return None
 
 
-def parse_job_card(card: BeautifulSoup) -> Dict:
+def _parse_job_card(card: BeautifulSoup) -> Dict:
     """
     Parse a search-result job card into a partial job dict
 
@@ -304,7 +310,7 @@ def parse_job_card(card: BeautifulSoup) -> Dict:
     }
 
 
-def fetch_job_detail(session: requests.Session, job_url: str, retries: int = 2) -> str:
+def _fetch_job_detail(session: requests.Session, job_url: str, retries: int = 2) -> str:
     """
     Fetch the job detail page and attempt to extract the full job description text.
 
@@ -320,7 +326,7 @@ def fetch_job_detail(session: requests.Session, job_url: str, retries: int = 2) 
     """
 
     # Get response safely
-    response = safe_get(session, job_url, retries=retries)
+    response = _safe_get(session, job_url, retries=retries)
 
     if not response or response.status_code != 200:
         logger.debug(
