@@ -1,16 +1,19 @@
 # ---------- SEARCHER AGENT ----------
 
 # search_jobs
-# _deduplicate_jobs
 # _save_raw_jobs
+# _deduplicate_jobs
 
 import os
 import logging
 import json
 from typing import List, Dict
 
+from utils.scrapers.duunitori import scrape_duunitori
+
+# from utils.scrapers.jobly import scrape_jobly
+
 from utils.queries import build_queries
-from utils.scrapers.duunitori import fetch_duunitori_results
 
 logger = logging.getLogger(__name__)
 
@@ -66,7 +69,7 @@ class SearcherAgent:
             for job_board in self.job_boards:
                 logger.info(" Searching %s for query '%s'", job_board, query)
                 if job_board.lower() == "duunitori":
-                    jobs = fetch_duunitori_results(query, deep_mode=self.deep_mode)
+                    jobs = scrape_duunitori(query, deep_mode=self.deep_mode)
                 else:
                     # Placeholder for other boards
                     jobs = []
@@ -81,6 +84,25 @@ class SearcherAgent:
     # ------------------------------
     # Internal functions
     # ------------------------------
+
+    def _save_raw_jobs(self, jobs: List[Dict], board: str, query: str):
+        """
+        Save raw job listings to /data/job_listings/raw/
+
+        Args:
+            jobs:
+            board:
+            query:
+        """
+
+        if not jobs:
+            return
+        safe_query = query.replace(" ", "_").replace("/", "_")
+        filename = f"{board.lower()}_{safe_query}.json"
+        path = os.path.join(self.jobs_raw_path, filename)
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(jobs, f, ensure_ascii=False, indent=2)
+        logger.info(" Saved %d raw jobs to /%s\n", len(jobs), path)
 
     def _deduplicate_jobs(self, jobs: List[Dict]) -> List[Dict]:
         """
@@ -102,22 +124,3 @@ class SearcherAgent:
                 deduped.append(job)
                 seen_urls.add(url)
         return deduped
-
-    def _save_raw_jobs(self, jobs: List[Dict], board: str, query: str):
-        """
-        Save raw job listings to /data/job_listings/raw/
-
-        Args:
-            jobs:
-            board:
-            query:
-        """
-
-        if not jobs:
-            return
-        safe_query = query.replace(" ", "_").replace("/", "_")
-        filename = f"{board.lower()}_{safe_query}.json"
-        path = os.path.join(self.jobs_raw_path, filename)
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump(jobs, f, ensure_ascii=False, indent=2)
-        logger.info(" Saved %d raw jobs to /%s\n", len(jobs), path)
