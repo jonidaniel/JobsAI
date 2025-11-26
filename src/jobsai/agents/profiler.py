@@ -11,7 +11,7 @@ import json
 from pathlib import Path
 from typing import Optional
 
-from pydantic import ValidationError
+# from pydantic import ValidationError
 
 from utils.llms import call_llm, extract_json
 from utils.normalization import normalize_parsed

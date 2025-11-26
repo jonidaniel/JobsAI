@@ -11,7 +11,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict
 
-from docx import Document
+# from docx import Document
 
 from utils.llms import call_llm
 from utils.normalization import normalize_text
