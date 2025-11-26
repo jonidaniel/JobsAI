@@ -1,14 +1,15 @@
 // Create slider row
-function createSliderRow(lang) {
+function createSliderRow(key) {
   return `
     <div class="flex flex-col w-full">
-      <label class="mb-1">${lang}</label>
+      <label class="mb-1">${key}</label>
       <input
         type="range"
         min="0"
         max="7"
         value="0"
-        class="w-full accent-blue-500"
+        class="slider w-full accent-blue-500"
+        data-key=${key}
       />
       <!-- Notch labels -->
       <div class="flex justify-between text-xs text-gray-600 mt-1">
