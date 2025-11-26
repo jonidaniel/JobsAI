@@ -76,3 +76,9 @@ section {
   font-size: 1.4rem;
   opacity: 0.85;
 }
+#contact a {
+  font-size: 1.4rem;
+  opacity: 0.85;
+  color: lightblue;
+  text-decoration: underline;
+}
