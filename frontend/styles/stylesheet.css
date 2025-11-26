@@ -64,10 +64,6 @@ section {
   border-left: 5px solid #7dd3fc;
   padding-left: 15px;
 }
-#search p {
-  font-size: 1.4rem;
-  opacity: 0.85;
-}
 
 /* Contact */
 #contact h2 {
