@@ -67,3 +67,9 @@
 - Made the generator agent somewhat work
 - Implemented versioned skill profile, raw jobs, scored jobs, and job report saving
 - Implemented dated file storing throughout the whole workflow
+
+### 2025/11/26
+
+- Refined reporter agent, now it builds honed cover letter writing instructions for generator agent
+- Made a massive refactor, now the project structure looks really good
+- Built the project UI up until the point where a clean result object is retrieved after submit button click
