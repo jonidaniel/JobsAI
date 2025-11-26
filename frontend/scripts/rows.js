@@ -1,18 +1,98 @@
-// Create slider row
-function createSliderRow(key) {
+// JSON strings that contain slider keys and values for each experience category
+const jsonStrings = [
+  '{"javascript":"JavaScript","html-css":"HTML/CSS","sql":"SQL","python":"Python","bash-shell":"Bash/Shell","typescript":"TypeScript","csharp":"C#","java":"Java","powershell":"PowerShell","cplusplus":"C++","c":"C","php":"PHP","go":"Go","rust":"Rust","kotlin":"Kotlin","lua":"Lua","ruby":"Ruby","dart":"Dart","assembly":"Assembly","swift":"Swift","groovy":"Groovy","visual-basic-dotnet":"Visual Basic (.Net)","perl":"Perl","r":"R","vba":"VBA","gdscript":"GDScript","scala":"Scala","elixir":"Elixir","matlab":"MATLAB","delphi":"Delphi","lisp":"Lisp","zig":"Zig","micropython":"MicroPython","erlang":"Erlang","fsharp":"F#","ada":"Ada","gleam":"Gleam","fortran":"Fortran","ocaml":"OCaml","prolog":"Prolog","cobol":"COBOL","mojo":"Mojo"}',
+  '{"postgresql":"PostgreSQL","mysql":"MySQL","sqlite":"SQLite","microsoft-sql-server":"Microsoft SQL Server","redis":"Redis","mongodb":"MongoDB","mariadb":"MariaDB","elasticsearch":"Elasticsearch","dynamodb":"Dynamodb","oracle":"Oracle","bigquery":"BigQuery","supabase1":"Supabase","cloud-firestore":"Cloud Firestore","h2":"H2","cosmos-db":"Cosmos DB","firebase-realtime-database":"Firebase Realtime Database","snowflake":"Snowflake","microsoft-access":"Microsoft Access","influxdb":"InfluxDB","duckdb":"DuckDB","databricks-sql":"Databricks SQL","cassandra":"Cassandra","neo4j":"Neo4J","clickhouse":"Clickhouse","valkey":"Valkey","amazon-redshift":"Amazon Redshift","ibm-db2":"IBM DB2","cockroachdb":"Cockroachdb","pocketbase":"Pocketbase","datomic":"Datomic"}',
+  '{"docker":"Docker","npm":"npm","amazon-web-services-aws":"Amazon Web Services (AWS)","pip":"Pip","kubernetes":"Kubernetes","microsoft-azure":"Microsoft Azure","vite":"Vite","homebrew":"Homebrew","google-cloud":"Google Cloud","yarn":"Yarn","make":"Make","nuget":"NuGet","webpack":"Webpack","cloudflare":"Cloudflare","terraform":"Terraform","apt":"APT","maven-build-tool":"Maven (build tool)","gradle":"Gradle","pnpm":"pnpm","cargo":"Cargo","firebase":"Firebase","prometheus":"Prometheus","msbuild":"MSBuild","composer":"Composer","ansible":"Ansible","digital-ocean":"Digital Ocean","podman":"Podman","chocolatey":"Chocolatey","vercel":"Vercel","datadog":"Datadog","poetry":"Poetry","pacman":"Pacman","netlify":"Netlify","heroku":"Heroku","bun":"Bun","supabase2":"Supabase","ninja":"Ninja","splunk":"Splunk","new-relic":"New Relic","railway":"Railway","ibm-cloud":"IBM Cloud","yandex-cloud":"Yandex Cloud"}',
+  '{"nodejs":"Node.js","react":"React","jquery":"jQuery","nextjs":"Next.js","aspdotnet-core":"ASP.NET Core","express":"Express","angular":"Angular","vuejs":"Vue.js","spring-boot":"Spring Boot","fastapi":"FastAPI","aspdotnet":"ASP.NET","flask":"Flask","wordpress":"WordPress","django":"Django","laravel":"Laravel","blazor":"Blazor","angularjs":"AngularJS","nestjs":"NestJS","svelte":"Svelte","ruby-on-rails":"Ruby on Rails","astro":"Astro","symfony":"Symfony","nuxtjs":"Nuxt.js","deno":"Deno","fastify":"Fastify","axum":"Axum","phoenix":"Phoenix","drupal":"Drupal"}',
+  '{"visual-studio-code":"Visual Studio Code","visual-studio":"Visual Studio","intellij-idea":"IntelliJ IDEA","notepadplusplus":"Notepad++","vim":"Vim","cursor":"Cursor","android-studio":"Android Studio","pycharm":"PyCharm","neovim":"Neovim","jupyter-nb-jupyterlab":"Jupyter Nb/JupyterLab","nano":"Nano","xcode":"Xcode","sublime-text":"Sublime Text","claude-code":"Claude Code","webstorm":"WebStorm","rider":"Rider","zed":"Zed","eclipse":"Eclipse","phpstorm":"PhpStorm","vscodium":"VSCodium","windsurf":"Windsurf","rustrover":"RustRover","lovabledotdev":"Lovable.dev","bolt":"Bolt","cline-and-or-roo":"Cline and/or Roo","aider":"Aider","trae":"Trae"}',
+  '{"openai-gpt":"OpenAI GPT","claude-sonnet":"Claude Sonnet","gemini-flash":"Gemini Flash","openai-reasoning":"OpenAI Reasoning","openai-image":"OpenAI Image","gemini-reasoning":"Gemini Reasoning","deepseek-reasoning":"DeepSeek Reasoning","meta-llama":"Meta Llama","deepseek-general":"DeepSeek General","x-grok":"X Grok","mistral":"Mistral","perplexity-sonar":"Perplexity Sonar","alibaba-qwen":"Alibaba Qwen","microsoft-phi-4-models":"Microsoft Phi-4 models","amazon-titan-models":"Amazon Titan models","cohere-command-a":"Cohere: Command A","reka-flash3-or-other-reka-models":"Reka (Flash 3 or other Reka models)"}',
+  '{"github":"GitHub","jira":"Jira","gitlab":"GitLab","confluence":"Confluence","markdown-file":"Markdown File","azure-devops":"Azure Devops","notion":"Notion","obsidian":"Obsidian","miro":"Miro","google-workspace":"Google Workspace","trello":"Trello","wikis":"Wikis","lucid-includes-lucidchart":"Lucid (includes Lucidchart)","google-colab":"Google Colab","asana":"Asana","doxygen":"Doxygen","clickup":"Clickup","linear":"Linear","redmine":"Redmine","mondaydotcom":"Monday.com","youtrack":"YouTrack","airtable":"Airtable","stack-overflow-for-teams":"Stack Overflow for Teams","microsoft-planner":"Microsoft Planner","coda":"Coda"}',
+  '{"windows":"Windows","macos":"MacOS","android":"Android","ubuntu":"Ubuntu","ios":"iOS","linux-non-wsl":"Linux (non-WSL)","windows-subsystem-for-linux-wsl":"Windows Subsystem for Linux (WSL)","debian":"Debian","arch":"Arch","ipados":"iPadOS","fedora":"Fedora","red-hat":"Red Hat","nixos":"NixOS","pop-os":"Pop!_OS","chromeos":"ChromeOS"}',
+];
+
+// Set HTML markup to slider containers
+let parsed = JSON.parse(jsonStrings[0]);
+for (i in parsed) {
+  document.getElementById(i).innerHTML = createSlider(i, parsed[i]);
+}
+parsed = JSON.parse(jsonStrings[1]);
+for (i in parsed) {
+  document.getElementById(i).innerHTML = createSlider(i, parsed[i]);
+}
+parsed = JSON.parse(jsonStrings[2]);
+for (i in parsed) {
+  document.getElementById(i).innerHTML = createSlider(i, parsed[i]);
+}
+parsed = JSON.parse(jsonStrings[3]);
+for (i in parsed) {
+  document.getElementById(i).innerHTML = createSlider(i, parsed[i]);
+}
+parsed = JSON.parse(jsonStrings[4]);
+for (i in parsed) {
+  document.getElementById(i).innerHTML = createSlider(i, parsed[i]);
+}
+parsed = JSON.parse(jsonStrings[5]);
+for (i in parsed) {
+  document.getElementById(i).innerHTML = createSlider(i, parsed[i]);
+}
+parsed = JSON.parse(jsonStrings[6]);
+for (i in parsed) {
+  document.getElementById(i).innerHTML = createSlider(i, parsed[i]);
+}
+parsed = JSON.parse(jsonStrings[7]);
+for (i in parsed) {
+  document.getElementById(i).innerHTML = createSlider(i, parsed[i]);
+}
+
+// Set HTML markup to text input containers
+document.getElementById("other1").innerHTML = createTextField(
+  "other1",
+  "Other"
+);
+document.getElementById("other2").innerHTML = createTextField(
+  "other2",
+  "Other"
+);
+document.getElementById("other3").innerHTML = createTextField(
+  "other3",
+  "Other"
+);
+document.getElementById("other4").innerHTML = createTextField(
+  "other4",
+  "Other"
+);
+document.getElementById("other5").innerHTML = createTextField(
+  "other5",
+  "Other"
+);
+document.getElementById("other6").innerHTML = createTextField(
+  "other6",
+  "Other"
+);
+document.getElementById("other7").innerHTML = createTextField(
+  "other7",
+  "Other"
+);
+document.getElementById("other8").innerHTML = createTextField(
+  "other8",
+  "Other"
+);
+
+// Create slider
+function createSlider(key, value) {
   return `
     <div class="flex flex-col w-full">
-      <label class="mb-1">${key}</label>
+      <label class="mb-1">${value}</label>
       <input
+        class="slider accent-blue-500 w-full"
         type="range"
         min="0"
         max="7"
         value="0"
-        class="slider w-full accent-blue-500"
         data-key=${key}
       />
       <!-- Notch labels -->
-      <div class="flex justify-between text-xs text-gray-600 mt-1">
+      <div class="flex justify-between mt-1 text-gray-600 text-xs">
         <span>0 yrs</span>
         <span>< 0.5 yrs</span>
         <span>< 1.0 yrs</span>
@@ -26,333 +106,16 @@ function createSliderRow(key) {
   `;
 }
 
-// Create input text row
-function createInputTextRow(key) {
+// Create text field
+function createTextField(key, value) {
   return `
-    <div class="flex justify-between items-center">
-      <span>${key}</span>
+    <div class="flex items-center justify-between">
+      <span>${value}</span>
       <input
+        class="input-field border border-gray-300 px-2 py-1 rounded w-2/3"
         type="text"
-        class="input-field w-2/3 border border-gray-300 rounded px-2 py-1"
         data-key=${key}
       />
     </div>
   `;
 }
-
-// Inject HTML into 'Programming, scripting, and markup languages' category slider containers
-document.getElementById("javascript").innerHTML = createSliderRow("JavaScript");
-document.getElementById("html-css").innerHTML = createSliderRow("HTML/CSS");
-document.getElementById("sql").innerHTML = createSliderRow("SQL");
-document.getElementById("python").innerHTML = createSliderRow("Python");
-document.getElementById("bash-shell").innerHTML = createSliderRow("Bash/Shell");
-document.getElementById("typescript").innerHTML = createSliderRow("TypeScript");
-document.getElementById("csharp").innerHTML = createSliderRow("C#");
-document.getElementById("java").innerHTML = createSliderRow("Java");
-document.getElementById("powershell").innerHTML = createSliderRow("PowerShell");
-document.getElementById("cplusplus").innerHTML = createSliderRow("C++");
-document.getElementById("c").innerHTML = createSliderRow("C");
-document.getElementById("php").innerHTML = createSliderRow("PHP");
-document.getElementById("go").innerHTML = createSliderRow("Go");
-document.getElementById("rust").innerHTML = createSliderRow("Rust");
-document.getElementById("kotlin").innerHTML = createSliderRow("Kotlin");
-document.getElementById("lua").innerHTML = createSliderRow("Lua");
-document.getElementById("ruby").innerHTML = createSliderRow("Ruby");
-document.getElementById("dart").innerHTML = createSliderRow("Dart");
-document.getElementById("assembly").innerHTML = createSliderRow("Assembly");
-document.getElementById("swift").innerHTML = createSliderRow("Swift");
-document.getElementById("groovy").innerHTML = createSliderRow("Groovy");
-document.getElementById("visual-basic-dotnet").innerHTML = createSliderRow(
-  "Visual Basic (.Net)"
-);
-document.getElementById("perl").innerHTML = createSliderRow("Perl");
-document.getElementById("r").innerHTML = createSliderRow("R");
-document.getElementById("vba").innerHTML = createSliderRow("VBA");
-document.getElementById("gdscript").innerHTML = createSliderRow("GDScript");
-document.getElementById("scala").innerHTML = createSliderRow("Scala");
-document.getElementById("elixir").innerHTML = createSliderRow("Elixir");
-document.getElementById("matlab").innerHTML = createSliderRow("MATLAB");
-document.getElementById("delphi").innerHTML = createSliderRow("Delphi");
-document.getElementById("lisp").innerHTML = createSliderRow("Lisp");
-document.getElementById("zig").innerHTML = createSliderRow("Zig");
-document.getElementById("micropython").innerHTML =
-  createSliderRow("MicroPython");
-document.getElementById("erlang").innerHTML = createSliderRow("Erlang");
-document.getElementById("fsharp").innerHTML = createSliderRow("F#");
-document.getElementById("ada").innerHTML = createSliderRow("Ada");
-document.getElementById("gleam").innerHTML = createSliderRow("Gleam");
-document.getElementById("fortran").innerHTML = createSliderRow("Fortran");
-document.getElementById("ocaml").innerHTML = createSliderRow("OCaml");
-document.getElementById("prolog").innerHTML = createSliderRow("Prolog");
-document.getElementById("cobol").innerHTML = createSliderRow("COBOL");
-document.getElementById("mojo").innerHTML = createSliderRow("Mojo");
-// Inject HTML into 'Programming, scripting, and markup languages' category text input container
-document.getElementById("other1").innerHTML = createInputTextRow("Other1");
-
-// Inject HTML into 'Databases' category slider containers
-document.getElementById("postgresql").innerHTML = createSliderRow("PostgreSQL");
-document.getElementById("mysql").innerHTML = createSliderRow("MySQL");
-document.getElementById("sqlite").innerHTML = createSliderRow("SQLite");
-document.getElementById("microsoft-sql-server").innerHTML = createSliderRow(
-  "Microsoft SQL Server"
-);
-document.getElementById("redis").innerHTML = createSliderRow("Redis");
-document.getElementById("mongodb").innerHTML = createSliderRow("MongoDB");
-document.getElementById("mariadb").innerHTML = createSliderRow("MariaDB");
-document.getElementById("elasticsearch").innerHTML =
-  createSliderRow("Elasticsearch");
-document.getElementById("dynamodb").innerHTML = createSliderRow("Dynamodb");
-document.getElementById("oracle").innerHTML = createSliderRow("Oracle");
-document.getElementById("bigquery").innerHTML = createSliderRow("BigQuery");
-document.getElementById("supabase1").innerHTML = createSliderRow("Supabase");
-document.getElementById("cloud-firestore").innerHTML =
-  createSliderRow("Cloud Firestore");
-document.getElementById("h2").innerHTML = createSliderRow("H2");
-document.getElementById("cosmos-db").innerHTML = createSliderRow("Cosmos DB");
-document.getElementById("firebase-realtime-database").innerHTML =
-  createSliderRow("Firebase Realtime Database");
-document.getElementById("snowflake").innerHTML = createSliderRow("Snowflake");
-document.getElementById("microsoft-access").innerHTML =
-  createSliderRow("Microsoft Access");
-document.getElementById("influxdb").innerHTML = createSliderRow("InfluxDB");
-document.getElementById("duckdb").innerHTML = createSliderRow("DuckDB");
-document.getElementById("databricks-sql").innerHTML =
-  createSliderRow("Databricks SQL");
-document.getElementById("cassandra").innerHTML = createSliderRow("Cassandra");
-document.getElementById("neo4j").innerHTML = createSliderRow("Neo4J");
-document.getElementById("clickhouse").innerHTML = createSliderRow("Clickhouse");
-document.getElementById("valkey").innerHTML = createSliderRow("Valkey");
-document.getElementById("amazon-redshift").innerHTML =
-  createSliderRow("Amazon Redshift");
-document.getElementById("ibm-db2").innerHTML = createSliderRow("IBM DB2");
-document.getElementById("cockroachdb").innerHTML =
-  createSliderRow("Cockroachdb");
-document.getElementById("pocketbase").innerHTML = createSliderRow("Pocketbase");
-document.getElementById("datomic").innerHTML = createSliderRow("Datomic");
-// Inject HTML into 'Databases' category text input container
-document.getElementById("other2").innerHTML = createInputTextRow("Other2");
-
-// Inject HTML into 'Cloud development' category slider containers
-document.getElementById("docker").innerHTML = createSliderRow("Docker");
-document.getElementById("npm").innerHTML = createSliderRow("npm");
-document.getElementById("amazon-web-services-aws").innerHTML = createSliderRow(
-  "Amazon Web Services (AWS)"
-);
-document.getElementById("pip").innerHTML = createSliderRow("Pip");
-document.getElementById("kubernetes").innerHTML = createSliderRow("Kubernetes");
-document.getElementById("microsoft-azure").innerHTML =
-  createSliderRow("Microsoft Azure");
-document.getElementById("vite").innerHTML = createSliderRow("Vite");
-document.getElementById("homebrew").innerHTML = createSliderRow("Homebrew");
-document.getElementById("google-cloud").innerHTML =
-  createSliderRow("Google Cloud");
-document.getElementById("yarn").innerHTML = createSliderRow("Yarn");
-document.getElementById("make").innerHTML = createSliderRow("Make");
-document.getElementById("nuget").innerHTML = createSliderRow("NuGet");
-document.getElementById("webpack").innerHTML = createSliderRow("Webpack");
-document.getElementById("cloudflare").innerHTML = createSliderRow("Cloudflare");
-document.getElementById("terraform").innerHTML = createSliderRow("Terraform");
-document.getElementById("apt").innerHTML = createSliderRow("APT");
-document.getElementById("maven-build-tool").innerHTML =
-  createSliderRow("Maven (build tool)");
-document.getElementById("gradle").innerHTML = createSliderRow("Gradle");
-document.getElementById("pnpm").innerHTML = createSliderRow("pnpm");
-document.getElementById("cargo").innerHTML = createSliderRow("Cargo");
-document.getElementById("firebase").innerHTML = createSliderRow("Firebase");
-document.getElementById("prometheus").innerHTML = createSliderRow("Prometheus");
-document.getElementById("msbuild").innerHTML = createSliderRow("MSBuild");
-document.getElementById("composer").innerHTML = createSliderRow("Composer");
-document.getElementById("ansible").innerHTML = createSliderRow("Ansible");
-document.getElementById("digital-ocean").innerHTML =
-  createSliderRow("Digital Ocean");
-document.getElementById("podman").innerHTML = createSliderRow("Podman");
-document.getElementById("chocolatey").innerHTML = createSliderRow("Chocolatey");
-document.getElementById("vercel").innerHTML = createSliderRow("Vercel");
-document.getElementById("datadog").innerHTML = createSliderRow("Datadog");
-document.getElementById("poetry").innerHTML = createSliderRow("Poetry");
-document.getElementById("pacman").innerHTML = createSliderRow("Pacman");
-document.getElementById("netlify").innerHTML = createSliderRow("Netlify");
-document.getElementById("heroku").innerHTML = createSliderRow("Heroku");
-document.getElementById("bun").innerHTML = createSliderRow("Bun");
-document.getElementById("supabase2").innerHTML = createSliderRow("Supabase");
-document.getElementById("ninja").innerHTML = createSliderRow("Ninja");
-document.getElementById("splunk").innerHTML = createSliderRow("Splunk");
-document.getElementById("new-relic").innerHTML = createSliderRow("New Relic");
-document.getElementById("railway").innerHTML = createSliderRow("Railway");
-document.getElementById("ibm-cloud").innerHTML = createSliderRow("IBM Cloud");
-document.getElementById("yandex-cloud").innerHTML =
-  createSliderRow("Yandex Cloud");
-// Inject HTML into 'Cloud development' category text input container
-document.getElementById("other3").innerHTML = createInputTextRow("Other3");
-
-// Inject HTML into 'Web frameworks and technologies' category slider containers
-document.getElementById("nodejs").innerHTML = createSliderRow("Node.js");
-document.getElementById("react").innerHTML = createSliderRow("React");
-document.getElementById("jquery").innerHTML = createSliderRow("jQuery");
-document.getElementById("nextjs").innerHTML = createSliderRow("Next.js");
-document.getElementById("aspdotnet-core").innerHTML =
-  createSliderRow("ASP.NET Core");
-document.getElementById("express").innerHTML = createSliderRow("Express");
-document.getElementById("angular").innerHTML = createSliderRow("Angular");
-document.getElementById("vuejs").innerHTML = createSliderRow("Vue.js");
-document.getElementById("spring-boot").innerHTML =
-  createSliderRow("Spring Boot");
-document.getElementById("fastapi").innerHTML = createSliderRow("FastAPI");
-document.getElementById("aspdotnet").innerHTML = createSliderRow("ASP.NET");
-document.getElementById("flask").innerHTML = createSliderRow("Flask");
-document.getElementById("wordpress").innerHTML = createSliderRow("WordPress");
-document.getElementById("django").innerHTML = createSliderRow("Django");
-document.getElementById("laravel").innerHTML = createSliderRow("Laravel");
-document.getElementById("blazor").innerHTML = createSliderRow("Blazor");
-document.getElementById("angularjs").innerHTML = createSliderRow("AngularJS");
-document.getElementById("nestjs").innerHTML = createSliderRow("NestJS");
-document.getElementById("svelte").innerHTML = createSliderRow("Svelte");
-document.getElementById("ruby-on-rails").innerHTML =
-  createSliderRow("Ruby on Rails");
-document.getElementById("astro").innerHTML = createSliderRow("Astro");
-document.getElementById("symfony").innerHTML = createSliderRow("Symfony");
-document.getElementById("nuxtjs").innerHTML = createSliderRow("Nuxt.js");
-document.getElementById("deno").innerHTML = createSliderRow("Deno");
-document.getElementById("fastify").innerHTML = createSliderRow("Fastify");
-document.getElementById("axum").innerHTML = createSliderRow("Axum");
-document.getElementById("phoenix").innerHTML = createSliderRow("Phoenix");
-document.getElementById("drupal").innerHTML = createSliderRow("Drupal");
-// Inject HTML into 'Web frameworks and technologies' category text input container
-document.getElementById("other4").innerHTML = createInputTextRow("Other4");
-
-// Inject HTML into 'Dev IDEs' category slider containers
-document.getElementById("visual-studio-code").innerHTML =
-  createSliderRow("Visual Studio Code");
-document.getElementById("visual-studio").innerHTML =
-  createSliderRow("Visual Studio");
-document.getElementById("intellij-idea").innerHTML =
-  createSliderRow("IntelliJ IDEA");
-document.getElementById("notepadplusplus").innerHTML =
-  createSliderRow("Notepad++");
-document.getElementById("vim").innerHTML = createSliderRow("Vim");
-document.getElementById("cursor").innerHTML = createSliderRow("Cursor");
-document.getElementById("android-studio").innerHTML =
-  createSliderRow("Android Studio");
-document.getElementById("pycharm").innerHTML = createSliderRow("PyCharm");
-document.getElementById("neovim").innerHTML = createSliderRow("Neovim");
-document.getElementById("jupyter-nb-jupyterlab").innerHTML = createSliderRow(
-  "Jupyter Nb/JupyterLab"
-);
-document.getElementById("nano").innerHTML = createSliderRow("Nano");
-document.getElementById("xcode").innerHTML = createSliderRow("Xcode");
-document.getElementById("sublime-text").innerHTML =
-  createSliderRow("Sublime Text");
-document.getElementById("claude-code").innerHTML =
-  createSliderRow("Claude Code");
-document.getElementById("webstorm").innerHTML = createSliderRow("WebStorm");
-document.getElementById("rider").innerHTML = createSliderRow("Rider");
-document.getElementById("zed").innerHTML = createSliderRow("Zed");
-document.getElementById("eclipse").innerHTML = createSliderRow("Eclipse");
-document.getElementById("phpstorm").innerHTML = createSliderRow("PhpStorm");
-document.getElementById("vscodium").innerHTML = createSliderRow("VSCodium");
-document.getElementById("windsurf").innerHTML = createSliderRow("Windsurf");
-document.getElementById("rustrover").innerHTML = createSliderRow("RustRover");
-document.getElementById("lovabledotdev").innerHTML =
-  createSliderRow("Lovable.dev");
-document.getElementById("bolt").innerHTML = createSliderRow("Bolt");
-document.getElementById("cline-and-or-roo").innerHTML =
-  createSliderRow("Cline and/or Roo");
-document.getElementById("aider").innerHTML = createSliderRow("Aider");
-document.getElementById("trae").innerHTML = createSliderRow("Trae");
-// Inject HTML into 'Dev IDEs' category text input container
-document.getElementById("other5").innerHTML = createInputTextRow("Other5");
-
-// Inject HTML into 'Large language models' category slider containers
-document.getElementById("openai-gpt").innerHTML = createSliderRow("OpenAI GPT");
-document.getElementById("claude-sonnet").innerHTML =
-  createSliderRow("Claude Sonnet");
-document.getElementById("gemini-flash").innerHTML =
-  createSliderRow("Gemini Flash");
-document.getElementById("openai-reasoning").innerHTML =
-  createSliderRow("OpenAI Reasoning");
-document.getElementById("openai-image").innerHTML =
-  createSliderRow("OpenAI Image");
-document.getElementById("gemini-reasoning").innerHTML =
-  createSliderRow("Gemini Reasoning");
-document.getElementById("deepseek-reasoning").innerHTML =
-  createSliderRow("DeepSeek Reasoning");
-document.getElementById("meta-llama").innerHTML = createSliderRow("Meta Llama");
-document.getElementById("deepseek-general").innerHTML =
-  createSliderRow("DeepSeek General");
-document.getElementById("x-grok").innerHTML = createSliderRow("X Grok");
-document.getElementById("mistral").innerHTML = createSliderRow("Mistral");
-document.getElementById("perplexity-sonar").innerHTML =
-  createSliderRow("Perplexity Sonar");
-document.getElementById("alibaba-qwen").innerHTML =
-  createSliderRow("Alibaba Qwen");
-document.getElementById("microsoft-phi-4-models").innerHTML = createSliderRow(
-  "Microsoft Phi-4 models"
-);
-document.getElementById("amazon-titan-models").innerHTML = createSliderRow(
-  "Amazon Titan models"
-);
-document.getElementById("cohere-command-a").innerHTML =
-  createSliderRow("Cohere: Command A");
-document.getElementById("reka-flash3-or-other-reka-models").innerHTML =
-  createSliderRow("Reka (Flash 3 or other Reka models)");
-// Inject HTML into 'Large language models' category text input container
-document.getElementById("other6").innerHTML = createInputTextRow("Other6");
-
-// Inject HTML into 'Code documentation and collaboration tools' category slider containers
-document.getElementById("github").innerHTML = createSliderRow("GitHub");
-document.getElementById("jira").innerHTML = createSliderRow("Jira");
-document.getElementById("gitlab").innerHTML = createSliderRow("GitLab");
-document.getElementById("confluence").innerHTML = createSliderRow("Confluence");
-document.getElementById("markdown-file").innerHTML =
-  createSliderRow("Markdown File");
-document.getElementById("azure-devops").innerHTML =
-  createSliderRow("Azure Devops");
-document.getElementById("notion").innerHTML = createSliderRow("Notion");
-document.getElementById("obsidian").innerHTML = createSliderRow("Obsidian");
-document.getElementById("miro").innerHTML = createSliderRow("Miro");
-document.getElementById("google-workspace").innerHTML =
-  createSliderRow("Google Workspace");
-document.getElementById("trello").innerHTML = createSliderRow("Trello");
-document.getElementById("wikis").innerHTML = createSliderRow("Wikis");
-document.getElementById("lucid-includes-lucidchart").innerHTML =
-  createSliderRow("Lucid (includes Lucidchart)");
-document.getElementById("google-colab").innerHTML =
-  createSliderRow("Google Colab");
-document.getElementById("asana").innerHTML = createSliderRow("Asana");
-document.getElementById("doxygen").innerHTML = createSliderRow("Doxygen");
-document.getElementById("clickup").innerHTML = createSliderRow("Clickup");
-document.getElementById("linear").innerHTML = createSliderRow("Linear");
-document.getElementById("redmine").innerHTML = createSliderRow("Redmine");
-document.getElementById("mondaydotcom").innerHTML =
-  createSliderRow("Monday.com");
-document.getElementById("youtrack").innerHTML = createSliderRow("YouTrack");
-document.getElementById("airtable").innerHTML = createSliderRow("Airtable");
-document.getElementById("stack-overflow-for-teams").innerHTML = createSliderRow(
-  "Stack Overflow for Teams"
-);
-document.getElementById("microsoft-planner").innerHTML =
-  createSliderRow("Microsoft Planner");
-document.getElementById("coda").innerHTML = createSliderRow("Coda");
-// Inject HTML into 'Code documentation and collaboration tools' category text input container
-document.getElementById("other7").innerHTML = createInputTextRow("Other7");
-
-// Inject HTML into 'Computer operating systems' category slider containers
-document.getElementById("windows").innerHTML = createSliderRow("Windows");
-document.getElementById("macos").innerHTML = createSliderRow("MacOS");
-document.getElementById("android").innerHTML = createSliderRow("Android");
-document.getElementById("ubuntu").innerHTML = createSliderRow("Ubuntu");
-document.getElementById("ios").innerHTML = createSliderRow("iOS");
-document.getElementById("linux-non-wsl").innerHTML =
-  createSliderRow("Linux (non-WSL)");
-document.getElementById("windows-subsystem-for-linux-wsl").innerHTML =
-  createSliderRow("Windows Subsystem for Linux (WSL)");
-document.getElementById("debian").innerHTML = createSliderRow("Debian");
-document.getElementById("arch").innerHTML = createSliderRow("Arch");
-document.getElementById("ipados").innerHTML = createSliderRow("iPadOS");
-document.getElementById("fedora").innerHTML = createSliderRow("Fedora");
-document.getElementById("red-hat").innerHTML = createSliderRow("Red Hat");
-document.getElementById("nixos").innerHTML = createSliderRow("NixOS");
-document.getElementById("pop-os").innerHTML = createSliderRow("Pop!_OS");
-document.getElementById("chromeos").innerHTML = createSliderRow("ChromeOS");
-// Inject HTML into 'Computer operating systems' category text input container
-document.getElementById("other8").innerHTML = createInputTextRow("Other8");
