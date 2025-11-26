@@ -76,6 +76,10 @@ section {
   display: block;
 }
 
+.input-field {
+  padding-bottom: 100px;
+}
+
 /* Contact section */
 #contact h2 {
   font-size: 2.4rem;
