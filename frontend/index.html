@@ -6,38 +6,49 @@
     <title>JobsAI — Automated Job Searching</title>
     <link rel="stylesheet" type="text/css" href="./styles/stylesheet.css" />
     <link rel="icon" type="image/x-icon" href="./assets/icons/favicon.ico" />
-    <!-- Tailwind CSS via CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
   </head>
   <body>
+    <!-- Navigation bar -->
     <nav>
       <a href="#hero">Home </a>
       <a href="#search">Search</a>
       <a href="#contact">Contact</a>
     </nav>
 
+    <!-- Hero section -->
     <section id="hero">
       <h1>JobsAI</h1>
       <p>Let us do your job searching for you</p>
     </section>
 
+    <!-- Search section -->
     <section id="search">
       <h2>Search</h2>
 
-      <!-- Experience category (languages, databases...) wrapper -->
+      <!-- Experience category wrapper:
+       'Programming, Scripting, and Markup Languages',
+       'Databases',
+       'Cloud Development',
+       'Web Frameworks and Technologies',
+       'Dev IDEs',
+       'Large Language Models',
+       'Code Documentation and Collaboration',
+       'Computer Operating Systems' -->
       <div id="experience-categories-container" class="relative">
-        <!-- TailwindCSS form-->
+        <!-- TailwindCSS form -->
         <div
           class="bg-gray-800 p-10 rounded-2xl shadow-lg w-full max-w-2xl space-y-10"
         >
-          <!-- Main Header -->
+          <!-- Main header -->
           <h1 class="text-3xl font-semibold text-white">
             Fill in your experience levels in each category and we will search
             jobs relevant to you
           </h1>
 
+          <!-- 'Programming, Scripting, and Markup Languages' experience category -->
           <section>
-            <!-- Upper navigation arrows -->
+            <!-- Top left/right arrows -->
             <div class="flex justify-between items-center mb-6">
               <button class="prev-btn text-white text-2xl px-3 py-1">
                 &larr;
@@ -50,7 +61,7 @@
               </button>
             </div>
 
-            <!-- Programming, scripting, and markup languages experience sliders -->
+            <!-- Sliders -->
             <div class="space-y-4">
               <div id="javascript"></div>
               <div id="html-css"></div>
@@ -94,11 +105,11 @@
               <div id="prolog"></div>
               <div id="cobol"></div>
               <div id="mojo"></div>
-              <!-- Programming, scripting, and markup languages experience text input row -->
+              <!-- Text field -->
               <div id="other1"></div>
             </div>
 
-            <!-- Lower navigation arrows -->
+            <!-- Bottom left/right arrows -->
             <div class="lower-arrows flex justify-between items-center mb-6">
               <button class="prev-btn text-white text-2xl px-3 py-1">
                 &larr;
@@ -112,8 +123,9 @@
             </div>
           </section>
 
+          <!-- 'Databases' experience category -->
           <section>
-            <!-- Upper navigation arrows -->
+            <!-- Top left/right arrows -->
             <div class="flex justify-between items-center mb-6">
               <button class="prev-btn text-white text-2xl px-3 py-1">
                 &larr;
@@ -126,7 +138,7 @@
               </button>
             </div>
 
-            <!-- Databases experience sliders -->
+            <!-- Sliders -->
             <div class="space-y-4">
               <div id="postgresql"></div>
               <div id="mysql"></div>
@@ -158,11 +170,11 @@
               <div id="cockroachdb"></div>
               <div id="pocketbase"></div>
               <div id="datomic"></div>
-              <!-- Databases experience text input row -->
+              <!-- Text field -->
               <div id="other2"></div>
             </div>
 
-            <!-- Lower navigation arrows -->
+            <!-- Bottom left/right arrows -->
             <div class="lower-arrows flex justify-between items-center mb-6">
               <button class="prev-btn text-white text-2xl px-3 py-1">
                 &larr;
@@ -176,8 +188,9 @@
             </div>
           </section>
 
+          <!-- 'Cloud Development' experience category -->
           <section>
-            <!-- Upper navigation arrows -->
+            <!-- Top left/right arrows -->
             <div class="flex justify-between items-center mb-6">
               <button class="prev-btn text-white text-2xl px-3 py-1">
                 &larr;
@@ -190,7 +203,7 @@
               </button>
             </div>
 
-            <!-- Cloud development experience sliders -->
+            <!-- Sliders -->
             <div class="space-y-4">
               <div id="docker"></div>
               <div id="npm"></div>
@@ -234,11 +247,11 @@
               <div id="railway"></div>
               <div id="ibm-cloud"></div>
               <div id="yandex-cloud"></div>
-              <!-- Cloud development experience text input row -->
+              <!-- Text field -->
               <div id="other3"></div>
             </div>
 
-            <!-- Lower navigation arrows -->
+            <!-- Bottom left/right arrows -->
             <div class="lower-arrows flex justify-between items-center mb-6">
               <button class="prev-btn text-white text-2xl px-3 py-1">
                 &larr;
@@ -252,8 +265,9 @@
             </div>
           </section>
 
+          <!-- 'Web Frameworks and Technologies' experience category -->
           <section>
-            <!-- Upper navigation arrows -->
+            <!-- Top left/right arrows -->
             <div class="flex justify-between items-center mb-6">
               <button class="prev-btn text-white text-2xl px-3 py-1">
                 &larr;
@@ -266,7 +280,7 @@
               </button>
             </div>
 
-            <!-- Web frameworks and technologies experience sliders -->
+            <!-- Sliders -->
             <div class="space-y-4">
               <div id="nodejs"></div>
               <div id="react"></div>
@@ -297,11 +311,11 @@
               <div id="phoenix"></div>
               <div id="drupal"></div>
               <!-- REMEMBER TO ADD REACT NATIVE -->
-              <!-- Web frameworks and technologies experience text input row -->
+              <!-- Text field -->
               <div id="other4"></div>
             </div>
 
-            <!-- Lower navigation arrows -->
+            <!-- Bottom left/right arrows -->
             <div class="lower-arrows flex justify-between items-center mb-6">
               <button class="prev-btn text-white text-2xl px-3 py-1">
                 &larr;
@@ -315,8 +329,9 @@
             </div>
           </section>
 
+          <!-- 'Dev IDEs' experience category -->
           <section>
-            <!-- Upper navigation arrows -->
+            <!-- Top left/right arrows -->
             <div class="flex justify-between items-center mb-6">
               <button class="prev-btn text-white text-2xl px-3 py-1">
                 &larr;
@@ -329,7 +344,7 @@
               </button>
             </div>
 
-            <!-- Dev IDEs experience sliders -->
+            <!-- Sliders -->
             <div class="space-y-4">
               <div id="visual-studio-code"></div>
               <div id="visual-studio"></div>
@@ -358,11 +373,11 @@
               <div id="cline-and-or-roo"></div>
               <div id="aider"></div>
               <div id="trae"></div>
-              <!-- Dev IDEs experience text input row -->
+              <!-- Text field -->
               <div id="other5"></div>
             </div>
 
-            <!-- Lower navigation arrows -->
+            <!-- Bottom left/right arrows -->
             <div class="lower-arrows flex justify-between items-center mb-6">
               <button class="prev-btn text-white text-2xl px-3 py-1">
                 &larr;
@@ -376,8 +391,9 @@
             </div>
           </section>
 
+          <!-- 'Large Language Models' experience category -->
           <section>
-            <!-- Upper navigation arrows -->
+            <!-- Top left/right arrows -->
             <div class="flex justify-between items-center mb-6">
               <button class="prev-btn text-white text-2xl px-3 py-1">
                 &larr;
@@ -390,7 +406,7 @@
               </button>
             </div>
 
-            <!-- Large language models experience sliders -->
+            <!-- Sliders -->
             <div class="space-y-4">
               <div id="openai-gpt"></div>
               <div id="claude-sonnet"></div>
@@ -409,11 +425,11 @@
               <div id="amazon-titan-models"></div>
               <div id="cohere-command-a"></div>
               <div id="reka-flash3-or-other-reka-models"></div>
-              <!-- Large language models experience text input row -->
+              <!-- Text field -->
               <div id="other6"></div>
             </div>
 
-            <!-- Lower navigation arrows -->
+            <!-- Bottom left/right arrows -->
             <div class="lower-arrows flex justify-between items-center mb-6">
               <button class="prev-btn text-white text-2xl px-3 py-1">
                 &larr;
@@ -427,8 +443,9 @@
             </div>
           </section>
 
+          <!-- 'Code Documentation and Collaboration' experience category -->
           <section>
-            <!-- Upper navigation arrows -->
+            <!-- Top left/right arrows -->
             <div class="flex justify-between items-center mb-6">
               <button class="prev-btn text-white text-2xl px-3 py-1">
                 &larr;
@@ -441,7 +458,7 @@
               </button>
             </div>
 
-            <!-- Code documentation and collaboration experience sliders -->
+            <!-- Sliders -->
             <div class="space-y-4">
               <div id="github"></div>
               <div id="jira"></div>
@@ -468,11 +485,11 @@
               <div id="stack-overflow-for-teams"></div>
               <div id="microsoft-planner"></div>
               <div id="coda"></div>
-              <!-- Code documentation and collaboration experience text input row -->
+              <!-- Text field -->
               <div id="other7"></div>
             </div>
 
-            <!-- Lower navigation arrows -->
+            <!-- Bottom left/right arrows -->
             <div class="lower-arrows flex justify-between items-center mb-6">
               <button class="prev-btn text-white text-2xl px-3 py-1">
                 &larr;
@@ -486,8 +503,9 @@
             </div>
           </section>
 
+          <!-- 'Computer Operating Systems' experience category -->
           <section>
-            <!-- Upper navigation arrows -->
+            <!-- Top left/right arrows -->
             <div class="flex justify-between items-center mb-6">
               <button class="prev-btn text-white text-2xl px-3 py-1">
                 &larr;
@@ -500,7 +518,7 @@
               </button>
             </div>
 
-            <!-- Computer operating systems experience sliders -->
+            <!-- Sliders -->
             <div class="space-y-4">
               <div id="windows"></div>
               <div id="macos"></div>
@@ -517,11 +535,11 @@
               <div id="nixos"></div>
               <div id="pop-os"></div>
               <div id="chromeos"></div>
-              <!-- Computer operating systems experience text input row -->
+              <!-- Text field -->
               <div id="other8"></div>
             </div>
 
-            <!-- Lower navigation arrows -->
+            <!-- Bottom left/right arrows -->
             <div class="lower-arrows flex justify-between items-center mb-6">
               <button class="prev-btn text-white text-2xl px-3 py-1">
                 &larr;
@@ -548,6 +566,7 @@
       </div>
     </section>
 
+    <!-- Contact section -->
     <section id="contact">
       <h2>Contact</h2>
       <p>+358405882001</p>
