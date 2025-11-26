@@ -89,7 +89,7 @@ document.getElementById("elasticsearch").innerHTML =
 document.getElementById("dynamodb").innerHTML = createSliderRow("Dynamodb");
 document.getElementById("oracle").innerHTML = createSliderRow("Oracle");
 document.getElementById("bigquery").innerHTML = createSliderRow("BigQuery");
-document.getElementById("supabase").innerHTML = createSliderRow("Supabase");
+document.getElementById("supabase1").innerHTML = createSliderRow("Supabase");
 document.getElementById("cloud-firestore").innerHTML =
   createSliderRow("Cloud Firestore");
 document.getElementById("h2").innerHTML = createSliderRow("H2");
@@ -157,7 +157,7 @@ document.getElementById("pacman").innerHTML = createSliderRow("Pacman");
 document.getElementById("netlify").innerHTML = createSliderRow("Netlify");
 document.getElementById("heroku").innerHTML = createSliderRow("Heroku");
 document.getElementById("bun").innerHTML = createSliderRow("Bun");
-document.getElementById("supabase").innerHTML = createSliderRow("Supabase");
+document.getElementById("supabase2").innerHTML = createSliderRow("Supabase");
 document.getElementById("ninja").innerHTML = createSliderRow("Ninja");
 document.getElementById("splunk").innerHTML = createSliderRow("Splunk");
 document.getElementById("new-relic").innerHTML = createSliderRow("New Relic");
