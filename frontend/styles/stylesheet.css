@@ -44,7 +44,7 @@ section {
   justify-content: center;
 }
 
-/* Hero */
+/* Hero section */
 #hero {
   text-align: center;
 }
@@ -57,7 +57,7 @@ section {
   opacity: 0.85;
 }
 
-/* Search */
+/* Search section */
 #search h2 {
   font-size: 2.4rem;
   margin-bottom: 20px;
@@ -65,7 +65,14 @@ section {
   padding-left: 15px;
 }
 
-/* Contact */
+#experience-categories-container section {
+  display: none;
+}
+#experience-categories-container section.active {
+  display: block;
+}
+
+/* Contact section */
 #contact h2 {
   font-size: 2.4rem;
   margin-bottom: 20px;
