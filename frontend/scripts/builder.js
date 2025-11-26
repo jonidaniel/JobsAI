@@ -11,72 +11,30 @@ const jsonStrings = [
 ];
 
 // Set HTML markup to slider container divs
-let parsed = JSON.parse(jsonStrings[0]);
-for (i in parsed) {
-  document.getElementById(i).innerHTML = createSlider(i, parsed[i]);
-}
-parsed = JSON.parse(jsonStrings[1]);
-for (i in parsed) {
-  document.getElementById(i).innerHTML = createSlider(i, parsed[i]);
-}
-parsed = JSON.parse(jsonStrings[2]);
-for (i in parsed) {
-  document.getElementById(i).innerHTML = createSlider(i, parsed[i]);
-}
-parsed = JSON.parse(jsonStrings[3]);
-for (i in parsed) {
-  document.getElementById(i).innerHTML = createSlider(i, parsed[i]);
-}
-parsed = JSON.parse(jsonStrings[4]);
-for (i in parsed) {
-  document.getElementById(i).innerHTML = createSlider(i, parsed[i]);
-}
-parsed = JSON.parse(jsonStrings[5]);
-for (i in parsed) {
-  document.getElementById(i).innerHTML = createSlider(i, parsed[i]);
-}
-parsed = JSON.parse(jsonStrings[6]);
-for (i in parsed) {
-  document.getElementById(i).innerHTML = createSlider(i, parsed[i]);
-}
-parsed = JSON.parse(jsonStrings[7]);
-for (i in parsed) {
-  document.getElementById(i).innerHTML = createSlider(i, parsed[i]);
+// Iterate 8 times over (one for every experience category: 'Programming, Scripting, and Markup Languages', 'Databases' ...)
+for (let j = 0; j < 8; j++) {
+  // Holds HTML of all sliders in an experience category
+  let div = document.createElement("div");
+  // From jsonStrings array, grab one JSON string at a time
+  let parsed = JSON.parse(jsonStrings[j]);
+  // For every key (e.g. "javascript") in parsed JSON
+  for (i in parsed) {
+    // Pass key (i, e.g. "javascript") and value (parsed[i], e.g. "JavaScript") to a function that creates the sliders
+    div.append(createSlider(i, parsed[i]));
+  }
+  // div.innerText now holds all sliders of an experience category
+  // Pass them all at once to the DOM
+  document.getElementById(`sliders${j + 1}`).innerHTML = div.innerText;
 }
 
 // Set HTML markup to text input container divs
-document.getElementById("other1").innerHTML = createTextField(
-  "other1",
-  "Other"
-);
-document.getElementById("other2").innerHTML = createTextField(
-  "other2",
-  "Other"
-);
-document.getElementById("other3").innerHTML = createTextField(
-  "other3",
-  "Other"
-);
-document.getElementById("other4").innerHTML = createTextField(
-  "other4",
-  "Other"
-);
-document.getElementById("other5").innerHTML = createTextField(
-  "other5",
-  "Other"
-);
-document.getElementById("other6").innerHTML = createTextField(
-  "other6",
-  "Other"
-);
-document.getElementById("other7").innerHTML = createTextField(
-  "other7",
-  "Other"
-);
-document.getElementById("other8").innerHTML = createTextField(
-  "other8",
-  "Other"
-);
+// Iterate 8 times over (there are 8 text fields)
+for (let i = 1; i < 9; i++) {
+  document.getElementById(`text-field${i}`).innerHTML = createTextField(
+    `text-field${i}`,
+    "Other"
+  );
+}
 
 // Create slider
 function createSlider(key, value) {
