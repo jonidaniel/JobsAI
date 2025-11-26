@@ -27,7 +27,7 @@ for (let j = 0; j < 8; j++) {
   document.getElementById(`sliders${j + 1}`).innerHTML = div.innerText;
 }
 
-// Set HTML markup to text input container divs
+// Set HTML markup to text field container divs
 // Iterate 8 times over (there are 8 text fields)
 for (let i = 1; i < 9; i++) {
   document.getElementById(`text-field${i}`).innerHTML = createTextField(
