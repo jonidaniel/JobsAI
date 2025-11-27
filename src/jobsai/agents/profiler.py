@@ -21,10 +21,10 @@ from typing import Optional
 
 from pydantic import ValidationError
 
-from utils.llms import call_llm, extract_json
-from utils.normalization import normalize_parsed
+from jobsai.config.schemas import SkillProfile
 
-from config.schemas import SkillProfile
+from jobsai.utils.llms import call_llm, extract_json
+from jobsai.utils.normalization import normalize_parsed
 
 logger = logging.getLogger(__name__)
 
