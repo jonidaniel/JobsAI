@@ -14,7 +14,7 @@ Author: Joni Mäkinen
 import logging
 from datetime import datetime
 
-from agents import (
+from jobsai.agents import (
     ProfilerAgent,
     SearcherAgent,
     ScorerAgent,
@@ -22,15 +22,15 @@ from agents import (
     GeneratorAgent,
 )
 
-from config.prompts import SYSTEM_PROMPT, USER_PROMPT
-from config.settings import (
+from jobsai.config.prompts import SYSTEM_PROMPT, USER_PROMPT
+from jobsai.config.settings import (
     JOB_BOARDS,
     DEEP_MODE,
     REPORT_SIZE,
     LETTER_STYLE,
     CONTACT_INFORMATION,
 )
-from config.paths import (
+from jobsai.config.paths import (
     SKILL_PROFILES_PATH,
     JOB_LISTINGS_RAW_PATH,
     JOB_LISTINGS_SCORED_PATH,
@@ -80,5 +80,6 @@ def main():
     )
 
 
+# For running as standalone with 'uv run src/jobsai/main.py'
 if __name__ == "__main__":
     main()
