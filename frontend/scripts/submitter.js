@@ -35,22 +35,31 @@ function main() {
       result[key] = textField.value.trim();
     });
 
-    console.log(result);
-
     async function myFunc(answers) {
-      const response = await fetch("http://localhost:8000/api/endpoint", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(answers),
-      });
-      //console.log(response.body);
-      return response;
+      try {
+        const response = await fetch("http://localhost:8000/api/endpoint", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(answers),
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        // Parse the JSON body
+        const data = await response.json();
+        console.log("Backend response:", data);
+
+        if (data.status === "completed") {
+          console.log("Pipeline finished successfully!");
+        }
+      } catch (err) {
+        console.error("Fetch error:", err);
+      }
     }
     // Send to backend
-    const response = myFunc(result);
-    response.then((asd) => {
-      console.log(asd);
-    });
+    myFunc(result);
   });
 }
 
