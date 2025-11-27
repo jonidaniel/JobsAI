@@ -8,10 +8,11 @@ To run:
 """
 
 import logging
-from typing import Dict, Any
 
 from pydantic import BaseModel, ConfigDict
 from fastapi import FastAPI
+
+import jobsai.main as jobsai
 
 logger = logging.getLogger(__name__)
 
@@ -32,36 +33,22 @@ class FrontendPayload(BaseModel):
     model_config = ConfigDict(extra="allow")  # Allow dynamic keys
 
 
-# ------------- Pipeline Function -------------
-
-
-def run(frontend_answers: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Triggers the complete JobsAI pipeline using the existing agent architecture.
-    Returns a summary dictionary of what was generated.
-    """
-
-    return {
-        "status": "completed",
-    }
-
-
 # ------------- API Route -------------
 @app.post("/api/endpoint")
-# async def trigger_pipeline(payload: Dict[str, Any]):
 async def trigger_pipeline(payload: FrontendPayload):
     """
     Endpoint called from the frontend.
-    The request body is the JSON collected from sliders & text fields.
+
+    The request body is the JSON collected from slider and text field questions.
     """
 
-    # print(payload)
     data = payload.model_dump()
 
     logging.info(f"Received API request with {len(data)} fields.")
 
-    result = run(data)
-    return result
+    jobsai.main(data)
+
+    return {"status": "completed"}
 
 
 # ------------- Run Standalone -------------
