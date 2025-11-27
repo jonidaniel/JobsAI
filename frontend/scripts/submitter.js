@@ -38,14 +38,19 @@ function main() {
     console.log(result);
 
     async function myFunc(answers) {
-      await fetch("http://localhost:8000/api/endpoint", {
+      const response = await fetch("http://localhost:8000/api/endpoint", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(answers),
       });
+      //console.log(response.body);
+      return response;
     }
     // Send to backend
-    myFunc(result);
+    const response = myFunc(result);
+    response.then((asd) => {
+      console.log(asd);
+    });
   });
 }
 
