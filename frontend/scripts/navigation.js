@@ -1,6 +1,12 @@
-// Gather all section tags (i.e. experience categories: languages, databases...)
-// under experience-category-container div to an array
-document.addEventListener("DOMContentLoaded", () => {
+/*
+ JobsAI/frontend/scripts/navigation.js
+
+ Contains code related to navigating between different question sets by clicking the left/right arrows.
+*/
+
+function main() {
+  // Gather all section tags (i.e. experience categories: languages, databases...)
+  // under experience-category-container div to an array
   const experienceCategories = Array.from(
     document.querySelectorAll("#experience-categories-wrapper section")
   );
@@ -60,4 +66,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Show first section on load
   showCategory(currentIndex, false); // false for not refreshing but loading page for the first time
-});
+}
+
+document.addEventListener("DOMContentLoaded", main);

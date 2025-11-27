@@ -1,5 +1,10 @@
-// When DOM content is loaded
-document.addEventListener("DOMContentLoaded", () => {
+/*
+ JobsAI/frontend/scripts/submit.js
+
+ Handles submit button clicks.
+*/
+
+function main() {
   // Grab the submit button
   const submitBtn = document.getElementById("submit-btn");
 
@@ -30,4 +35,6 @@ document.addEventListener("DOMContentLoaded", () => {
     // Send to backend
     // fetch("/api/submit", { method: "POST", body: JSON.stringify(result) });
   });
-});
+}
+
+document.addEventListener("DOMContentLoaded", main);
