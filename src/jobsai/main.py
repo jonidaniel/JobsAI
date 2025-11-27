@@ -1,12 +1,15 @@
-# ---------- JOBSAI ----------
+"""
+JOBSAI
+BACKEND ENTRY POINT
 
-# Version: 0.1.0
-# Date: Fall 2025
-# Author: Joni Mäkinen
+Version: 0.1.0
+Date: Fall 2025
+Author: Joni Mäkinen
 
-# An agentic AI system for end-to-end automated job searching and job application document generation:
-# enter your skills and preferences to the system once and get job recommendations and cover letters delivered to you continuously.
-# Checks input resources consistently and updates search queries autonomously.
+An agentic AI system for end-to-end automated job searching and job application document generation:
+enter your skills and preferences to the system once and get job recommendations and cover letters delivered to you continuously.
+Checks input resources consistently and updates search queries autonomously.
+"""
 
 import logging
 from datetime import datetime

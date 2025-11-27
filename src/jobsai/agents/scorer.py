@@ -1,10 +1,18 @@
-# ---------- SCORER AGENT ----------
+"""
+JobsAI/src/jobsai/agents/scorer.py
 
-# score_jobs
-# _load_job_listings
-# _job_identity
-# _compute_job_score
-# _save_scored_jobs
+Acts as the SCORER AGENT.
+
+CLASSES:
+    ScorerAgent
+
+FUNCTIONS (in order of workflow):
+    1. ScorerAgent.score_jobs           (public use)
+    2. ScorerAgent._load_job_listings   (internal use)
+    3. ScorerAgent._job_identity        (internal use)
+    4. ScorerAgent._compute_job_score   (internal use)
+    5. ScorerAgent._save_scored_jobs    (internal use)
+"""
 
 import os
 import logging

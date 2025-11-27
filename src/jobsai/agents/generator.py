@@ -1,9 +1,17 @@
-# ---------- GENERATOR AGENT ----------
+"""
+JobsAI/src/jobsai/agents/generator.py
 
-# generate_letters
-# _build_system_prompt
-# _build_user_prompt
-# _write_letter
+Acts as the GENERATOR AGENT.
+
+CLASSES:
+    GeneratorAgent
+
+FUNCTIONS (in order of workflow):
+    1. GeneratorAgent.generate_letters     (public use)
+    2. GeneratorAgent._build_system_prompt (internal use)
+    3. GeneratorAgent._build_user_prompt   (internal use)
+    4. GeneratorAgent._write_letter        (internal use)
+"""
 
 import os
 import logging

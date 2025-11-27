@@ -1,7 +1,15 @@
-# ---------- REPORTER AGENT ----------
+"""
+JobsAI/src/jobsai/agents/reporter.py
 
-# generate_report
-# _load_scored_jobs
+Acts as the REPORTER AGENT.
+
+CLASSES:
+    ReporterAgent
+
+FUNCTIONS (in order of workflow):
+    1. ReporterAgent.generate_report      (public use)
+    2. ReporterAgent._load_scored_jobs    (internal use)
+"""
 
 import os
 import logging

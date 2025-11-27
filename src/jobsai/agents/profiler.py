@@ -1,9 +1,17 @@
-# ---------- PROFILER AGENT ----------
+"""
+JobsAI/src/jobsai/agents/profiler.py
 
-# create_profile
-# _merge_profiles
-# _load_profile
-# _save_profile
+Acts as the PROFILER AGENT.
+
+CLASSES:
+    ProfilerAgent
+
+FUNCTIONS (in order of workflow):
+    1. ProfilerAgent.create_profile   (public use)
+    2. ProfilerAgent._merge_profiles  (internal use)
+    3. ProfilerAgent._load_profile    (internal use)
+    4. ProfilerAgent._save_profile    (internal use)
+"""
 
 import os
 import logging

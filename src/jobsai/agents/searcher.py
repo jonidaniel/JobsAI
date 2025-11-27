@@ -1,8 +1,16 @@
-# ---------- SEARCHER AGENT ----------
+"""
+JobsAI/src/jobsai/agents/searcher.py
 
-# search_jobs
-# _save_raw_jobs
-# _deduplicate_jobs
+Acts as the SEARCHER AGENT.
+
+CLASSES:
+    SearcherAgent
+
+FUNCTIONS (in order of workflow):
+    1. SearcherAgent.search_jobs          (public use)
+    2. SearcherAgent._save_raw_jobs       (internal use)
+    3. SearcherAgent._deduplicate_jobs    (internal use)
+"""
 
 import os
 import logging
