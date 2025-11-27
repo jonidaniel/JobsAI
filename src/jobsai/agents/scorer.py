@@ -20,9 +20,9 @@ import json
 from pathlib import Path
 from typing import List, Dict
 
-from utils.normalization import normalize_list
+from jobsai.config.schemas import SkillProfile
 
-from config.schemas import SkillProfile
+from jobsai.utils.normalization import normalize_list
 
 logger = logging.getLogger(__name__)
 
