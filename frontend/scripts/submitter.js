@@ -37,8 +37,15 @@ function main() {
 
     console.log(result);
 
+    async function myFunc(answers) {
+      await fetch("http://localhost:8000/api/endpoint", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(answers),
+      });
+    }
     // Send to backend
-    // fetch("/api/submit", { method: "POST", body: JSON.stringify(result) });
+    myFunc(result);
   });
 }
 
