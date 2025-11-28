@@ -26,7 +26,6 @@ from jobsai.agents import (
 )
 
 from jobsai.config.paths import (
-    JOB_LISTINGS_SCORED_PATH,
     REPORTS_PATH,
     LETTERS_PATH,
 )
@@ -56,8 +55,8 @@ def main(submits: Dict) -> Document:
     # Initialize agents with constant values
     profiler = ProfilerAgent(timestamp)
     searcher = SearcherAgent(JOB_BOARDS, DEEP_MODE, timestamp)
-    scorer = ScorerAgent(JOB_LISTINGS_SCORED_PATH, timestamp)
-    reporter = ReporterAgent(JOB_LISTINGS_SCORED_PATH, REPORTS_PATH, timestamp)
+    scorer = ScorerAgent(timestamp)
+    reporter = ReporterAgent(REPORTS_PATH, timestamp)
     generator = GeneratorAgent(LETTERS_PATH, timestamp)
 
     # WILL BE ACCEPTED FROM FRONTEND FROM A TEXT FIELD LATER
