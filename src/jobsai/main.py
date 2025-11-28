@@ -54,14 +54,14 @@ def main(submits: Dict) -> Document:
     """
 
     # A constant timestamp for the whole workflow
-    TIMESTAMP = datetime.now().strftime("%Y%m%d_%H%M%S")
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
     # Initialize agents with constant values
-    profiler = ProfilerAgent(SKILL_PROFILES_PATH, TIMESTAMP)
-    searcher = SearcherAgent(JOB_BOARDS, DEEP_MODE, JOB_LISTINGS_RAW_PATH, TIMESTAMP)
-    scorer = ScorerAgent(JOB_LISTINGS_RAW_PATH, JOB_LISTINGS_SCORED_PATH, TIMESTAMP)
-    reporter = ReporterAgent(JOB_LISTINGS_SCORED_PATH, REPORTS_PATH, TIMESTAMP)
-    generator = GeneratorAgent(LETTERS_PATH, TIMESTAMP)
+    profiler = ProfilerAgent(SKILL_PROFILES_PATH, timestamp)
+    searcher = SearcherAgent(JOB_BOARDS, DEEP_MODE, JOB_LISTINGS_RAW_PATH, timestamp)
+    scorer = ScorerAgent(JOB_LISTINGS_RAW_PATH, JOB_LISTINGS_SCORED_PATH, timestamp)
+    reporter = ReporterAgent(JOB_LISTINGS_SCORED_PATH, REPORTS_PATH, timestamp)
+    generator = GeneratorAgent(LETTERS_PATH, timestamp)
 
     # WILL BE ACCEPTED FROM FRONTEND FROM A TEXT FIELD LATER
     user_input = "My name is Joni Potala.\nI have developed software since 2020.\
@@ -92,8 +92,8 @@ def main(submits: Dict) -> Document:
 
     return {
         "document": document,
-        "timestamp": TIMESTAMP,
-        "filename": f"{TIMESTAMP}_cover_letter.docx",
+        "timestamp": timestamp,
+        "filename": f"{timestamp}_cover_letter.docx",
     }
 
 
