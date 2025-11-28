@@ -13,6 +13,9 @@ Author: Joni Mäkinen
 
 import logging
 from datetime import datetime
+from typing import Dict
+
+from docx import Document
 
 from jobsai.agents import (
     ProfilerAgent,
@@ -43,7 +46,7 @@ logging.basicConfig(level=logging.INFO)
 # logging.basicConfig(level=logging.DEBUG)
 
 
-def main(submits):
+def main(submits: Dict) -> Document:
     """
     Launch JobsAI.
     """
@@ -81,13 +84,17 @@ def main(submits):
     job_report = reporter.generate_report(skill_profile, REPORT_SIZE)
 
     # 5. Generate cover letters for each job
-    response = generator.generate_letters(
+    document = generator.generate_letters(
         skill_profile, job_report, LETTER_STYLE, CONTACT_INFORMATION
     )
 
-    return response
+    return {
+        "document": document,
+        "timestamp": TIMESTAMP,
+        "filename": f"{TIMESTAMP}_cover_letter.docx",
+    }
 
 
 # For running as standalone with 'uv run src/jobsai/main.py'
 if __name__ == "__main__":
-    main()
+    main({})
