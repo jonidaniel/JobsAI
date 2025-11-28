@@ -1,10 +1,4 @@
-/*
- JobsAI/frontend/scripts/builder.js
-
- Builds the question sets.
-*/
-
-function main() {
+export default function builder() {
   // Creates HTML for slider questions
   function createSlider(key, value) {
     return `
@@ -67,7 +61,7 @@ function main() {
     // From jsonStrings array, grab one JSON string at a time
     let parsed = JSON.parse(jsonStrings[j]);
     // For every key (e.g. "javascript") in parsed JSON
-    for (i in parsed) {
+    for (let i in parsed) {
       // Pass key (i, e.g. "javascript") and value (parsed[i], e.g. "JavaScript") to a function that creates the sliders
       div.append(createSlider(i, parsed[i]));
     }
@@ -85,5 +79,3 @@ function main() {
     );
   }
 }
-
-document.addEventListener("DOMContentLoaded", main);

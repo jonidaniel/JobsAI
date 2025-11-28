@@ -1,10 +1,4 @@
-/*
- JobsAI/frontend/scripts/submitter.js
-
- Handles submit button clicks.
-*/
-
-function main() {
+export default function submitter() {
   const submitBtn = document.getElementById("submit-btn");
 
   // Submit button is clicked
@@ -39,52 +33,30 @@ function main() {
       }
     });
 
-    async function downloadDocx(payload) {
+    async function myFunc(answers) {
       try {
         const response = await fetch("http://localhost:8000/api/endpoint", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(answers),
         });
 
         if (!response.ok) {
-          throw new Error(`Server error: ${response.status}`);
+          throw new Error(`HTTP error! status: ${response.status}`);
         }
 
-        // Get the response as a blob (binary)
-        const blob = await response.blob();
+        // Parse the JSON body
+        const data = await response.json();
+        console.log("Backend response:", data);
 
-        // Get the filename from Content-Disposition header if available
-        const contentDisposition = response.headers.get("Content-Disposition");
-        let filename = "document.docx"; // default fallback
-        if (contentDisposition) {
-          const match = contentDisposition.match(/filename="?(.+)"?/);
-          if (match && match[1]) filename = match[1];
+        if (data.status === "completed") {
+          console.log("Pipeline finished successfully!");
         }
-
-        // Create a temporary URL for the blob
-        const url = window.URL.createObjectURL(blob);
-
-        // Create a temporary link element to trigger download
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-
-        // Clean up the blob URL
-        window.URL.revokeObjectURL(url);
-      } catch (error) {
-        console.error("Download failed:", error);
+      } catch (err) {
+        console.error("Fetch error:", err);
       }
     }
-
     // Send to backend
-    downloadDocx(result);
+    myFunc(result);
   });
 }
-
-document.addEventListener("DOMContentLoaded", main);

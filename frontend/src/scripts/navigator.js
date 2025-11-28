@@ -1,10 +1,4 @@
-/*
- JobsAI/frontend/scripts/navigator.js
-
- Contains code related to navigating between different question sets by clicking the left/right arrows.
-*/
-
-function main() {
+export default function navigator() {
   // Toggles which question set (1–8) is visible
   function showQuestionSet(currentIndex, refreshing = true) {
     // Iterate over all question sets
@@ -38,7 +32,7 @@ function main() {
     const rightArrows = questionSet.querySelectorAll(".next-btn");
 
     // Add listeners to both left arrows
-    for (arrow of leftArrows) {
+    for (let arrow of leftArrows) {
       // Left arrow is clicked
       arrow.addEventListener("click", () => {
         // If questionSetIndex is 0 (i.e. if currently showing question set 1/8),
@@ -55,7 +49,7 @@ function main() {
     }
 
     // Add listeners to both right arrows
-    for (arrow of rightArrows) {
+    for (let arrow of rightArrows) {
       // Right arrow is clicked
       arrow.addEventListener("click", () => {
         // Set currentIndex as ????????????????????????????????????????????????????
@@ -68,5 +62,3 @@ function main() {
 
   showQuestionSet(currentIndex, false); // false indicates that the page is being loaded for the first time
 }
-
-document.addEventListener("DOMContentLoaded", main);
