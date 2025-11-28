@@ -21,8 +21,8 @@ from typing import Dict, Optional
 
 from pydantic import ValidationError
 
-from jobsai.config.prompts import USER_PROMPT_BASE  # ADDED
-from jobsai.config.schemas import SkillProfile
+from jobsai.config.prompts import USER_PROMPT_BASE
+from jobsai.config.schemas import SkillProfile, SUBMITS_MAP, OUTPUT_SCHEMA
 
 from jobsai.utils.llms import call_llm, extract_json
 from jobsai.utils.normalization import normalize_parsed
@@ -58,7 +58,6 @@ class ProfilerAgent:
     # Public interface
     # ------------------------------
     def create_profile(
-        # self, system_prompt: str, user_prompt: str
         self,
         system_prompt: str,
         submits: Dict,
@@ -77,8 +76,41 @@ class ProfilerAgent:
             profile: the candidate's skill profile
         """
 
-        # BUILD PROMPT
-        user_prompt = USER_PROMPT_BASE
+        # WILL BE ACCEPTED FROM FRONTEND FROM A TEXT FIELD LATER
+        user_input = "My name is Joni Potala.\nI have developed software since 2020.\
+            I have built and published multiple full-stack apps (frontend, backend, database, desktop, mobile).\
+                I have built multi-agent orchestrations with OpenAI Agents SDK for half a year.\
+                    I have very good soft skills."
+
+        # Build prompt
+        for key, value in submits.items():
+            # Map key to proper term (e.g. "javascript to "JavaScript")
+            for item, mapped in SUBMITS_MAP.items():
+                if item == key:
+                    key = mapped
+            # Convert frontend's index-like values into actual years
+            if value == 1:
+                value = "less than half a year"
+            if value == 2:
+                value = "less than a year"
+            if value == 3:
+                value = "less than 1.5 years"
+            if value == 4:
+                value = "less than 2 years"
+            if value == 5:
+                value = "less than 2.5 years"
+            if value == 6:
+                value = "less than 3 years"
+            if value == 7:
+                value = "over 3 years"
+            experience = f"\nI have {value} of experience with {key}."
+            user_input = user_input + experience
+
+        # Insert the user prompt and the output schema into the user prompt base to create the final prompt
+        user_prompt = USER_PROMPT_BASE.format(
+            user_input_placeholder=user_input, output_schema=OUTPUT_SCHEMA
+        )
+        print(user_prompt)
 
         print()
         logger.info(" CREATING SKILL PROFILE...")
