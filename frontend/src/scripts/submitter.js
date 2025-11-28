@@ -33,30 +33,50 @@ export default function submitter() {
       }
     });
 
-    async function myFunc(answers) {
+    async function downloadDocx(payload) {
       try {
         const response = await fetch("http://localhost:8000/api/endpoint", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(answers),
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
         });
 
         if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+          throw new Error(`Server error: ${response.status}`);
         }
 
-        // Parse the JSON body
-        const data = await response.json();
-        console.log("Backend response:", data);
+        // Get the response as a blob (binary)
+        const blob = await response.blob();
 
-        if (data.status === "completed") {
-          console.log("Pipeline finished successfully!");
+        // Get the filename from Content-Disposition header if available
+        const contentDisposition = response.headers.get("Content-Disposition");
+        let filename = "document.docx"; // default fallback
+        if (contentDisposition) {
+          const match = contentDisposition.match(/filename="?(.+)"?/);
+          if (match && match[1]) filename = match[1];
         }
-      } catch (err) {
-        console.error("Fetch error:", err);
+
+        // Create a temporary URL for the blob
+        const url = window.URL.createObjectURL(blob);
+
+        // Create a temporary link element to trigger download
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+
+        // Clean up the blob URL
+        window.URL.revokeObjectURL(url);
+      } catch (error) {
+        console.error("Download failed:", error);
       }
     }
+
     // Send to backend
-    myFunc(result);
+    downloadDocx(result);
   });
 }
