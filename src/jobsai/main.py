@@ -58,8 +58,14 @@ def main(submits):
     reporter = ReporterAgent(JOB_LISTINGS_SCORED_PATH, REPORTS_PATH, TIMESTAMP)
     generator = GeneratorAgent(LETTERS_PATH, TIMESTAMP)
 
+    # WILL BE ACCEPTED FROM FRONTEND FROM A TEXT FIELD LATER
+    user_input = "My name is Joni Potala.\nI have developed software since 2020.\
+        I have built and published multiple full-stack apps (frontend, backend, database, desktop, mobile).\
+            I have built multi-agent orchestrations with OpenAI Agents SDK for half a year.\
+                I have very good soft skills."
+
     # 1. Assess a candidate and return a skill profile of them
-    skill_profile = profiler.create_profile(SYSTEM_PROMPT, submits)
+    skill_profile = profiler.create_profile(SYSTEM_PROMPT, user_input, submits)
 
     # 2. Build search queries based on the skill profile
     # Then scrape job boards for job listings
