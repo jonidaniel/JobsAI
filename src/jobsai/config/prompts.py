@@ -1,68 +1,49 @@
 # ---------- PROMPTS ----------
 
-from jobsai.config.schemas import OUTPUT_SCHEMA
+SYSTEM_PROMPT = """You are the Profiler agent for an agentic AI system.
+The system is designed to automate most of a candidate's job searching and applying process.
 
-SYSTEM_PROMPT = """
-You are the Skill Assessment Agent for an agentic AI system that automates job searching.
+You will receive a text input from the candidate.
+The text input will contain their own description of what their technical and soft skills are.
+Your task is to create a 'skill profile' of the candidate by extracting relevant information from the text input.
 
-Your job is to extract and structure a candidate's technical and soft skills
-based on their LinkedIn profile, personal websites, résumé, GitHub projects, and other inputs.
+The skill profile MUST be a valid JSON object that follows this schema EXACTLY:
 
-You must produce:
-- a consistent and normalized skill profile
-- a set of job search keyword suggestions
-- a clean JSON object following the required schema
+{output_schema}
 
-Your output MUST be valid JSON. Do not include any commentary, explanations, or markdown.
-Do not add fields not present in the schema.
+Include fields even if they do not have values.
+Do not add fields that are not present in the schema.
+
+Once you find a match between a piece of information in the text input and one of the fields in the JSON object schema,
+you place an appropriate, concise and normalized (e.g., "py" -> "Python", "js" -> "JavaScript") value inside the right field in the JSON object.
 Do not invent skills or experience that are not explicitly mentioned or strongly implied.
-Normalize skill names (e.g., "js" -> "JavaScript", "py" -> "Python").
+Do not include any commentary, explanations, or markdown.
 
-Be concise and avoid duplicates.
-"""
+"name" should contain the candidate's name.
+"core_languages" should contain core programming languages.
+"frameworks_and_libraries" should contain frameworks and libraries.
+"tools_and_platforms" should contain tools and platforms.
+"agentic_ai_experience" should contain things related to agentic AI.
+"ai_ml_experience" should contain things related to artificial intelligence and machine learning.
+"soft_skills" should contain general/soft work skills.
+"projects_mentioned" should contain short slugs or titles (no full descriptions).
+"experience_level"."Python" should contain your numerical value estimate.
+"experience_level"."JavaScript" should contain your numerical value estimate.
+"experience_level"."Agentic AI" should contain your numerical value estimate.
+"experience_level"."AI/ML" should contain your numerical value estimate.
+"job_search_keywords" should contain realistic search terms.
 
-# USER_INPUT = """
-# Joni Mäkinen has developed software since 2020.
-# He has built and published multiple full-stack apps (frontend, backend, database, desktop, mobile).
-# He has 3 years of experience with Git.
-# He has 2 years of experience with web development.
-# He has 2 years of experience with Node.js development.
-# He has 2 years of experience with JavaScript.
-# He has 1.5 years of experience with SQL.
-# He has 1 year of experience with AWS.
-# He has 1 year of experience with Python.
-# He has 1 year of experience with React.
-# He has 0.5 years of experience with Scikit-learn.
-# He has 0.5 years of experience with PyTorch.
-# He has little experience with React Native.
-# He has little experience with Java, Kotlin, C++, and C#.
-# He has little experience with LangChain, OpenAI Agents, and CrewAI.
-# He has very good soft skills.
-# He is an AWS Certified Solutions Architect (SAA-C03).
-# He is an AWS Certified Cloud Practitioner (CLF-C02).
-# """
+Avoid duplicate values across the whole JSON object,
+BUT it is possible for "job_search_keywords" to have same values as the other fields."""
 
-USER_PROMPT_BASE = """
-Below is the INPUT TEXT describing the candidate's background.
+USER_PROMPT_BASE = """!!! THE CANDIDATE'S INPUT STARTS HERE:
+{user_input_placeholder}
+!!! THE CANDIDATE'S INPUT ENDS HERE.
 
 Extract all technical skills, frameworks, tools, libraries, AI-related experience,
-agentic-AI experience, soft skills, and any other relevant competencies from it.
+agentic-AI experience, soft skills, and any other relevant competencies from the input.
 
 Then estimate experience strength on a scale of 1–10 (rough subjective estimate, but consistent).
 Also generate job search keywords based on the overall profile.
 
-INPUT TEXT:
-\"\"\"
-{user_input}
-\"\"\"
-
-Now produce a structured skill profile following the JSON schema provided below.
-\"\"\"
-{output_schema}
-\"\"\"
-"""
-
-# Inject the user prompt and the output schema into the user prompt base to create the final prompt
-# USER_PROMPT = USER_PROMPT_BASE.format(
-#     user_input=USER_INPUT, output_schema=OUTPUT_SCHEMA
-# )
+Now produce the skill profile following the schema."""
