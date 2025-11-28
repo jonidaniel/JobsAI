@@ -21,6 +21,7 @@ from typing import Dict
 
 from docx import Document
 
+from jobsai.config.prompts import USER_PROMPT_BASE
 from jobsai.config.schemas import SkillProfile
 
 from jobsai.utils.llms import call_llm
@@ -51,10 +52,7 @@ class GeneratorAgent:
         job_report: str,
         letter_style: str,
         contact_info: Dict,
-        # employer: Optional[str] = None,
-        # job_title: Optional[str] = None,
-        # ) -> str:
-    ):
+    ) -> Document:
         """
         Produce a tailored job-application message based on
         the candidate's skills and the job report.
@@ -71,17 +69,13 @@ class GeneratorAgent:
         system_prompt = self._build_system_prompt(letter_style)
         user_prompt = self._build_user_prompt(skill_profile, job_report)
 
-        self._write_letter(contact_info)
+        logger.info(" GENERATING COVER LETTER ...")
 
-        logger.info(" GENERATING APPLICATION TEXT...")
+        cover_letter = self._write_letter(system_prompt, user_prompt, contact_info)
 
-        raw = call_llm(system_prompt, user_prompt)
+        logger.info(" COVER LETTER GENERATED\n")
 
-        output = normalize_text(raw)
-
-        logger.info(" APPLICATION TEXT GENERATION COMPLETED\n")
-
-        # return output
+        return cover_letter
 
     # ------------------------------
     # Internal functions
@@ -163,15 +157,29 @@ class GeneratorAgent:
 
         return user_prompt
 
-    def _write_letter(self, contact_info: Dict):
+    def _write_letter(
+        self, system_prompt: str, user_prompt: str, contact_info: Dict
+    ) -> Document:
+        """
+        Write a cover letter.
+
+        Args:
+            system_prompt:
+            user_prompt:
+            contact_info:
+
+        Returns:
+            doc: the ready cover letter
+        """
+
         doc = Document()
 
         p = doc.add_paragraph()
-        p.add_run(f"{contact_info.get("website")}\n")
-        p.add_run(f"{contact_info.get("linkedin")}\n")
-        p.add_run(f"{contact_info.get("github")}\n\n")
-        p.add_run(f"{contact_info.get("email")}\n")
-        p.add_run(f"{contact_info.get("phone")}\n\n")
+        p.add_run(f"{contact_info.get('website')}\n")
+        p.add_run(f"{contact_info.get('linkedin')}\n")
+        p.add_run(f"{contact_info.get('github')}\n\n")
+        p.add_run(f"{contact_info.get('email')}\n")
+        p.add_run(f"{contact_info.get('phone')}\n\n")
 
         # Turn the timestamp into a 'pretty date'
         dt = datetime.strptime(self.timestamp, "%Y%m%d_%H%M%S")
@@ -182,11 +190,17 @@ class GeneratorAgent:
         doc.add_paragraph("Hiring Team")
         doc.add_paragraph("Vuono Group\n\n")
 
-        # Body paragraphs
-        body = []
+        raw = call_llm(system_prompt, user_prompt)
 
-        for paragraph in body:
-            doc.add_paragraph(paragraph)
+        normalized = normalize_text(raw)
+
+        doc.add_paragraph(normalized)
+
+        # Body paragraphs
+        # body = []
+
+        # for paragraph in body:
+        #     doc.add_paragraph(paragraph)
 
         filename = f"{self.timestamp}_cover_letter.docx"
 
@@ -194,3 +208,5 @@ class GeneratorAgent:
 
         # Save the cover letter to /data/cover_letters/
         doc.save(path)
+
+        return doc
