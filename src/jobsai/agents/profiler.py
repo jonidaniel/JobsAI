@@ -78,10 +78,11 @@ class ProfilerAgent:
             profile: the candidate's skill profile
         """
 
-        user_prompt = self._build_prompt(user_input, submits)
-
         print()
-        logger.info(" CREATING SKILL PROFILE...")
+        logger.info(" CREATING SKILL PROFILE ...")
+
+        # Build the final user prompt from base user prompt, actual user input, and output schema
+        user_prompt = self._build_prompt(user_input, submits)
 
         # Retrieve raw LLM response that contains the skill profile
         raw = call_llm(system_prompt, user_prompt)
@@ -112,7 +113,7 @@ class ProfilerAgent:
     # Internal functions
     # ------------------------------
 
-    def _build_prompt(user_input: str, submits: Dict) -> str:
+    def _build_prompt(self, user_input: str, submits: Dict) -> str:
         """
         Build the final prompt for LLM.
 
@@ -124,13 +125,13 @@ class ProfilerAgent:
             user_prompt: the final user prompt
         """
 
-        # Build prompt
+        # Iterate over the frontend payload
         for key, value in submits.items():
             # Map key to proper term (e.g. "javascript to "JavaScript")
             for item, mapped in SUBMITS_MAP.items():
                 if item == key:
                     key = mapped
-            # Convert frontend's index-like values into actual years
+            # Convert frontend's index-like values (1–7) into actual years
             if value == 1:
                 value = "less than half a year"
             if value == 2:
@@ -145,15 +146,17 @@ class ProfilerAgent:
                 value = "less than 3 years"
             if value == 7:
                 value = "over 3 years"
+
+            # Append experience line to user input
             experience = f"\nI have {value} of experience with {key}."
             user_input = user_input + experience
 
-        # Insert the user prompt and the output schema into the user prompt base to create the final prompt
-        user_prompt = USER_PROMPT_BASE.format(
+        # Insert user input and output schema into the user prompt base to create final user prompt
+        final_user_prompt = USER_PROMPT_BASE.format(
             user_input_placeholder=user_input, output_schema=OUTPUT_SCHEMA
         )
 
-        return user_prompt
+        return final_user_prompt
 
     def _merge_profiles(self, new_profile: SkillProfile) -> SkillProfile:
         """
@@ -173,6 +176,9 @@ class ProfilerAgent:
         if not existing:
             self._save_profile(new_profile)
             return new_profile
+
+        print()
+        logger.info(" MERGING SKILL PROFILE WITH EXISTING PROFILE ...")
 
         # Merge lists
         merged = existing.model_dump()
@@ -245,8 +251,10 @@ class ProfilerAgent:
         Save the skills JSON to the vector database.
 
         Args:
-            profile: the merged skill profile
+            profile: the skill profile (merged or new)
         """
+
+        logger.info(" SAVING SKILL PROFILE ...")
 
         out = json.loads(profile.model_dump_json(by_alias=True))
 
@@ -261,7 +269,7 @@ class ProfilerAgent:
                 json.dump(out, f, ensure_ascii=False, indent=2)
 
             logger.info(
-                f" SKILL PROFILE CREATED: Saved to /%s/{filename}\n",
+                f" SKILL PROFILE SAVED: /%s/{filename}\n",
                 self.profile_path,
             )
         except Exception as e:
