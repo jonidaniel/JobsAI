@@ -22,6 +22,13 @@ from jobsai.agents import (
     GeneratorAgent,
 )
 
+from jobsai.config.paths import (
+    SKILL_PROFILES_PATH,
+    JOB_LISTINGS_RAW_PATH,
+    JOB_LISTINGS_SCORED_PATH,
+    REPORTS_PATH,
+    LETTERS_PATH,
+)
 from jobsai.config.prompts import SYSTEM_PROMPT
 from jobsai.config.settings import (
     JOB_BOARDS,
@@ -29,13 +36,6 @@ from jobsai.config.settings import (
     REPORT_SIZE,
     LETTER_STYLE,
     CONTACT_INFORMATION,
-)
-from jobsai.config.paths import (
-    SKILL_PROFILES_PATH,
-    JOB_LISTINGS_RAW_PATH,
-    JOB_LISTINGS_SCORED_PATH,
-    REPORTS_PATH,
-    LETTERS_PATH,
 )
 
 logging.basicConfig(level=logging.INFO)
