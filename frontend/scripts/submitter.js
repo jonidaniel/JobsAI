@@ -21,11 +21,14 @@ function main() {
 
     // Iterate over all slider questions
     document.querySelectorAll(".slider").forEach((slider) => {
-      // Grab the slider's unique key (e.g. "javascript")
-      const key = slider.dataset.key;
-      // Create a new key to the result object and store the slider's value (e.g. 3) under it
-      result[key] = Number(slider.value);
+      if (slider.value != 0) {
+        // Grab the slider's unique key (e.g. "javascript")
+        const key = slider.dataset.key;
+        // Create a new key to the result object and store the slider's value (e.g. 3) under it
+        result[key] = Number(slider.value);
+      }
     });
+    console.log(result);
 
     // Iterate over all text field questions
     document.querySelectorAll(".text-field").forEach((textField) => {
