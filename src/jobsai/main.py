@@ -32,7 +32,7 @@ from jobsai.config.paths import (
     REPORTS_PATH,
     LETTERS_PATH,
 )
-from jobsai.config.prompts import SYSTEM_PROMPT
+from jobsai.config.prompts import PROFILER_SYSTEM_PROMPT as SYSTEM_PROMPT
 from jobsai.config.settings import (
     JOB_BOARDS,
     DEEP_MODE,
