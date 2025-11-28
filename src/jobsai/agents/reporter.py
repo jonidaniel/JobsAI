@@ -17,7 +17,7 @@ import json
 from pathlib import Path
 from typing import List, Dict
 
-from jobsai.config.paths import JOB_LISTINGS_SCORED_PATH
+from jobsai.config.paths import JOB_LISTINGS_SCORED_PATH, REPORTS_PATH
 from jobsai.config.prompts import (
     REPORTER_SYSTEM_PROMPT as SYSTEM_PROMPT,
     REPORTER_USER_PROMPT as USER_PROMPT,
@@ -37,12 +37,10 @@ class ReporterAgent:
     2. Write a report/an analysis of the scored job listings
 
     Args:
-        reports_path (Path): The path to the job reports.
         timestamp (str): The backend-wide timestamp of the moment when the main function was started.
     """
 
-    def __init__(self, reports_path: Path, timestamp: str):
-        self.reports_path = reports_path
+    def __init__(self, timestamp: str):
         self.timestamp = timestamp
 
     # ------------------------------
@@ -108,7 +106,7 @@ class ReporterAgent:
 
         # Form a dated filename and join it with the report path
         filename = f"{self.timestamp}_job_report.txt"
-        path = os.path.join(self.reports_path, filename)
+        path = os.path.join(REPORTS_PATH, filename)
 
         try:
             with open(path, "w", encoding="utf-8") as f:
