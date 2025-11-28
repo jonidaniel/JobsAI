@@ -25,9 +25,6 @@ from jobsai.agents import (
     GeneratorAgent,
 )
 
-from jobsai.config.paths import (
-    LETTERS_PATH,
-)
 from jobsai.config.settings import (
     JOB_BOARDS,
     DEEP_MODE,
@@ -56,7 +53,7 @@ def main(submits: Dict) -> Document:
     searcher = SearcherAgent(JOB_BOARDS, DEEP_MODE, timestamp)
     scorer = ScorerAgent(timestamp)
     reporter = ReporterAgent(timestamp)
-    generator = GeneratorAgent(LETTERS_PATH, timestamp)
+    generator = GeneratorAgent(timestamp)
 
     # WILL BE ACCEPTED FROM FRONTEND FROM A TEXT FIELD LATER
     user_input = "My name is Joni Potala.\nI have developed software since 2020.\
