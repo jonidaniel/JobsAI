@@ -26,7 +26,6 @@ from jobsai.agents import (
 )
 
 from jobsai.config.paths import (
-    SKILL_PROFILES_PATH,
     JOB_LISTINGS_RAW_PATH,
     JOB_LISTINGS_SCORED_PATH,
     REPORTS_PATH,
@@ -56,7 +55,7 @@ def main(submits: Dict) -> Document:
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
     # Initialize agents with constant values
-    profiler = ProfilerAgent(SKILL_PROFILES_PATH, timestamp)
+    profiler = ProfilerAgent(timestamp)
     searcher = SearcherAgent(JOB_BOARDS, DEEP_MODE, JOB_LISTINGS_RAW_PATH, timestamp)
     scorer = ScorerAgent(JOB_LISTINGS_RAW_PATH, JOB_LISTINGS_SCORED_PATH, timestamp)
     reporter = ReporterAgent(JOB_LISTINGS_SCORED_PATH, REPORTS_PATH, timestamp)
