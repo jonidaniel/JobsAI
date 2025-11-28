@@ -47,8 +47,10 @@ logging.basicConfig(level=logging.INFO)
 
 
 def main(submits: Dict) -> Document:
-    """
-    Launch JobsAI.
+    """Launch the agent pipeline.
+
+    Returns:
+        Document: The final cover letter.
     """
 
     # A constant timestamp for the whole workflow

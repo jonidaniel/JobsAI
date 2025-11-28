@@ -42,9 +42,7 @@ app.add_middleware(
 
 
 class FrontendPayload(BaseModel):
-    """
-    Accept arbitrary key-value pairs from the frontend.
-    """
+    """Accept arbitrary key-value pairs from the frontend."""
 
     model_config = ConfigDict(extra="allow")  # Allow dynamic keys
 
@@ -52,10 +50,9 @@ class FrontendPayload(BaseModel):
 # ------------- API Route -------------
 @app.post("/api/endpoint")
 async def run_agent_pipeline(payload: FrontendPayload):
-    """
-    Endpoint for requests from frontend.
+    """Run the agent pipeline.
 
-    The request body is the JSON collected from slider and text field questions.
+    HandleThe request body is the JSON collected from slider and text field questions.
     """
 
     data = payload.model_dump()

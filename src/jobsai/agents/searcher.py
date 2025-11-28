@@ -26,14 +26,19 @@ logger = logging.getLogger(__name__)
 
 
 class SearcherAgent:
-    """
-    Orchestrate the job listings search.
+    """Orchestrate the job listings search.
 
     Responsibilities:
     1. Build queries from skill profile
     2. Fetch job listings from supported job boards
     3. Deduplicate the job listings
     4. Store the job listings
+
+    Args:
+        job_boards (List[str]):
+        deep_mode (bool):
+        jobs_raw_path (Path):
+        timestamp (str): The backend-wide timestamp of the moment when the main function was started.
     """
 
     def __init__(
@@ -43,15 +48,6 @@ class SearcherAgent:
         jobs_raw_path: Path,
         timestamp: str,
     ):
-        """
-        Construct the SearcherAgent class.
-
-        Args:
-            job_boards:
-            deep_mode:
-            jobs_raw_path:
-        """
-
         self.job_boards = job_boards
         self.deep_mode = deep_mode
         self.jobs_raw_path = jobs_raw_path
@@ -61,14 +57,13 @@ class SearcherAgent:
     # Public interface
     # ------------------------------
     def search_jobs(self, skill_profile: dict) -> List[Dict]:
-        """
-        Run searches on all job boards using queries from the skill profile
+        """Run searches on all job boards using queries from the skill profile.
 
         Args:
-            skill_profile:
+            skill_profile (dict): HUOM DICT
 
         Returns:
-            self._deduplicate_jobs(all_jobs): deduplicated list of jobs
+            callable: A deduplicated list of jobs.
         """
 
         logger.info(" WEB SCRAPING STARTING...")
@@ -102,13 +97,12 @@ class SearcherAgent:
     # ------------------------------
 
     def _save_raw_jobs(self, jobs: List[Dict], board: str, query: str):
-        """
-        Save raw job listings to /data/job_listings/raw/
+        """Save raw job listings to src/jobsai/data/job_listings/raw/
 
         Args:
-            jobs:
-            board:
-            query:
+            jobs (List[Dict]):
+            board (str):
+            query (str):
         """
 
         if not jobs:
@@ -130,14 +124,13 @@ class SearcherAgent:
         logger.info(" Saved %d raw jobs to /%s", len(jobs), path)
 
     def _deduplicate_jobs(self, jobs: List[Dict]) -> List[Dict]:
-        """
-        Remove duplicate job listings
+        """Remove duplicate the job listings.
 
         Args:
-            jobs:
+            jobs (List[Dict]):
 
         Returns:
-            deduped: deduplicated list of jobs
+            List[Dict]: The deduplicated list of jobs.
         """
 
         seen_urls = set()

@@ -1,5 +1,4 @@
-"""
-JobsAI/src/jobsai/agents/generator.py
+"""JobsAI/src/jobsai/agents/generator.py
 
 Acts as the GENERATOR AGENT.
 
@@ -10,8 +9,7 @@ FUNCTIONS (in order of workflow):
     1. GeneratorAgent.generate_letters     (public use)
     2. GeneratorAgent._build_system_prompt (internal use)
     3. GeneratorAgent._build_user_prompt   (internal use)
-    4. GeneratorAgent._write_letter        (internal use)
-"""
+    4. GeneratorAgent._write_letter        (internal use)"""
 
 import os
 import logging
@@ -21,7 +19,6 @@ from typing import Dict
 
 from docx import Document
 
-from jobsai.config.prompts import USER_PROMPT_BASE
 from jobsai.config.schemas import SkillProfile
 
 from jobsai.utils.llms import call_llm
@@ -31,15 +28,14 @@ logger = logging.getLogger(__name__)
 
 
 class GeneratorAgent:
-    """
-    Generate cover letters.
+    """Generates cover letters.
+
+    Args:
+        letters_path (Path): The path to cover letters.
+        timestamp (str): The backend-wide timestamp of the moment when the main function was started.
     """
 
     def __init__(self, letters_path: Path, timestamp: str):
-        """
-        Construct GeneratorAgent.
-        """
-
         self.letters_path = letters_path
         self.timestamp = timestamp
 
@@ -53,17 +49,15 @@ class GeneratorAgent:
         letter_style: str,
         contact_info: Dict,
     ) -> Document:
-        """
-        Produce a tailored job-application message based on
-        the candidate's skills and the job report.
+        """Produce a tailored job-application message based on the candidate's skills and the job report.
 
         Args:
-            skill_profile: the skill profile
-            job_report: the job report
-            letter_style: the intended style/tone of the cover letter
+            skill_profile (SkillProfile): The candidate's skill profile.
+            job_report (str): The job report that contains instructions for what kind of cover letter to write.
+            letter_style (str): The intended style/tone of the cover letter.
 
         Returns:
-            output: the generated text
+            Document: The final cover letter.
         """
 
         system_prompt = self._build_system_prompt(letter_style)
@@ -82,15 +76,15 @@ class GeneratorAgent:
     # ------------------------------
 
     def _build_system_prompt(self, style: str) -> str:
-        """
-        Build the system prompt.
+        """Build the system prompt that is used to write the cover letter.
 
         Args:
-            style: the style or tone for the cover letter
+            style (str): The intended style/tone of the cover letter.
 
         Returns:
-            system_prompt: the system prompt
+            str: The system prompt that is used to write the cover letter.
         """
+        print(self._build_system_prompt.__doc__)
 
         tone_instructions = {
             "professional": (
@@ -105,12 +99,10 @@ class GeneratorAgent:
 
         base_style = tone_instructions.get(style, tone_instructions["professional"])
 
-        system_prompt = f"""
-        You are a professional cover letter writer.
+        system_prompt = f"""You are a professional cover letter writer.
         Your goal is to produce polished text suitable for real-world job applications.
         Follow this style:
-        {base_style}
-        """
+        {base_style}"""
 
         return system_prompt
 
@@ -119,21 +111,15 @@ class GeneratorAgent:
         skill_profile: SkillProfile,
         job_report: str,
     ) -> str:
-        """
-        Build the user prompt.
+        """Build the user prompt that is used to write the cover letter.
 
         Args:
-            skill_profile: the skill profile
-            job_report: the job report
+            skill_profile (SkillProfile): The candidate's skill profile.
+            job_report (str): The job report that contains instructions for what kind of cover letter to write.
 
         Returns:
-            user_prompt: the user prompt
+            str: The user prompt that is used to write the cover letter.
         """
-
-        # employer_text = f"Employer: {employer}\n" if employer else ""
-        employer_text = f"Employer: empty\n"
-        # title_text = f"Target job title: {job_title}\n" if job_title else ""
-        title_text = f"Target job title: empty\n"
 
         user_prompt = f"""
         Generate a tailored job-application message.
@@ -143,8 +129,6 @@ class GeneratorAgent:
 
         Job Match Analysis:
         {job_report}
-
-        {employer_text}{title_text}
 
         Instructions:
         - Produce a compelling but concise job-application message.
@@ -158,53 +142,45 @@ class GeneratorAgent:
     def _write_letter(
         self, system_prompt: str, user_prompt: str, contact_info: Dict
     ) -> Document:
-        """
-        Write a cover letter.
+        """Write the cover letter.
 
         Args:
-            system_prompt:
-            user_prompt:
-            contact_info:
+            system_prompt (str): The system prompt that is used to write the cover letter.
+            user_prompt (str): The user prompt that is used to write the cover letter.
+            contact_info (Dict): The candidate's contact information.
 
         Returns:
-            doc: the ready cover letter
+            Document: The ready cover letter.
         """
 
-        doc = Document()
+        cover_letter = Document()
 
-        p = doc.add_paragraph()
-        p.add_run(f"{contact_info.get('website')}\n")
-        p.add_run(f"{contact_info.get('linkedin')}\n")
-        p.add_run(f"{contact_info.get('github')}\n\n")
-        p.add_run(f"{contact_info.get('email')}\n")
-        p.add_run(f"{contact_info.get('phone')}\n\n")
+        # Contact information at the top
+        p = cover_letter.add_paragraph()
+        p.add_run(f'{contact_info.get("website")}\n')
+        p.add_run(f'{contact_info.get("linkedin'")}\n')
+        p.add_run(f'{contact_info.get("github")}\n\n')
+        p.add_run(f'{contact_info.get("email")}\n')
+        p.add_run(f'{contact_info.get("phone")}\n\n')
 
         # Turn the timestamp into a 'pretty date'
         dt = datetime.strptime(self.timestamp, "%Y%m%d_%H%M%S")
         pretty_date = dt.strftime("%B %d, %Y")
+        # Add the date
+        cover_letter.add_paragraph(f"{pretty_date}\n")
 
-        doc.add_paragraph(f"{pretty_date}\n")
+        # Add the recipient
+        cover_letter.add_paragraph("ADD RECRUITER/HIRING TEAM")
+        cover_letter.add_paragraph("ADD HIRING COMPANY/GROUP\n\n")
 
-        doc.add_paragraph("Hiring Team")
-        doc.add_paragraph("Vuono Group\n\n")
-
+        # Get the actual body/content of the cover letter
         raw = call_llm(system_prompt, user_prompt)
-
         normalized = normalize_text(raw)
-
-        doc.add_paragraph(normalized)
-
-        # Body paragraphs
-        # body = []
-
-        # for paragraph in body:
-        #     doc.add_paragraph(paragraph)
+        # Insert the body to the document
+        cover_letter.add_paragraph(normalized)
 
         filename = f"{self.timestamp}_cover_letter.docx"
+        # Save the cover letter to /src/jobsai/data/cover_letters/
+        cover_letter.save(os.path.join(self.letters_path, filename))
 
-        path = os.path.join(self.letters_path, filename)
-
-        # Save the cover letter to /data/cover_letters/
-        doc.save(path)
-
-        return doc
+        return cover_letter

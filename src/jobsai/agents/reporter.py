@@ -25,23 +25,19 @@ logger = logging.getLogger(__name__)
 
 
 class ReporterAgent:
-    """
-    ReporterAgent class orchestrates reporting job findings.
+    """Orchestrates the reporting of the best-scored jobs.
 
     Responsibilities:
     1. Load scored job listings
     2. Write a report/an analysis of the scored job listings
+
+    Args:
+        jobs_scored_path (Path): The path to the scored jobs.
+        reports_path (Path): The path to the job reports.
+        timestamp (str): The backend-wide timestamp of the moment when the main function was started.
     """
 
     def __init__(self, jobs_scored_path: Path, reports_path: Path, timestamp: str):
-        """
-        Construct the ReporterAgent class.
-
-        Args:
-            jobs_scored_path:
-            reports_path:
-        """
-
         self.jobs_scored_path = jobs_scored_path
         self.reports_path = reports_path
         self.timestamp = timestamp
@@ -52,15 +48,15 @@ class ReporterAgent:
     def generate_report(
         self, skill_profile: SkillProfile, report_size: int = 10
     ) -> str:
-        """
-        Load scored jobs, generate a summary report (text),
-        save it to REPORTS_DIR, and return the report text.
+        """Generate a summary report on the most-scored jobs.
+
+        Saves it to src/jobsai/data/reports/ and also returns the job report.
 
         Args:
-            report_size: the number of top jobs to include
+            report_size (int): The desired number of top jobs to include in the report.
 
         Returns:
-            report_text: the generated report as a string
+            str: The job report.
         """
 
         logger.info(" WRITING JOB LISTINGS REPORT...")
@@ -73,11 +69,10 @@ class ReporterAgent:
         # Sort jobs by score descending (already done in scorer, but safe)
         scored_jobs.sort(key=lambda x: x.get("score", 0), reverse=True)
 
+        # ????
         report_lines = ["Job Report", "=" * 40, f"Top {report_size} Jobs:\n"]
 
         for job in scored_jobs[:report_size]:
-            #
-
             full_description = job.get("full_description")
 
             system_prompt = """
@@ -136,19 +131,17 @@ class ReporterAgent:
 
         report_text = "\n".join(report_lines)
 
-        # Form a dated filename
+        # Form a dated filename and join it with the report path
         filename = f"{self.timestamp}_job_report.txt"
-
-        # Join the report path and the dated filename
         path = os.path.join(self.reports_path, filename)
 
         try:
             with open(path, "w", encoding="utf-8") as f:
                 f.write(report_text)
 
-            logger.info(f" JOB LISTINGS REPORT WRITTEN: Report saved to /{path}\n")
+            logger.info(f" JOB REPORT WRITTEN SAVED TO: /{path}\n")
         except Exception as e:
-            logger.error(f" WRITING JOB LISTINGS REPORT FAILED: {e}\n")
+            logger.error(f" JOB REPORT FAILED: {e}\n")
 
         return report_text
 
@@ -156,12 +149,10 @@ class ReporterAgent:
     # Internal function
     # ------------------------------
     def _load_scored_jobs(self) -> List[Dict]:
-        """
-        Load scored jobs JSON from SCORED_JOB_LISTINGS_DIR.
+        """Load the scored job listings from src/jobsai/data/job_listings/scored/.
 
         Returns:
-            []:
-            data:
+            List[Dict]: The
         """
 
         path = os.path.join(self.jobs_scored_path, f"{self.timestamp}_scored_jobs.json")

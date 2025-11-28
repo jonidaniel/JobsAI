@@ -28,23 +28,19 @@ logger = logging.getLogger(__name__)
 
 
 class ScorerAgent:
-    """
-    ScorerAgent class orchestrates scoring the raw job listings.
+    """Orchestrates the scoring of the raw job listings.
 
     Responsibilities:
     1. Score job listings based on the candidate's skill profile
     2. Save the scored job listings
+
+    Args:
+        jobs_raw_path: The path to the raw job listings.
+        jobs_scored_path: The path to the scored job listings.
+        timestamp (str): The backend-wide timestamp of the moment when the main function was started.
     """
 
     def __init__(self, jobs_raw_path: Path, jobs_scored_path: Path, timestamp: str):
-        """
-        Construct the ScorerAgent class.
-
-        Args:
-            jobs_raw_path:
-            jobs_scored_path:
-        """
-
         self.jobs_raw_path = jobs_raw_path
         self.jobs_scored_path = jobs_scored_path
         self.timestamp = timestamp
@@ -53,13 +49,12 @@ class ScorerAgent:
     # Public interface
     # ------------------------------
     def score_jobs(self, skill_profile: SkillProfile):
-        """
-        Fetch all raw job listings from /data/job_listings/,
-        score them based on the given skill profile, and save
-        scored jobs to SCORED_JOB_LISTINGS_DIR.
+        """Score the raw job listings based on the candidate's skill profile.
+
+        Save the scored jobs to src/jobsai/data/job_listings/scored/.
 
         Args:
-            skill_profile:
+            skill_profile (SkillProfile): The candidate's skill profile.
         """
 
         logger.info(" SCORING JOBS STARTING...")
@@ -85,11 +80,10 @@ class ScorerAgent:
     # ------------------------------
 
     def _load_job_listings(self) -> List[Dict]:
-        """
-        Load all JSON files from RAW_JOB_LISTINGS_DIR and return as a list of jobs.
+        """Load all JSON files from src/jobsai/data/job_listings/raw and return them as a list.
 
         Returns:
-            unique_jobs:
+            List[Dict]: The job listings.
         """
 
         jobs = []
@@ -116,18 +110,15 @@ class ScorerAgent:
 
     @staticmethod
     def _job_identity(job: Dict) -> str:
-        """
-        Build a repeatable identifier for a job.
+        """Build a repeatable identifier for a job.
 
         Prefer URL, otherwise a hashable combo of fields that tends to be stable across scrapes.
 
         Args:
-            job:
+            job (Dict):
 
         Returns:
-            url:
-            "":
-            f"{title}|{query}|{snippet_prefix}":
+            str: The
         """
 
         url = (job.get("url") or "").strip()
@@ -144,15 +135,14 @@ class ScorerAgent:
         return f"{title}|{query}|{snippet_prefix}"
 
     def _compute_job_score(self, job: Dict, skill_profile: SkillProfile) -> Dict:
-        """
-        Compute a simple matching score for the job based on the skill profile.
+        """Compute a simple matching score for the job based on the cnadidate's skill profile.
 
         Args:
-            job:
-            skill_profile:
+            job (Dict):
+            skill_profile (SkillProfile): The candidate's skill profile.
 
         Returns:
-            job_copy:
+            Dict: The
         """
 
         # Combine all skill keywords from the profile
@@ -193,11 +183,10 @@ class ScorerAgent:
         return job_copy
 
     def _save_scored_jobs(self, scored_jobs: List[Dict]):
-        """
-        Save scored jobs into SCORED_JOB_LISTINGS_DIR as a JSON file.
+        """Save the scored jobs to src/jobsai/data/job_listings/scored/ as a JSON file.
 
         Args:
-            scored_jobs:
+            scored_jobs (List[Dict]): The scored job listings.
         """
 
         if not scored_jobs:

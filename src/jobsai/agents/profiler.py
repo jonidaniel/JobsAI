@@ -32,26 +32,20 @@ logger = logging.getLogger(__name__)
 
 
 class ProfilerAgent:
-    """
-    Orchestrate candidate assessment.
+    """Orchestrates candidate profiling.
 
     Responsibilities:
     1. Assess the candidate's skills
     2. Form a skill profile of the candidate
     3. Merge the profile with existing profile
     4. Save the profile
+
+    Args:
+        profile_path (Path): The path to the candidate's skill profile.
+        timestamp (str): The backend-wide timestamp of the moment when the main function was started.
     """
 
     def __init__(self, profile_path: Path, timestamp: str):
-        """
-        Construct the AssessorAgent class.
-
-        Args:
-            model: the OpenAI model
-            key: the OpenAI API key
-            profile_path: the path to the candidate's skill profile
-        """
-
         self.profile_path = profile_path
         self.timestamp = timestamp
 
@@ -64,18 +58,17 @@ class ProfilerAgent:
         user_input: str,
         submits: Dict,
     ) -> SkillProfile:
-        """
-        Create skill profile.
+        """Create the candidate's skill profile.
 
-        Make an LLM call, extract JSON from the response,
-        parse the JSON, and normalize it.
+        Makes an LLM call, extracts JSON from the response, parses the JSON, and normalizes it.
 
         Args:
-            system_prompt: system prompt for the LLM
-            user_prompt: user prompt for the LLM
+            system_prompt (str): System prompt for the LLM.
+            user_prompt (str): User prompt for the LLM.
+            submits (Dict): The user's submits from frontend.
 
         Returns:
-            profile: the candidate's skill profile
+            SkillProfile: The candidate's skill profile.
         """
 
         print()
@@ -114,15 +107,14 @@ class ProfilerAgent:
     # ------------------------------
 
     def _build_prompt(self, user_input: str, submits: Dict) -> str:
-        """
-        Build the final prompt for LLM.
+        """Build the final user prompt for an LLM.
 
         Args:
-            user_input: the user input from frontend payload
-            submits: the question submits from frontend payload
+            user_input (str): The user input from frontend payload.
+            submits (Dict): The user's submits from frontend.
 
         Returns:
-            user_prompt: the final user prompt
+            str: The final user prompt for an LLM.
         """
 
         # Iterate over the frontend payload
@@ -158,24 +150,22 @@ class ProfilerAgent:
 
         return final_user_prompt
 
-    def _merge_profiles(self, new_profile: SkillProfile) -> SkillProfile:
-        """
-        Merge new_profile into existing profile (e.g. union lists and max experience levels).
+    def _merge_profiles(self, skill_profile: SkillProfile) -> SkillProfile:
+        """Merge the new skill profile into the existing skill profile.
 
         Args:
-            new_profile: the new skill profile
+            skill_profile (SkillProfile): The candidate's skill profile.
 
         Returns:
-            new_profile: the new skill profile
-            merged_profile: the merged skill profile
+            SkillProfile: The skill profile unmodified if there is not an existing skill profile, a merged skill profile if there was an existing skill profile.
         """
         # Load existing skill profile from /memory/vector_db/skill_profile.json
         existing = self._load_profile()
 
         # If running for the first time
         if not existing:
-            self._save_profile(new_profile)
-            return new_profile
+            self._save_profile(skill_profile)
+            return skill_profile
 
         print()
         logger.info(" MERGING SKILL PROFILE WITH EXISTING PROFILE ...")
@@ -194,34 +184,33 @@ class ProfilerAgent:
         ]:
             merged[list_key] = list(
                 dict.fromkeys(
-                    existing.model_dump()[list_key] + new_profile.model_dump()[list_key]
+                    existing.model_dump()[list_key]
+                    + skill_profile.model_dump()[list_key]
                 )
             )
 
         # Merge experience levels (take max)
         el_existing = existing.experience_level.model_dump(by_alias=True)
-        el_new = new_profile.experience_level.model_dump(by_alias=True)
+        el_new = skill_profile.experience_level.model_dump(by_alias=True)
         merged_el = {}
         for k in ["Python", "JavaScript", "Agentic AI", "AI/ML"]:
             merged_el[k] = max(
                 int(el_existing.get(k, 0) or 0), int(el_new.get(k, 0) or 0)
             )
         merged["experience_level"] = merged_el
-        merged["name"] = new_profile.name or existing.name
+        merged["name"] = skill_profile.name or existing.name
         merged_profile = SkillProfile(**merged)
 
-        # Save merged skill profile to /memory/vector_db/skill_profile.json
+        # Save merged skill profile to src/jobsai/memory/vector_db/
         self._save_profile(merged_profile)
 
         return merged_profile
 
     def _load_profile(self) -> Optional[SkillProfile]:
-        """
-        Load existing skill profile.
+        """Load existing skill profile.
 
         Returns:
-            SkillProfile(**data): the existing skill profile if skill_profile.json is intact
-            None: if skill_profile.json is corrupt
+            SkillProfile or None: A new `SkillProfile`instance if skill_profile.json is intact, None if skill_profile is corrupt.
         """
 
         # TURHA?
@@ -246,22 +235,20 @@ class ProfilerAgent:
 
         return None
 
-    def _save_profile(self, profile: SkillProfile):
-        """
-        Save the skills JSON to the vector database.
+    def _save_profile(self, skill_profile: SkillProfile):
+        """Save the candidate's skill profile to the vector database.
 
         Args:
-            profile: the skill profile (merged or new)
+            skill_profile (SkillProfile): The candidate's skill profile (merged or unmodified).
         """
 
         logger.info(" SAVING SKILL PROFILE ...")
 
-        out = json.loads(profile.model_dump_json(by_alias=True))
+        # ???
+        out = json.loads(skill_profile.model_dump_json(by_alias=True))
 
-        # Form a dated filename
+        # Form a dated filename and make a path
         filename = f"{self.timestamp}_skill_profile.json"
-
-        # Join the skill profile path and the dated filename
         path = os.path.join(self.profile_path, filename)
 
         try:
