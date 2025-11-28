@@ -26,8 +26,8 @@ from jobsai.agents import (
 )
 
 from jobsai.config.settings import (
-    JOB_BOARDS,
-    DEEP_MODE,
+    job_boards,
+    deep_mode,
     REPORT_SIZE,
     LETTER_STYLE,
     CONTACT_INFORMATION,
@@ -50,7 +50,7 @@ def main(submits: Dict) -> Document:
 
     # Initialize agents with constant values
     profiler = ProfilerAgent(timestamp)
-    searcher = SearcherAgent(JOB_BOARDS, DEEP_MODE, timestamp)
+    searcher = SearcherAgent(job_boards, deep_mode, timestamp)
     scorer = ScorerAgent(timestamp)
     reporter = ReporterAgent(timestamp)
     generator = GeneratorAgent(timestamp)
