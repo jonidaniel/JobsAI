@@ -22,7 +22,10 @@ from typing import Dict, Optional
 
 from pydantic import ValidationError
 
-from jobsai.config.prompts import PROFILER_USER_PROMPT as USER_PROMPT
+from jobsai.config.prompts import (
+    PROFILER_SYSTEM_PROMPT as SYSTEM_PROMPT,
+    PROFILER_USER_PROMPT as USER_PROMPT,
+)
 from jobsai.config.schemas import SkillProfile, OUTPUT_SCHEMA, SUBMITS_MAP
 
 from jobsai.utils.llms import call_llm, extract_json
@@ -54,7 +57,6 @@ class ProfilerAgent:
     # ------------------------------
     def create_profile(
         self,
-        system_prompt: str,
         user_input: str,
         submits: Dict,
     ) -> SkillProfile:
@@ -63,7 +65,6 @@ class ProfilerAgent:
         Makes an LLM call, extracts JSON from the response, parses the JSON, and normalizes it.
 
         Args:
-            system_prompt (str): System prompt for the LLM.
             user_prompt (str): User prompt for the LLM.
             submits (Dict): The user's submits from frontend.
 
@@ -78,7 +79,7 @@ class ProfilerAgent:
         user_prompt = self._build_prompt(user_input, submits)
 
         # Retrieve raw LLM response that contains the skill profile
-        raw = call_llm(system_prompt, user_prompt)
+        raw = call_llm(SYSTEM_PROMPT, user_prompt)
 
         # Extract the JSON substring from the raw response
         json_text = extract_json(raw)
@@ -105,7 +106,8 @@ class ProfilerAgent:
     # ------------------------------
     # Internal functions
     # ------------------------------
-
+    # KATOHAN VÄHÄN TOTO USER_PROMPPUA
+    # niin juu täähän saattaa kadotat tästä kun saa frontista pian noi
     def _build_prompt(self, user_input: str, submits: Dict) -> str:
         """Build the final user prompt for an LLM.
 
