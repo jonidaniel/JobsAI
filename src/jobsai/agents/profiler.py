@@ -17,10 +17,11 @@ import os
 import logging
 import json
 from pathlib import Path
-from typing import Optional
+from typing import Dict, Optional
 
 from pydantic import ValidationError
 
+from jobsai.config.prompts import USER_PROMPT_BASE  # ADDED
 from jobsai.config.schemas import SkillProfile
 
 from jobsai.utils.llms import call_llm, extract_json
@@ -56,7 +57,12 @@ class ProfilerAgent:
     # ------------------------------
     # Public interface
     # ------------------------------
-    def create_profile(self, system_prompt: str, user_prompt: str) -> SkillProfile:
+    def create_profile(
+        # self, system_prompt: str, user_prompt: str
+        self,
+        system_prompt: str,
+        submits: Dict,
+    ) -> SkillProfile:
         """
         Create skill profile.
 
@@ -70,6 +76,9 @@ class ProfilerAgent:
         Returns:
             profile: the candidate's skill profile
         """
+
+        # BUILD PROMPT
+        user_prompt = USER_PROMPT_BASE
 
         print()
         logger.info(" CREATING SKILL PROFILE...")
