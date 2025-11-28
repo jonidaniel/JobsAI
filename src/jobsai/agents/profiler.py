@@ -8,9 +8,10 @@ CLASSES:
 
 FUNCTIONS (in order of workflow):
     1. ProfilerAgent.create_profile   (public use)
-    2. ProfilerAgent._merge_profiles  (internal use)
-    3. ProfilerAgent._load_profile    (internal use)
-    4. ProfilerAgent._save_profile    (internal use)
+    2. ProfilerAgent._build_prompt    (internal use)
+    3. ProfilerAgent._merge_profiles  (internal use)
+    4. ProfilerAgent._load_profile    (internal use)
+    5. ProfilerAgent._save_profile    (internal use)
 """
 
 import os
@@ -22,7 +23,7 @@ from typing import Dict, Optional
 from pydantic import ValidationError
 
 from jobsai.config.prompts import USER_PROMPT_BASE
-from jobsai.config.schemas import SkillProfile, SUBMITS_MAP, OUTPUT_SCHEMA
+from jobsai.config.schemas import SkillProfile, OUTPUT_SCHEMA, SUBMITS_MAP
 
 from jobsai.utils.llms import call_llm, extract_json
 from jobsai.utils.normalization import normalize_parsed
@@ -60,6 +61,7 @@ class ProfilerAgent:
     def create_profile(
         self,
         system_prompt: str,
+        user_input: str,
         submits: Dict,
     ) -> SkillProfile:
         """
@@ -76,41 +78,7 @@ class ProfilerAgent:
             profile: the candidate's skill profile
         """
 
-        # WILL BE ACCEPTED FROM FRONTEND FROM A TEXT FIELD LATER
-        user_input = "My name is Joni Potala.\nI have developed software since 2020.\
-            I have built and published multiple full-stack apps (frontend, backend, database, desktop, mobile).\
-                I have built multi-agent orchestrations with OpenAI Agents SDK for half a year.\
-                    I have very good soft skills."
-
-        # Build prompt
-        for key, value in submits.items():
-            # Map key to proper term (e.g. "javascript to "JavaScript")
-            for item, mapped in SUBMITS_MAP.items():
-                if item == key:
-                    key = mapped
-            # Convert frontend's index-like values into actual years
-            if value == 1:
-                value = "less than half a year"
-            if value == 2:
-                value = "less than a year"
-            if value == 3:
-                value = "less than 1.5 years"
-            if value == 4:
-                value = "less than 2 years"
-            if value == 5:
-                value = "less than 2.5 years"
-            if value == 6:
-                value = "less than 3 years"
-            if value == 7:
-                value = "over 3 years"
-            experience = f"\nI have {value} of experience with {key}."
-            user_input = user_input + experience
-
-        # Insert the user prompt and the output schema into the user prompt base to create the final prompt
-        user_prompt = USER_PROMPT_BASE.format(
-            user_input_placeholder=user_input, output_schema=OUTPUT_SCHEMA
-        )
-        print(user_prompt)
+        user_prompt = self._build_prompt(user_input, submits)
 
         print()
         logger.info(" CREATING SKILL PROFILE...")
@@ -143,6 +111,38 @@ class ProfilerAgent:
     # ------------------------------
     # Internal functions
     # ------------------------------
+
+    def _build_prompt(user_input: str, submits: Dict) -> str:
+        # Build prompt
+        for key, value in submits.items():
+            # Map key to proper term (e.g. "javascript to "JavaScript")
+            for item, mapped in SUBMITS_MAP.items():
+                if item == key:
+                    key = mapped
+            # Convert frontend's index-like values into actual years
+            if value == 1:
+                value = "less than half a year"
+            if value == 2:
+                value = "less than a year"
+            if value == 3:
+                value = "less than 1.5 years"
+            if value == 4:
+                value = "less than 2 years"
+            if value == 5:
+                value = "less than 2.5 years"
+            if value == 6:
+                value = "less than 3 years"
+            if value == 7:
+                value = "over 3 years"
+            experience = f"\nI have {value} of experience with {key}."
+            user_input = user_input + experience
+
+        # Insert the user prompt and the output schema into the user prompt base to create the final prompt
+        user_prompt = USER_PROMPT_BASE.format(
+            user_input_placeholder=user_input, output_schema=OUTPUT_SCHEMA
+        )
+
+        return user_prompt
 
     def _merge_profiles(self, new_profile: SkillProfile) -> SkillProfile:
         """
