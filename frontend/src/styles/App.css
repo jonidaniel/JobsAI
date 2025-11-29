@@ -1,0 +1,31 @@
+/* Reset & Base styles */
+
+#root {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: center;
+}
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+body {
+  font-family: Arial, Helvetica, sans-serif;
+  background: #0e0e0e;
+  color: #f0f0f0;
+  scroll-behavior: smooth;
+  display: block !important;
+  place-items: normal !important;
+}
+
+/* Section layout */
+section {
+  min-height: 100vh;
+  padding: 80px 10%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
