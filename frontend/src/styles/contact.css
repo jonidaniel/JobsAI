@@ -1,5 +1,9 @@
 /* Contact section styles */
 
+#contact {
+  padding: 280px 10%;
+  align-items: center;
+}
 #contact h2 {
   font-size: 2.4rem;
   margin-bottom: 20px;
