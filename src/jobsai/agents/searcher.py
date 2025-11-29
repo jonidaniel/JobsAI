@@ -64,7 +64,7 @@ class SearcherAgent:
             callable: A deduplicated list of jobs.
         """
 
-        logger.info(" WEB SCRAPING STARTING...")
+        logger.info(" WEB SCRAPING ...")
 
         all_jobs = []
 
