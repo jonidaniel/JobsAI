@@ -1,0 +1,13 @@
+/* Hero section styles */
+
+#hero {
+  text-align: center;
+}
+#hero h1 {
+  font-size: 3.2rem;
+  margin-bottom: 20px;
+}
+#hero p {
+  font-size: 1.4rem;
+  opacity: 0.85;
+}
