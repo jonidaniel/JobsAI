@@ -26,7 +26,12 @@ from jobsai.config.prompts import (
     PROFILER_SYSTEM_PROMPT as SYSTEM_PROMPT,
     PROFILER_USER_PROMPT as USER_PROMPT,
 )
-from jobsai.config.schemas import SkillProfile, OUTPUT_SCHEMA, SUBMIT_ALIAS_MAP
+from jobsai.config.schemas import (
+    SkillProfile,
+    OUTPUT_SCHEMA,
+    EXPERIENCE_ALIAS_MAP,
+    SUBMIT_ALIAS_MAP,
+)
 
 from jobsai.utils.llms import call_llm, extract_json
 from jobsai.utils.normalization import normalize_parsed
@@ -55,7 +60,6 @@ class ProfilerAgent:
     # ------------------------------
     def create_profile(
         self,
-        user_input: str,
         submits: Dict,
     ) -> SkillProfile:
         """Create the candidate's skill profile.
@@ -63,7 +67,6 @@ class ProfilerAgent:
         Makes an LLM call, extracts JSON from the response, parses the JSON, and normalizes it.
 
         Args:
-            user_prompt (str): User prompt for the LLM.
             submits (Dict): The user's submits from frontend.
 
         Returns:
@@ -74,7 +77,7 @@ class ProfilerAgent:
         logger.info(" CREATING SKILL PROFILE ...")
 
         # Build the final user prompt from base user prompt, actual user input, and output schema
-        user_prompt = self._build_prompt(user_input, submits)
+        user_prompt = self._build_prompt(submits)
 
         # Retrieve raw LLM response that contains the skill profile
         raw = call_llm(SYSTEM_PROMPT, user_prompt)
@@ -105,47 +108,44 @@ class ProfilerAgent:
     # Internal functions
     # ------------------------------
 
-    def _build_prompt(self, user_input: str, submits: Dict) -> str:
+    def _build_prompt(self, submits: Dict) -> str:
         """Build the final user prompt for an LLM.
 
         Args:
-            user_input (str): The user input from frontend payload.
             submits (Dict): The user's submits from frontend.
 
         Returns:
             str: The final user prompt for an LLM.
         """
 
-        # Iterate over the frontend payload
-        for key, value in submits.items():
-            # Map key to proper term (e.g. "javascript to "JavaScript")
-            for item, mapped in SUBMIT_ALIAS_MAP.items():
-                if item == key:
-                    key = mapped
-            # Convert frontend's index-like values (1–7) into actual years
-            if value == 1:
-                value = "less than half a year"
-            if value == 2:
-                value = "less than a year"
-            if value == 3:
-                value = "less than 1.5 years"
-            if value == 4:
-                value = "less than 2 years"
-            if value == 5:
-                value = "less than 2.5 years"
-            if value == 6:
-                value = "less than 3 years"
-            if value == 7:
-                value = "over 3 years"
+        # Extract general text and build experience lines in a single pass
+        user_input = submits.get("general", "")
+        experience_lines = []
 
-            # Append experience line to user input
-            experience = f"\nI have {value} of experience with {key}."
-            user_input = user_input + experience
+        for key, value in submits.items():
+            # Skip "general" key as it's already handled
+            if key == "general":
+                continue
+
+            # Map key to proper term (e.g. "javascript" to "JavaScript")
+            mapped_key = SUBMIT_ALIAS_MAP.get(key, key)
+
+            # Convert frontend's index-like values (1–7) into actual years
+            if value in EXPERIENCE_ALIAS_MAP:
+                experience_text = EXPERIENCE_ALIAS_MAP[value]
+                experience_lines.append(
+                    f"\nI have {experience_text} of experience with {mapped_key}."
+                )
+
+        # Combine general input with experience lines
+        user_input = user_input + "".join(experience_lines)
 
         # Insert user input and output schema into the user prompt to create final user prompt
         final_user_prompt = USER_PROMPT.format(
             user_input=user_input, output_schema=OUTPUT_SCHEMA
         )
+
+        print(final_user_prompt)
 
         return final_user_prompt
 
@@ -241,8 +241,6 @@ class ProfilerAgent:
             skill_profile (SkillProfile): The candidate's skill profile (merged or unmodified).
         """
 
-        logger.info(" SAVING SKILL PROFILE ...")
-
         # ???
         out = json.loads(skill_profile.model_dump_json(by_alias=True))
 
@@ -255,8 +253,8 @@ class ProfilerAgent:
                 json.dump(out, f, ensure_ascii=False, indent=2)
 
             logger.info(
-                f" SKILL PROFILE SAVED: /%s/{filename}\n",
+                f" SKILL PROFILE SAVED TO /%s/{filename}\n",
                 SKILL_PROFILE_PATH,
             )
         except Exception as e:
-            logger.error(f" SKILL PROFILE CREATION FAILED: {e}\n")
+            logger.error(f" SKILL PROFILE FAILED: {e}\n")
