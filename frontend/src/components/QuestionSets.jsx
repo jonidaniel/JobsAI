@@ -11,16 +11,43 @@ export default function QuestionSets() {
   }, []);
 
   return (
+    /*
+     * Question set wrapper
+     *
+     * There are 8 question sets in total:
+     *     1/8 'Programming, Scripting, and Markup Languages',
+     *     2/8 'Databases',
+     *     3/8 'Cloud Development',
+     *     4/8 'Web Frameworks and Technologies',
+     *     5/8 'Dev IDEs',
+     *     6/8 'Large Language Models',
+     *     7/8 'Code Documentation and Collaboration',
+     *     8/8 'Computer Operating Systems'
+     *
+     *   Only one question set is shown on the webpage at a time
+     */
     <div id="question-set-wrapper" className="relative">
+      {/* TailwindCSS form */}
       <div className="bg-gray-800 p-10 rounded-2xl shadow-lg w-full max-w-2xl space-y-10">
+        {/* Main header */}
         <h1 className="text-3xl font-semibold text-white">
           Fill in your experience levels in each category and we will search
           jobs relevant to you
         </h1>
 
-        {/** EXACT COPY of all 8 <section> blocks, but JSX instead of HTML */}
+        {/* Create an array of 8 question sets */}
         {Array.from({ length: 8 }).map((_, i) => (
+          /* Question set
+           *
+           * A single question set consists of:
+           *     - Top left/right arrows
+           *     - The actual questions
+           *     - Bottom left/right arrows
+           *
+           * Left/right arrows change the question set
+           */
           <section key={i}>
+            {/* Top left/right arrows */}
             <div className="flex justify-between items-center mb-6">
               <button className="prev-btn text-white text-2xl px-3 py-1">
                 &larr;
@@ -33,11 +60,13 @@ export default function QuestionSets() {
               </button>
             </div>
 
+            {/* Questions */}
             <div className="space-y-4">
               <div id={`sliders${i + 1}`}></div>
               <div id={`text-field${i + 1}`}></div>
             </div>
 
+            {/* Bottom left/right arrows */}
             <div className="bottom-arrows flex justify-between items-center mb-6">
               <button className="prev-btn text-white text-2xl px-3 py-1">
                 &larr;
@@ -52,6 +81,7 @@ export default function QuestionSets() {
           </section>
         ))}
 
+        {/* Submit button */}
         <div className="flex justify-center">
           <button
             id="submit-btn"
