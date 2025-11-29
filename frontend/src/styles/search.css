@@ -1,6 +1,7 @@
 /* Search section styles */
 
 #search {
+  padding: 280px 10%;
   align-items: center;
 }
 #search h2 {
@@ -40,6 +41,6 @@
 }
 
 /* Bottom left/right arrows */
-.bottom-arrows {
-  padding-top: 75px;
-}
+/* .bottom-arrows {
+  padding-top: 35px;
+} */
