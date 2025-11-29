@@ -28,13 +28,7 @@ export default function QuestionSets() {
      */
     <div id="question-set-wrapper" className="relative">
       {/* TailwindCSS form */}
-      <div className="bg-gray-800 p-10 rounded-2xl shadow-lg w-full max-w-2xl space-y-10">
-        {/* Main header */}
-        <h1 className="text-3xl font-semibold text-white">
-          Fill in your experience levels in each category and we will search
-          jobs relevant to you
-        </h1>
-
+      <div className="bg-gray-800 p-10 rounded-2xl shadow-lg space-y-10">
         {/* General question set */}
         <section>
           {/* Top left/right arrows */}
