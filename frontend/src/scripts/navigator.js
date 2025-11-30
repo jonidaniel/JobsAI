@@ -1,5 +1,5 @@
 export default function navigator() {
-  // Toggles which question set (1–8) is visible
+  // Toggles which question set (1–9) is visible
   function showQuestionSet(currentIndex, refreshing = true) {
     // Iterate over all question sets
     questionSets.forEach((questionSet, questionSetIndex) => {
@@ -21,44 +21,35 @@ export default function navigator() {
     document.querySelectorAll("#question-set-wrapper section")
   );
 
-  // Makes question set 1/8 be the one that shows up on page load
+  // Makes question set 1/9 be the one that shows up on page load
   let currentIndex = 0;
 
-  // Attach on click listeners to all 32 arrows
-  questionSets.forEach((questionSet, questionSetIndex) => {
-    // Grab both left arrows of a question set (top and bottom)
-    const leftArrows = questionSet.querySelectorAll(".prev-btn");
-    // Grab both right arrows of a question set (top and bottom)
-    const rightArrows = questionSet.querySelectorAll(".next-btn");
+  // Get the left arrow (prev-btn) - now outside the container
+  const prevBtn = document.querySelector(".prev-btn");
+  // Get the right arrow (next-btn) - now outside the container
+  const nextBtn = document.querySelector(".next-btn");
 
-    // Add listeners to both left arrows
-    for (let arrow of leftArrows) {
-      // Left arrow is clicked
-      arrow.addEventListener("click", () => {
-        // If questionSetIndex is 0 (i.e. if currently showing question set 1/8),
-        // then set currentIndex as 7 (i.e. show set 8/8)
-        // If questionSetIndex is anything else,
-        // then subtract it by one (i.e. show previous set)
-        currentIndex =
-          questionSetIndex === 0
-            ? questionSets.length - 1
-            : questionSetIndex - 1;
-        // Go make previous question set visible
-        showQuestionSet(currentIndex, true); // // true indicates that the page is being refreshed
-      });
-    }
+  // Add click listener to the left arrow
+  if (prevBtn) {
+    prevBtn.addEventListener("click", () => {
+      // If currently at index 0, go to the last question set
+      // Otherwise, go to the previous question set
+      currentIndex =
+        currentIndex === 0 ? questionSets.length - 1 : currentIndex - 1;
+      // Show the previous question set
+      showQuestionSet(currentIndex, true);
+    });
+  }
 
-    // Add listeners to both right arrows
-    for (let arrow of rightArrows) {
-      // Right arrow is clicked
-      arrow.addEventListener("click", () => {
-        // Set currentIndex as ????????????????????????????????????????????????????
-        currentIndex = (questionSetIndex + 1) % questionSets.length;
-        // Go make next question set visible
-        showQuestionSet(currentIndex, true); // true indicates that the page is being refreshed
-      });
-    }
-  });
+  // Add click listener to the right arrow
+  if (nextBtn) {
+    nextBtn.addEventListener("click", () => {
+      // Move to the next question set (wraps around to 0 after the last one)
+      currentIndex = (currentIndex + 1) % questionSets.length;
+      // Show the next question set
+      showQuestionSet(currentIndex, true);
+    });
+  }
 
   showQuestionSet(currentIndex, false); // false indicates that the page is being loaded for the first time
 }
