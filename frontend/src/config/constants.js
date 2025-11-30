@@ -1,13 +1,13 @@
 /**
  * Application Constants
- * 
+ *
  * Centralized constants used throughout the application.
  * These values define the structure and configuration of the questionnaire.
- * 
+ *
  * Question Set Structure:
  * - 1 General Questions set (index 0): 10 text fields (first is multiple choice)
  * - 8 Slider Question sets (indices 1-8): Multiple sliders + 1 "Other" text field each
- * 
+ *
  * Total: 9 question sets
  */
 
@@ -22,7 +22,7 @@ export const SLIDER_QUESTION_SETS_COUNT = 8;
 
 /**
  * Slider Configuration
- * 
+ *
  * Sliders represent years of experience ranges:
  * 0 = 0 yrs
  * 1 = < 0.5 yrs
@@ -39,7 +39,7 @@ export const SLIDER_DEFAULT = 0;
 
 /**
  * Question Set Indices
- * 
+ *
  * Constants for identifying question set types by index
  */
 export const GENERAL_QUESTIONS_INDEX = 0;

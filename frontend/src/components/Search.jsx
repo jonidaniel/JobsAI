@@ -1,14 +1,40 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import QuestionSets from "./QuestionSets";
 import { API_ENDPOINTS } from "../config/api";
 import "../styles/search.css";
 
+/**
+ * Search Component
+ *
+ * Main component for the search/questionnaire section.
+ * Responsibilities:
+ * - Renders QuestionSets component
+ * - Manages form submission to backend API
+ * - Handles file download from server response
+ * - Displays error and success messages
+ * - Manages submission state to prevent double-submission
+ *
+ * Form data flow:
+ * QuestionSets -> onFormDataChange callback -> formData state -> handleSubmit -> API
+ */
 export default function Search() {
+  // Submission state management
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
 
-  // Get user-friendly error message
+  // Form data received from QuestionSets component via callback
+  const [formData, setFormData] = useState({});
+
+  // Ref to track timeout for auto-dismissing success message
+  const successTimeoutRef = useRef(null);
+
+  /**
+   * Converts technical error objects into user-friendly error messages
+   *
+   * @param {Error} error - The error object from fetch or other operations
+   * @returns {string} User-friendly error message
+   */
   const getErrorMessage = (error) => {
     if (error instanceof TypeError && error.message.includes("fetch")) {
       return "Unable to connect to the server. Please check your internet connection and try again.";
@@ -28,6 +54,18 @@ export default function Search() {
     return "An unexpected error occurred. Please try again.";
   };
 
+  /**
+   * Handles form submission
+   *
+   * Process:
+   * 1. Prevents default form behavior and double submission
+   * 2. Filters form data to remove empty values
+   * 3. Sends POST request to backend API
+   * 4. Downloads the returned .docx file
+   * 5. Shows success/error messages
+   *
+   * @param {Event} e - Form submit event
+   */
   const handleSubmit = async (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -42,40 +80,26 @@ export default function Search() {
     setSuccess(false);
     setIsSubmitting(true);
 
-    // Collect form data
+    /**
+     * Filter form data to only include non-empty values
+     * - Strings: Include if trimmed value is not empty
+     * - Numbers: Include if value is not 0 (sliders default to 0)
+     * - Arrays: Include if array has at least one element (checkboxes)
+     */
     const result = {};
-
-    // Iterate over all slider questions
-    document.querySelectorAll(".slider").forEach((slider) => {
-      if (slider.value != 0) {
-        const key = slider.dataset.key;
-        result[key] = Number(slider.value);
-      }
-    });
-
-    // Iterate over all checkbox questions (multiple choice)
-    document.querySelectorAll(".checkbox-field").forEach((checkbox) => {
-      if (checkbox.checked) {
-        const key = checkbox.dataset.key;
-        const value = checkbox.dataset.value;
-        // Store as array if multiple selections, or as single value
-        if (!result[key]) {
-          result[key] = [];
-        }
-        result[key].push(value);
-      }
-    });
-
-    // Iterate over all text field questions
-    document.querySelectorAll(".text-field").forEach((textField) => {
-      if (textField.value != "") {
-        const key = textField.dataset.key;
-        result[key] = textField.value.trim();
+    Object.entries(formData).forEach(([key, value]) => {
+      if (typeof value === "string" && value.trim() !== "") {
+        result[key] = value.trim();
+      } else if (typeof value === "number" && value !== 0) {
+        result[key] = value;
+      } else if (Array.isArray(value) && value.length > 0) {
+        result[key] = value;
       }
     });
 
     // Send to backend and download document
     try {
+      // Send POST request with form data
       const response = await fetch(API_ENDPOINTS.SUBMIT_FORM, {
         method: "POST",
         headers: {
@@ -84,14 +108,16 @@ export default function Search() {
         body: JSON.stringify(result),
       });
 
+      // Check if request was successful
       if (!response.ok) {
         throw new Error(`Server error: ${response.status}`);
       }
 
-      // Get the response as a blob (binary)
+      // Get the response as a blob (binary data for .docx file)
       const blob = await response.blob();
 
-      // Get the filename from Content-Disposition header if available
+      // Extract filename from Content-Disposition header if available
+      // Format: "attachment; filename=\"document.docx\""
       const contentDisposition = response.headers.get("Content-Disposition");
       let filename = "document.docx"; // default fallback
       if (contentDisposition) {
@@ -102,7 +128,8 @@ export default function Search() {
       // Create a temporary URL for the blob
       const url = window.URL.createObjectURL(blob);
 
-      // Create a temporary link element to trigger download
+      // Programmatically trigger file download
+      // Create temporary anchor element, click it, then remove it
       const a = document.createElement("a");
       a.href = url;
       a.download = filename;
@@ -110,21 +137,40 @@ export default function Search() {
       a.click();
       a.remove();
 
-      // Clean up the blob URL
+      // Clean up the blob URL to free memory
       window.URL.revokeObjectURL(url);
 
       // Show success message
       setSuccess(true);
       setError(null);
+
+      // Auto-dismiss success message after 5 seconds
+      // Clear any existing timeout first to prevent multiple timers
+      if (successTimeoutRef.current) {
+        clearTimeout(successTimeoutRef.current);
+      }
+      successTimeoutRef.current = setTimeout(() => {
+        setSuccess(false);
+        successTimeoutRef.current = null;
+      }, 5000);
     } catch (error) {
       console.error("Download failed:", error);
       setError(getErrorMessage(error));
       setSuccess(false);
     } finally {
-      // Reset submission flag after request completes
+      // Reset submission flag after request completes (success or error)
       setIsSubmitting(false);
     }
   };
+
+  // Cleanup: Clear timeout if component unmounts
+  useEffect(() => {
+    return () => {
+      if (successTimeoutRef.current) {
+        clearTimeout(successTimeoutRef.current);
+      }
+    };
+  }, []);
 
   return (
     <section id="search">
@@ -132,8 +178,10 @@ export default function Search() {
       <h3 className="text-3xl font-semibold text-white text-center">
         Answer questions in each category and we will find jobs relevant to you
       </h3>
-      <QuestionSets />
-      {/* Error message */}
+      {/* Question sets component - manages all form inputs */}
+      <QuestionSets onFormDataChange={setFormData} />
+
+      {/* Error message - displayed when submission fails */}
       {error && (
         <div className="flex justify-center mt-4">
           <div
@@ -161,7 +209,7 @@ export default function Search() {
         </div>
       )}
 
-      {/* Success message */}
+      {/* Success message - displayed when document is successfully downloaded */}
       {success && (
         <div className="flex justify-center mt-4">
           <div
@@ -191,13 +239,14 @@ export default function Search() {
         </div>
       )}
 
-      {/* Submit button */}
+      {/* Submit button - triggers form submission and document generation */}
       <div className="flex justify-center mt-6">
         <button
           id="submit-btn"
           onClick={handleSubmit}
           disabled={isSubmitting}
           className="text-3xl px-6 py-3 border border-white bg-transparent text-white font-semibold rounded-lg shadow disabled:opacity-50 disabled:cursor-not-allowed"
+          aria-label="Submit form and generate job search document"
         >
           {isSubmitting ? "Finding Jobs..." : "Find Jobs"}
         </button>

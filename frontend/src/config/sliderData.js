@@ -1,5 +1,33 @@
-// Slider question data for question sets 1-8
-// Raw JSON strings (for reference/backup)
+/**
+ * Slider Question Data Configuration
+ *
+ * Contains the slider questions for question sets 1-8.
+ * Each question set has multiple sliders representing experience levels
+ * for different technologies/tools.
+ *
+ * Data Structure:
+ * - Each array element is a JSON string representing one question set
+ * - Each JSON object maps technology keys to display labels
+ * - Keys are kebab-case identifiers (e.g., "javascript", "postgresql")
+ * - Values are human-readable labels (e.g., "JavaScript", "PostgreSQL")
+ *
+ * Question Set Mapping:
+ * 0: General Questions (not in this file)
+ * 1: Programming, Scripting, and Markup Languages Experience
+ * 2: Databases Experience
+ * 3: Cloud Development Experience
+ * 4: Web Frameworks and Technologies Experience
+ * 5: Dev IDEs Experience
+ * 6: Large Language Models Experience
+ * 7: Code Documentation and Collaboration Experience
+ * 8: Computer Operating Systems Experience
+ */
+
+/**
+ * Raw JSON strings for slider data
+ * Stored as strings for easier editing and version control
+ * Parsed once at module load time for performance
+ */
 const SLIDER_DATA_RAW = [
   '{"javascript":"JavaScript","html-css":"HTML/CSS","sql":"SQL","python":"Python","bash-shell":"Bash/Shell","typescript":"TypeScript","csharp":"C#","java":"Java","powershell":"PowerShell","cplusplus":"C++","c":"C","php":"PHP","go":"Go","rust":"Rust","kotlin":"Kotlin","lua":"Lua","ruby":"Ruby","dart":"Dart","assembly":"Assembly","swift":"Swift","groovy":"Groovy","visual-basic-dotnet":"Visual Basic (.Net)","perl":"Perl","r":"R","vba":"VBA","gdscript":"GDScript","scala":"Scala","elixir":"Elixir","matlab":"MATLAB","delphi":"Delphi","lisp":"Lisp","zig":"Zig","micropython":"MicroPython","erlang":"Erlang","fsharp":"F#","ada":"Ada","gleam":"Gleam","fortran":"Fortran","ocaml":"OCaml","prolog":"Prolog","cobol":"COBOL","mojo":"Mojo"}',
   '{"postgresql":"PostgreSQL","mysql":"MySQL","sqlite":"SQLite","microsoft-sql-server":"Microsoft SQL Server","redis":"Redis","mongodb":"MongoDB","mariadb":"MariaDB","elasticsearch":"Elasticsearch","dynamodb":"Dynamodb","oracle":"Oracle","bigquery":"BigQuery","supabase1":"Supabase","cloud-firestore":"Cloud Firestore","h2":"H2","cosmos-db":"Cosmos DB","firebase-realtime-database":"Firebase Realtime Database","snowflake":"Snowflake","microsoft-access":"Microsoft Access","influxdb":"InfluxDB","duckdb":"DuckDB","databricks-sql":"Databricks SQL","cassandra":"Cassandra","neo4j":"Neo4J","clickhouse":"Clickhouse","valkey":"Valkey","amazon-redshift":"Amazon Redshift","ibm-db2":"IBM DB2","cockroachdb":"Cockroachdb","pocketbase":"Pocketbase","datomic":"Datomic"}',
@@ -11,8 +39,18 @@ const SLIDER_DATA_RAW = [
   '{"windows":"Windows","macos":"MacOS","android":"Android","ubuntu":"Ubuntu","ios":"iOS","linux-non-wsl":"Linux (non-WSL)","windows-subsystem-for-linux-wsl":"Windows Subsystem for Linux (WSL)","debian":"Debian","arch":"Arch","ipados":"iPadOS","fedora":"Fedora","red-hat":"Red Hat","nixos":"NixOS","pop-os":"Pop!_OS","chromeos":"ChromeOS"}',
 ];
 
-// Parse JSON strings once at module load time
-// This is more efficient than parsing on every component render
+/**
+ * Parsed slider data
+ *
+ * JSON strings are parsed once at module load time.
+ * This is more efficient than parsing on every component render.
+ *
+ * Structure: Array of 8 objects, each containing key-value pairs
+ * where keys are technology identifiers and values are display labels.
+ *
+ * Usage: SLIDER_DATA[index - 1] gives the data for question set at index
+ * (e.g., SLIDER_DATA[0] is for question set 1)
+ */
 export const SLIDER_DATA = SLIDER_DATA_RAW.map((jsonStr) =>
   JSON.parse(jsonStr)
 );
