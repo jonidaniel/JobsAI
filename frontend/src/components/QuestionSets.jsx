@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from "react";
 import { SLIDER_DATA } from "../config/sliderData";
 import {
   GENERAL_QUESTION_LABELS,
-  GENERAL_QUESTION_DEFAULTS,
   GENERAL_QUESTION_KEYS,
   NAME_OPTIONS,
   JOB_BOARD_OPTIONS,
@@ -171,14 +170,6 @@ function MultipleChoice({ keyName, label, options, value, onChange }) {
  *                              Receives (keyName, selectedValue) as parameters
  */
 function SingleChoice({ keyName, label, options, value, onChange }) {
-  /**
-   * Handles radio button change events
-   * Sets the selected value directly (only one can be selected)
-   */
-  const handleRadioChange = (option) => {
-    onChange(keyName, option);
-  };
-
   return (
     <div className="flex flex-col w-full">
       <label className="mb-1">{label}</label>
@@ -192,7 +183,7 @@ function SingleChoice({ keyName, label, options, value, onChange }) {
               type="radio"
               name={keyName}
               checked={isChecked}
-              onChange={() => handleRadioChange(option)}
+              onChange={() => onChange(keyName, option)}
               data-key={keyName}
               data-value={option}
               id={`${keyName}-${optionKey}`}
@@ -312,19 +303,9 @@ function QuestionSet({ index, isActive, sectionRef, formData, onFormChange }) {
                   onChange={onFormChange}
                 />
               );
-            } else {
-              return (
-                <TextField
-                  key={j}
-                  keyName={keyName}
-                  label={GENERAL_QUESTION_LABELS[j]}
-                  value={
-                    formData[keyName] || GENERAL_QUESTION_DEFAULTS[j] || ""
-                  }
-                  onChange={onFormChange}
-                />
-              );
             }
+            // All general questions (0-4) are handled above
+            return null;
           })
         ) : (
           // Slider question sets (indices 1-8): Multiple sliders + one "Other" text field
@@ -382,24 +363,14 @@ export default function QuestionSets({ onFormDataChange }) {
     const initial = {};
 
     // Set default values for general questions (question set 0)
-    for (let j = 0; j < GENERAL_QUESTIONS_COUNT; j++) {
-      const keyName = GENERAL_QUESTION_KEYS[j];
-      if (j === 0 || j === 1) {
-        // First and second questions are multiple choice - start with empty array
-        initial[keyName] = [];
-      } else if (j === 2 || j === 3 || j === 4) {
-        // Third, fourth, and fifth questions are single choice - start with empty string
-        initial[keyName] = "";
-      } else {
-        // Other general questions use default values from config
-        initial[keyName] = GENERAL_QUESTION_DEFAULTS[j] || "";
-      }
-    }
+    GENERAL_QUESTION_KEYS.forEach((keyName, j) => {
+      initial[keyName] = j < 2 ? [] : ""; // First 2 are arrays, rest are strings
+    });
 
     // Set default values for slider question sets (question sets 1-8)
+    // Sliders default to 0 (handled in Slider component)
+    // Only need to initialize the "Other" text fields
     for (let i = 1; i < TOTAL_QUESTION_SETS; i++) {
-      // Sliders default to 0 (handled in Slider component)
-      // Only need to initialize the "Other" text field
       initial[`text-field${i}`] = "";
     }
 
@@ -424,10 +395,7 @@ export default function QuestionSets({ onFormDataChange }) {
    * @param {string|number|string[]} value - The new value (string, number, or array for checkboxes)
    */
   const handleFormChange = (key, value) => {
-    setFormData((prev) => {
-      const updated = { ...prev, [key]: value };
-      return updated;
-    });
+    setFormData((prev) => ({ ...prev, [key]: value }));
   };
 
   /**

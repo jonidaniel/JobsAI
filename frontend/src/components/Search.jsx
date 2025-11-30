@@ -92,16 +92,19 @@ export default function Search() {
      * - Numbers: Include if value is not 0 (sliders default to 0)
      * - Arrays: Include if array has at least one element (checkboxes)
      */
-    const filtered = {};
-    Object.entries(formData).forEach(([key, value]) => {
-      if (typeof value === "string" && value.trim() !== "") {
-        filtered[key] = value.trim();
-      } else if (typeof value === "number" && value !== 0) {
-        filtered[key] = value;
-      } else if (Array.isArray(value) && value.length > 0) {
-        filtered[key] = value;
-      }
-    });
+    const filtered = Object.fromEntries(
+      Object.entries(formData)
+        .filter(([, value]) => {
+          if (typeof value === "string") return value.trim() !== "";
+          if (typeof value === "number") return value !== 0;
+          if (Array.isArray(value)) return value.length > 0;
+          return false;
+        })
+        .map(([key, value]) => [
+          key,
+          typeof value === "string" ? value.trim() : value,
+        ])
+    );
 
     /**
      * Group filtered data by question set
@@ -110,33 +113,23 @@ export default function Search() {
     const result = {};
 
     // Group general questions (index 0)
-    const generalQuestions = [];
-    GENERAL_QUESTION_KEYS.forEach((key) => {
-      if (filtered[key] !== undefined) {
-        generalQuestions.push({ [key]: filtered[key] });
-      }
-    });
+    const generalQuestions = GENERAL_QUESTION_KEYS.filter(
+      (key) => filtered[key] !== undefined
+    ).map((key) => ({ [key]: filtered[key] }));
     if (generalQuestions.length > 0) {
       result[QUESTION_SET_NAMES[GENERAL_QUESTIONS_INDEX]] = generalQuestions;
     }
 
     // Group slider question sets (indices 1-8)
     for (let i = 1; i < QUESTION_SET_NAMES.length; i++) {
-      const questionSetData = [];
-      const sliderKeys = Object.keys(SLIDER_DATA[i - 1]);
-      const textFieldKey = `text-field${i}`;
-
-      // Add slider values
-      sliderKeys.forEach((key) => {
-        if (filtered[key] !== undefined) {
-          questionSetData.push({ [key]: filtered[key] });
-        }
-      });
-
-      // Add text field value if present
-      if (filtered[textFieldKey] !== undefined) {
-        questionSetData.push({ [textFieldKey]: filtered[textFieldKey] });
-      }
+      const questionSetData = [
+        ...Object.keys(SLIDER_DATA[i - 1])
+          .filter((key) => filtered[key] !== undefined)
+          .map((key) => ({ [key]: filtered[key] })),
+        ...(filtered[`text-field${i}`] !== undefined
+          ? [{ [`text-field${i}`]: filtered[`text-field${i}`] }]
+          : []),
+      ];
 
       if (questionSetData.length > 0) {
         result[QUESTION_SET_NAMES[i]] = questionSetData;
