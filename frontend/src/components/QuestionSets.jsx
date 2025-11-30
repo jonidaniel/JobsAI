@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { SLIDER_DATA } from "../config/sliderData";
 import {
   GENERAL_QUESTION_LABELS,
@@ -74,41 +74,79 @@ function MultipleChoice({ keyName, label, options }) {
   );
 }
 
-export default function QuestionSets() {
-  const initialized = useRef(false);
-  const currentIndexRef = useRef(0);
-  const questionSetsRef = useRef([]);
-
-  useEffect(() => {
-    // Prevent double initialization of navigator in StrictMode
-    if (initialized.current) {
-      return;
-    }
-    initialized.current = true;
-
-    // Set up navigator
-    const questionSets = Array.from(
-      document.querySelectorAll("#question-set-wrapper section")
-    );
-
-    function showQuestionSet(index, shouldScroll = false) {
-      questionSets.forEach((questionSet, questionSetIndex) => {
-        questionSet.classList.toggle("active", questionSetIndex === index);
-      });
-      if (shouldScroll && questionSets[index]) {
-        questionSets[index].scrollIntoView({
-          behavior: "smooth",
-          block: "start",
-        });
-      }
-    }
-
-    questionSetsRef.current = questionSets;
-    showQuestionSet(currentIndexRef.current, false);
-  }, []);
-
+function QuestionSet({ index, isActive, sectionRef }) {
   // Parse slider data
   const sliderData = SLIDER_DATA.map((jsonStr) => JSON.parse(jsonStr));
+
+  return (
+    <section ref={sectionRef} style={{ display: isActive ? "block" : "none" }}>
+      <h3 className="text-3xl">{index + 1}/9</h3>
+      <h3 className="text-3xl">{QUESTION_SET_TITLES[index]}</h3>
+
+      {/* Questions */}
+      <div className="space-y-4">
+        {index === 0 ? (
+          // 'General Questions'
+          Array.from({ length: 10 }).map((_, j) => {
+            if (j === 0) {
+              // First question (Name) is a multiple choice with checkboxes
+              return (
+                <MultipleChoice
+                  key={j}
+                  keyName={`text-field-general-${j}`}
+                  label={GENERAL_QUESTION_LABELS[j]}
+                  options={NAME_OPTIONS}
+                />
+              );
+            } else {
+              return (
+                <TextField
+                  key={j}
+                  keyName={`text-field-general-${j}`}
+                  label={GENERAL_QUESTION_LABELS[j]}
+                  defaultValue={GENERAL_QUESTION_DEFAULTS[j] || ""}
+                />
+              );
+            }
+          })
+        ) : (
+          // Other question sets (1-8)
+          <>
+            {/* Sliders */}
+            {Object.entries(sliderData[index - 1]).map(([key, label]) => (
+              <Slider key={key} keyName={key} label={label} />
+            ))}
+            {/* Text field */}
+            <TextField keyName={`text-field${index}`} label="Other" />
+          </>
+        )}
+      </div>
+    </section>
+  );
+}
+
+export default function QuestionSets() {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const sectionRefs = useRef({});
+
+  // Scroll to active section when index changes
+  useEffect(() => {
+    const section = sectionRefs.current[currentIndex];
+    if (section) {
+      section.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }
+  }, [currentIndex]);
+
+  const handlePrevious = () => {
+    setCurrentIndex((prev) => (prev === 0 ? 8 : prev - 1));
+  };
+
+  const handleNext = () => {
+    setCurrentIndex((prev) => (prev + 1) % 9);
+  };
 
   return (
     /*
@@ -132,25 +170,7 @@ export default function QuestionSets() {
       <div className="prev-btn-container sticky top-1/2 -translate-y-1/2 self-start h-0 flex items-center z-10">
         <button
           className="prev-btn text-white text-2xl px-3 py-1 bg-gray-800 rounded-lg hover:bg-gray-700 transition-colors"
-          onClick={() => {
-            const questionSets = questionSetsRef.current;
-            currentIndexRef.current =
-              currentIndexRef.current === 0
-                ? questionSets.length - 1
-                : currentIndexRef.current - 1;
-            questionSets.forEach((questionSet, questionSetIndex) => {
-              questionSet.classList.toggle(
-                "active",
-                questionSetIndex === currentIndexRef.current
-              );
-            });
-            if (questionSets[currentIndexRef.current]) {
-              questionSets[currentIndexRef.current].scrollIntoView({
-                behavior: "smooth",
-                block: "start",
-              });
-            }
-          }}
+          onClick={handlePrevious}
         >
           &larr;
         </button>
@@ -158,52 +178,16 @@ export default function QuestionSets() {
 
       {/* TailwindCSS form */}
       <div className="bg-gray-800 p-10 rounded-2xl shadow-lg flex-1">
-        {/* Create an array of 9 question sets */}
+        {/* Render all question sets, but only show the active one */}
         {Array.from({ length: 9 }).map((_, i) => (
-          /* Question set */
-          <section key={i}>
-            <h3 className="text-3xl">{i + 1}/9</h3>
-            <h3 className="text-3xl">{getTitle(i)}</h3>
-
-            {/* Questions */}
-            <div className="space-y-4">
-              {i === 0 ? (
-                // 'General Questions'
-                Array.from({ length: 10 }).map((_, j) => {
-                  if (j === 0) {
-                    // First question (Name) is a multiple choice with checkboxes
-                    return (
-                      <MultipleChoice
-                        key={j}
-                        keyName={`text-field-general-${j}`}
-                        label={GENERAL_QUESTION_LABELS[j]}
-                        options={NAME_OPTIONS}
-                      />
-                    );
-                  } else {
-                    return (
-                      <TextField
-                        key={j}
-                        keyName={`text-field-general-${j}`}
-                        label={GENERAL_QUESTION_LABELS[j]}
-                        defaultValue={GENERAL_QUESTION_DEFAULTS[j] || ""}
-                      />
-                    );
-                  }
-                })
-              ) : (
-                // Other question sets (1-8)
-                <>
-                  {/* Sliders */}
-                  {Object.entries(sliderData[i - 1]).map(([key, label]) => (
-                    <Slider key={key} keyName={key} label={label} />
-                  ))}
-                  {/* Text field */}
-                  <TextField keyName={`text-field${i}`} label="Other" />
-                </>
-              )}
-            </div>
-          </section>
+          <QuestionSet
+            key={i}
+            index={i}
+            isActive={i === currentIndex}
+            sectionRef={(el) => {
+              if (el) sectionRefs.current[i] = el;
+            }}
+          />
         ))}
       </div>
 
@@ -211,31 +195,11 @@ export default function QuestionSets() {
       <div className="next-btn-container sticky top-1/2 -translate-y-1/2 self-start h-0 flex items-center z-10 ml-auto">
         <button
           className="next-btn text-white text-2xl px-3 py-1 bg-gray-800 rounded-lg hover:bg-gray-700 transition-colors"
-          onClick={() => {
-            const questionSets = questionSetsRef.current;
-            currentIndexRef.current =
-              (currentIndexRef.current + 1) % questionSets.length;
-            questionSets.forEach((questionSet, questionSetIndex) => {
-              questionSet.classList.toggle(
-                "active",
-                questionSetIndex === currentIndexRef.current
-              );
-            });
-            if (questionSets[currentIndexRef.current]) {
-              questionSets[currentIndexRef.current].scrollIntoView({
-                behavior: "smooth",
-                block: "start",
-              });
-            }
-          }}
+          onClick={handleNext}
         >
           &rarr;
         </button>
       </div>
     </div>
   );
-}
-
-function getTitle(i) {
-  return QUESTION_SET_TITLES[i];
 }
