@@ -11,7 +11,7 @@ Modify these values to customize the behavior of the agent pipeline.
 # List of job boards to scrape for job listings
 # Available options: "Duunitori", "Jobly"
 # Add multiple boards to search across multiple platforms
-job_boards = ["Duunitori", "Jobly"]  # Choose from "Duunitori" and "Jobly"
+job_boards = ["Jobly"]  # Choose from "Duunitori" and "Jobly"
 
 # Deep Mode Configuration
 # If True: Fetches full job descriptions by visiting each job's detail page
