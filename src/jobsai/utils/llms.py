@@ -77,8 +77,35 @@ def call_llm(system_prompt: str, user_prompt: str, max_tokens: int = 800) -> str
         temperature=0.2,  # Low temperature for consistent, focused output
     )
 
+    # Validate response structure
+    if not response or not hasattr(response, "choices"):
+        error_msg = (
+            "Invalid response structure from OpenAI API: missing 'choices' attribute"
+        )
+        logger.error(error_msg)
+        raise ValueError(error_msg)
+
+    if not response.choices or len(response.choices) == 0:
+        error_msg = "OpenAI API returned empty choices array"
+        logger.error(error_msg)
+        raise ValueError(error_msg)
+
     # Extract text content from response
-    text = response.choices[0].message.content
+    message = response.choices[0].message
+    if not message or not hasattr(message, "content"):
+        error_msg = (
+            "Invalid response structure from OpenAI API: missing 'content' attribute"
+        )
+        logger.error(error_msg)
+        raise ValueError(error_msg)
+
+    text = message.content
+
+    # Check if content is None (can happen with some API responses)
+    if text is None:
+        error_msg = "OpenAI API returned None content in response"
+        logger.error(error_msg)
+        raise ValueError(error_msg)
 
     # Log first 500 characters for debugging (full response may be very long)
     logger.debug(" LLM response: %s", text[:500])
