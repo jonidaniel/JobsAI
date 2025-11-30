@@ -22,15 +22,15 @@
  * 9: Additional Information
  */
 export const GENERAL_QUESTION_LABELS = [
-  "Name",
-  "Years of Experience",
-  "Background Summary",
-  "Key Skills",
-  "Previous Projects",
-  "Education",
-  "Certifications",
+  "What level of job are you looking for?",
+  "Are you currently employed somewhere related to software development?",
+  "Have you worked on any projects that are related to software development?",
+  "What is your background summary?",
+  "",
+  "What is your education?",
+  "How does your education show when you work?",
   "Languages",
-  "Location",
+  "From what areas you would like to find jobs?",
   "Additional Information",
 ];
 
