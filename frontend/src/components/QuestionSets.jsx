@@ -4,6 +4,10 @@ import {
   GENERAL_QUESTION_LABELS,
   GENERAL_QUESTION_DEFAULTS,
   NAME_OPTIONS,
+  JOB_BOARD_OPTIONS,
+  DEEP_MODE_OPTIONS,
+  COVER_LETTER_STYLE_OPTIONS,
+  JOB_COUNT_OPTIONS,
 } from "../config/generalQuestions";
 import { QUESTION_SET_TITLES } from "../config/questionSetTitles";
 import {
@@ -181,11 +185,11 @@ function QuestionSet({ index, isActive, sectionRef, formData, onFormChange }) {
       {/* Questions */}
       <div className="space-y-4">
         {index === GENERAL_QUESTIONS_INDEX ? (
-          // General Questions (index 0): 10 text fields, first one is multiple choice
+          // General Questions (index 0): 10 questions, first, second, third, fourth, and fifth are multiple choice
           Array.from({ length: GENERAL_QUESTIONS_COUNT }).map((_, j) => {
             const keyName = `text-field-general-${j}`;
             if (j === 0) {
-              // First question (Name) is a multiple choice with checkboxes
+              // First question (Job level) is a multiple choice with checkboxes
               // Options: Intern, Entry, Intermediate, Expert
               return (
                 <MultipleChoice
@@ -193,6 +197,58 @@ function QuestionSet({ index, isActive, sectionRef, formData, onFormChange }) {
                   keyName={keyName}
                   label={GENERAL_QUESTION_LABELS[j]}
                   options={NAME_OPTIONS}
+                  value={formData[keyName] || []}
+                  onChange={onFormChange}
+                />
+              );
+            } else if (j === 1) {
+              // Second question (Job boards) is a multiple choice with checkboxes
+              // Options: Duunitori, Jobly
+              return (
+                <MultipleChoice
+                  key={j}
+                  keyName={keyName}
+                  label={GENERAL_QUESTION_LABELS[j]}
+                  options={JOB_BOARD_OPTIONS}
+                  value={formData[keyName] || []}
+                  onChange={onFormChange}
+                />
+              );
+            } else if (j === 2) {
+              // Third question (Deep mode) is a multiple choice with checkboxes
+              // Options: Yes, No
+              return (
+                <MultipleChoice
+                  key={j}
+                  keyName={keyName}
+                  label={GENERAL_QUESTION_LABELS[j]}
+                  options={DEEP_MODE_OPTIONS}
+                  value={formData[keyName] || []}
+                  onChange={onFormChange}
+                />
+              );
+            } else if (j === 3) {
+              // Fourth question (Cover letter style) is a multiple choice with checkboxes
+              // Options: Professional, Friendly, Confident
+              return (
+                <MultipleChoice
+                  key={j}
+                  keyName={keyName}
+                  label={GENERAL_QUESTION_LABELS[j]}
+                  options={COVER_LETTER_STYLE_OPTIONS}
+                  value={formData[keyName] || []}
+                  onChange={onFormChange}
+                />
+              );
+            } else if (j === 4) {
+              // Fifth question (Job count) is a multiple choice with checkboxes
+              // Options: 1, 2, 3, 4, 5, 10
+              return (
+                <MultipleChoice
+                  key={j}
+                  keyName={keyName}
+                  label={GENERAL_QUESTION_LABELS[j]}
+                  options={JOB_COUNT_OPTIONS}
                   value={formData[keyName] || []}
                   onChange={onFormChange}
                 />
@@ -269,8 +325,8 @@ export default function QuestionSets({ onFormDataChange }) {
     // Set default values for general questions (question set 0)
     for (let j = 0; j < GENERAL_QUESTIONS_COUNT; j++) {
       const keyName = `text-field-general-${j}`;
-      if (j === 0) {
-        // First question (Name) is multiple choice - starts with empty array
+      if (j === 0 || j === 1 || j === 2 || j === 3 || j === 4) {
+        // First, second, third, fourth, and fifth questions are multiple choice - start with empty array
         initial[keyName] = [];
       } else {
         // Other general questions use default values from config
