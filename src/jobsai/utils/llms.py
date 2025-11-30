@@ -22,16 +22,25 @@ load_dotenv()
 OPENAI_MODEL = os.getenv("OPENAI_MODEL")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
+# Validate required environment variables
 if not OPENAI_MODEL:
-    logger.warning(
-        " OPENAI_MODEL not found in environment. OpenAI calls will fail without it."
-    )
-if not OPENAI_API_KEY:
-    logger.warning(
-        " OPENAI_API_KEY not found in environment. OpenAI calls will fail without it."
-    )
+    error_msg = "OPENAI_MODEL not found in environment variables. Please set OPENAI_MODEL in your .env file or environment."
+    logger.error(error_msg)
+    raise ValueError(error_msg)
 
-client = OpenAI(api_key=OPENAI_API_KEY)
+if not OPENAI_API_KEY:
+    error_msg = "OPENAI_API_KEY not found in environment variables. Please set OPENAI_API_KEY in your .env file or environment."
+    logger.error(error_msg)
+    raise ValueError(error_msg)
+
+# Initialize OpenAI client with validated API key
+# This will raise an error immediately if the API key is invalid format
+try:
+    client = OpenAI(api_key=OPENAI_API_KEY)
+except Exception as e:
+    error_msg = f"Failed to initialize OpenAI client: {str(e)}"
+    logger.error(error_msg)
+    raise ValueError(error_msg) from e
 
 
 def call_llm(system_prompt: str, user_prompt: str, max_tokens: int = 800) -> str:
