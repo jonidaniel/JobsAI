@@ -22,12 +22,12 @@ export default function Search() {
         <button
           disabled
           type="button"
-          class="text-3xl mt-6 px-6 py-3 border border-white bg-transparent text-white font-semibold rounded-lg shadow"
+          className="text-3xl mt-6 px-6 py-3 border border-white bg-transparent text-white font-semibold rounded-lg shadow"
         >
           <svg
             aria-hidden="true"
             role="status"
-            class="w-8 h-8 me-2 text-blue-500 animate-spin"
+            className="w-8 h-8 me-2 text-blue-500 animate-spin"
             viewBox="0 0 100 101"
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
