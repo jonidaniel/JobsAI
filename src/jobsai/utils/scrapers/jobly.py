@@ -364,10 +364,10 @@ def _fetch_full_job_description(
     longest = 0
 
     for div in divs:
-        txt = div.get_text(" ", strip=True)
+        text_content = div.get_text(" ", strip=True)
         # Look for divs with substantial text (likely descriptions)
-        if len(txt) > longest and len(txt) > 100:
-            longest = len(txt)
-            best_guess = txt
+        if len(text_content) > longest and len(text_content) > 100:
+            longest = len(text_content)
+            best_guess = text_content
 
     return best_guess

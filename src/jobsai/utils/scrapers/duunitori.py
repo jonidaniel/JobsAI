@@ -83,8 +83,8 @@ def scrape_duunitori(
 
     # Slugify query (i.e. make it URL compliant)
     # Replace whitespace with hyphens and remove unsafe chars
-    q = re.sub(r"\s+", "-", query.strip().lower())
-    query_slug = quote_plus(q, safe="-")
+    slugified_query = re.sub(r"\s+", "-", query.strip().lower())
+    query_slug = quote_plus(slugified_query, safe="-")
 
     results = []
     total_fetched = 0

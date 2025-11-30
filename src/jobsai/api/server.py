@@ -80,9 +80,9 @@ async def run_agent_pipeline(payload: FrontendPayload):
     """
 
     # Extract dictionary from Pydantic model
-    data = payload.model_dump()
+    form_data = payload.model_dump()
 
-    logger.info(f"Received an API request with {len(data)} fields.")
+    logger.info(f"Received an API request with {len(form_data)} fields.")
 
     try:
         # Run the complete agent pipeline
@@ -90,18 +90,20 @@ async def run_agent_pipeline(payload: FrontendPayload):
         # - Number of job boards to scrape
         # - Deep mode (whether to fetch full job descriptions)
         # - Number of LLM calls required
-        result = jobsai.main(data)
+        pipeline_result = jobsai.main(form_data)
 
         # Validate result structure
-        if not isinstance(result, dict):
-            logger.error("Pipeline returned invalid result type: %s", type(result))
+        if not isinstance(pipeline_result, dict):
+            logger.error(
+                "Pipeline returned invalid result type: %s", type(pipeline_result)
+            )
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Pipeline returned invalid result format.",
             )
 
-        document = result.get("document")
-        filename = result.get("filename")
+        document = pipeline_result.get("document")
+        filename = pipeline_result.get("filename")
 
         if document is None:
             logger.error("Pipeline did not return a document.")

@@ -39,18 +39,18 @@ def build_queries(skill_profile: dict) -> list[str]:
     # Generates multiple query variations for each language
     core_langs = skill_profile.get("core_languages", [])
     for lang in core_langs:
-        l = lang.lower()
-        queries.add(f"{l} developer")
-        queries.add(f"junior {l} developer")
-        queries.add(f"{l} engineer")
+        language_lowercase = lang.lower()
+        queries.add(f"{language_lowercase} developer")
+        queries.add(f"junior {language_lowercase} developer")
+        queries.add(f"{language_lowercase} engineer")
 
     # Build search queries from agentic AI experience
     # These are specialized tools/technologies that warrant specific searches
     agentic = skill_profile.get("agentic_ai_experience", [])
     for tool in agentic:
-        t = tool.lower()
-        queries.add(t)  # Direct tool name search
-        queries.add(f"{t} developer")  # Tool + developer search
+        tool_lowercase = tool.lower()
+        queries.add(tool_lowercase)  # Direct tool name search
+        queries.add(f"{tool_lowercase} developer")  # Tool + developer search
 
     # Build search queries from AI/ML experience
     # If candidate has any AI/ML experience, add general AI/ML job queries

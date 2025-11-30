@@ -152,18 +152,18 @@ class GeneratorAgent:
 
         # Add contact information at the top right
         # Format: website, LinkedIn, GitHub (blank line) email, phone
-        p = cover_letter.add_paragraph()
-        p.alignment = WD_ALIGN_PARAGRAPH.RIGHT
-        p.add_run(f'{contact_info.get("website")}\n')
-        p.add_run(f'{contact_info.get("linkedin")}\n')
-        p.add_run(f'{contact_info.get("github")}\n\n')
-        p.add_run(f'{contact_info.get("email")}\n')
-        p.add_run(f'{contact_info.get("phone")}\n\n')
+        contact_paragraph = cover_letter.add_paragraph()
+        contact_paragraph.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+        contact_paragraph.add_run(f'{contact_info.get("website")}\n')
+        contact_paragraph.add_run(f'{contact_info.get("linkedin")}\n')
+        contact_paragraph.add_run(f'{contact_info.get("github")}\n\n')
+        contact_paragraph.add_run(f'{contact_info.get("email")}\n')
+        contact_paragraph.add_run(f'{contact_info.get("phone")}\n\n')
 
         # Convert timestamp (YYYYMMDD_HHMMSS) to human-readable date
         # Format: "Month Day, Year" (e.g., "November 30, 2025")
-        dt = datetime.strptime(self.timestamp, "%Y%m%d_%H%M%S")
-        pretty_date = dt.strftime("%B %d, %Y")
+        parsed_timestamp = datetime.strptime(self.timestamp, "%Y%m%d_%H%M%S")
+        pretty_date = parsed_timestamp.strftime("%B %d, %Y")
         # Add the date (aligned right)
         cover_letter.add_paragraph(f"{pretty_date}\n").alignment = (
             WD_ALIGN_PARAGRAPH.RIGHT

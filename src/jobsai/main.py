@@ -38,7 +38,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def main(submits: Dict) -> Dict:
+def main(form_submissions: Dict) -> Dict:
     """
     Launch the complete JobsAI agent pipeline.
 
@@ -50,7 +50,7 @@ def main(submits: Dict) -> Dict:
     5. GeneratorAgent: Creates cover letter document based on report
 
     Args:
-        submits (Dict): Form data from frontend containing:
+        form_submissions (Dict): Form data from frontend containing:
             - General questions (text fields)
             - Technology experience levels (slider values 0-7)
             - Multiple choice selections (e.g., experience levels)
@@ -84,7 +84,7 @@ def main(submits: Dict) -> Dict:
     # Uses LLM to extract structured skill information from form submissions
     try:
         logger.info("Step 1/5: Creating skill profile...")
-        skill_profile = profiler.create_profile(submits)
+        skill_profile = profiler.create_profile(form_submissions)
         logger.info("Step 1/5: Skill profile created successfully")
     except Exception as e:
         error_msg = f"Step 1/5 (Profile Creation) failed: {str(e)}"

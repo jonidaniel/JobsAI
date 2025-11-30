@@ -60,14 +60,14 @@ class ProfilerAgent:
     # ------------------------------
     def create_profile(
         self,
-        submits: Dict,
+        form_submissions: Dict,
     ) -> SkillProfile:
         """Create the candidate's skill profile.
 
         Makes an LLM call, extracts JSON from the response, parses the JSON, and normalizes it.
 
         Args:
-            submits (Dict): The user's submits from frontend.
+            form_submissions (Dict): The user's form submissions from frontend.
 
         Returns:
             SkillProfile: The candidate's skill profile.
@@ -77,7 +77,7 @@ class ProfilerAgent:
         logger.info(" CREATING SKILL PROFILE ...")
 
         # Build the final user prompt from base user prompt, actual user input, and output schema
-        user_prompt = self._build_prompt(submits)
+        user_prompt = self._build_prompt(form_submissions)
 
         # Retrieve raw LLM response that contains the skill profile
         raw = call_llm(SYSTEM_PROMPT, user_prompt)
@@ -108,7 +108,7 @@ class ProfilerAgent:
     # Internal functions
     # ------------------------------
 
-    def _build_prompt(self, submits: Dict) -> str:
+    def _build_prompt(self, form_submissions: Dict) -> str:
         """
         Build the final user prompt for the LLM by combining form data.
 
@@ -119,7 +119,7 @@ class ProfilerAgent:
         - Combines everything into a coherent text for the LLM
 
         Args:
-            submits (Dict): The user's form submissions from frontend containing:
+            form_submissions (Dict): The user's form submissions from frontend containing:
                 - "general": General text input (background, skills, etc.)
                 - Technology keys: Slider values (0-7) representing experience levels
                 - Multiple choice arrays: Selected experience levels
@@ -129,11 +129,11 @@ class ProfilerAgent:
         """
 
         # Extract general text input (background summary, key skills, etc.)
-        user_input = submits.get("general", "")
+        user_input = form_submissions.get("general", "")
         experience_lines = []
 
         # Process each form field
-        for key, value in submits.items():
+        for key, value in form_submissions.items():
             # Skip "general" key as it's already handled above
             if key == "general":
                 continue
@@ -200,7 +200,7 @@ class ProfilerAgent:
         logger.info(" MERGING SKILL PROFILE WITH EXISTING PROFILE ...")
 
         # Start with existing profile as base
-        merged = existing.model_dump()
+        merged_profile_dict = existing.model_dump()
 
         # Merge list fields: combine lists and remove duplicates
         # Uses dict.fromkeys() trick to preserve order while deduplicating
@@ -214,7 +214,7 @@ class ProfilerAgent:
             "projects_mentioned",
             "job_search_keywords",
         ]:
-            merged[list_key] = list(
+            merged_profile_dict[list_key] = list(
                 dict.fromkeys(
                     existing.model_dump()[list_key]
                     + skill_profile.model_dump()[list_key]
@@ -224,20 +224,21 @@ class ProfilerAgent:
         # Merge experience levels: take the maximum value
         # This ensures we keep the highest experience level if candidate
         # has provided different values in different submissions
-        el_existing = existing.experience_level.model_dump(by_alias=True)
-        el_new = skill_profile.experience_level.model_dump(by_alias=True)
-        merged_el = {}
-        for k in ["Python", "JavaScript", "Agentic AI", "AI/ML"]:
-            merged_el[k] = max(
-                int(el_existing.get(k, 0) or 0), int(el_new.get(k, 0) or 0)
+        existing_experience_levels = existing.experience_level.model_dump(by_alias=True)
+        new_experience_levels = skill_profile.experience_level.model_dump(by_alias=True)
+        merged_experience_levels = {}
+        for technology_name in ["Python", "JavaScript", "Agentic AI", "AI/ML"]:
+            merged_experience_levels[technology_name] = max(
+                int(existing_experience_levels.get(technology_name, 0) or 0),
+                int(new_experience_levels.get(technology_name, 0) or 0),
             )
-        merged["experience_level"] = merged_el
+        merged_profile_dict["experience_level"] = merged_experience_levels
 
         # Use new name if provided, otherwise keep existing name
-        merged["name"] = skill_profile.name or existing.name
+        merged_profile_dict["name"] = skill_profile.name or existing.name
 
         # Create merged profile object and validate
-        merged_profile = SkillProfile(**merged)
+        merged_profile = SkillProfile(**merged_profile_dict)
 
         # Save merged skill profile to /src/jobsai/memory/vector_db/
         self._save_profile(merged_profile)

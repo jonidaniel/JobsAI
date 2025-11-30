@@ -83,25 +83,25 @@ class ScorerAgent:
         """
 
         jobs = []
-        for f in os.listdir(RAW_JOB_LISTING_PATH):
-            if not f.endswith(".json"):
+        for filename in os.listdir(RAW_JOB_LISTING_PATH):
+            if not filename.endswith(".json"):
                 continue
-            path = os.path.join(RAW_JOB_LISTING_PATH, f)
+            path = os.path.join(RAW_JOB_LISTING_PATH, filename)
             try:
                 with open(path, "r", encoding="utf-8") as file:
-                    data = json.load(file)
-                    if isinstance(data, list):
-                        jobs.extend(data)
+                    job_listings_data = json.load(file)
+                    if isinstance(job_listings_data, list):
+                        jobs.extend(job_listings_data)
             except Exception as e:
                 logger.error(f" Failed to load {path}: {e}")
         # Deduplicate by URL (falling back to lightweight fingerprint when URL missing)
-        seen = set()
+        seen_fingerprints = set()
         unique_jobs = []
         for job in jobs:
             fingerprint = self._job_identity(job)
-            if fingerprint and fingerprint not in seen:
+            if fingerprint and fingerprint not in seen_fingerprints:
                 unique_jobs.append(job)
-                seen.add(fingerprint)
+                seen_fingerprints.add(fingerprint)
         return unique_jobs
 
     @staticmethod
@@ -188,15 +188,15 @@ class ScorerAgent:
         score = int(len(matched_skills) / max(1, len(profile_keywords)) * 100)
 
         # Enrich job dict with scoring information
-        job_copy = job.copy()
-        job_copy.update(
+        scored_job = job.copy()
+        scored_job.update(
             {
                 "score": score,
                 "matched_skills": matched_skills,
                 "missing_skills": missing_skills,
             }
         )
-        return job_copy
+        return scored_job
 
     def _save_scored_jobs(self, scored_jobs: List[Dict]):
         """Save the scored jobs to /src/jobsai/data/job_listings/scored/ as a JSON file.

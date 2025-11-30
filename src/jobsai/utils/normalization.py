@@ -19,15 +19,15 @@ from jobsai.config.schemas import SKILL_ALIAS_MAP
 # ------------------------------
 
 
-def normalize_parsed(parsed: Dict[str, Any]) -> Dict[str, Any]:
+def normalize_parsed(profile_dict: Dict[str, Any]) -> Dict[str, Any]:
     """
     Normalize the parsed JSON.
 
     Args:
-        parsed: parsed skills JSON
+        profile_dict: Parsed skills JSON dictionary from LLM
 
     Returns:
-        parsed: the normalized parsed skills JSON
+        Dict[str, Any]: The normalized parsed skills JSON
     """
 
     keys = [
@@ -43,11 +43,11 @@ def normalize_parsed(parsed: Dict[str, Any]) -> Dict[str, Any]:
         "job_search_keywords",
     ]
     # Ensure all keys exist in the JSON the LLM generated
-    for k in keys:
-        if k not in parsed:
-            parsed[k] = (
+    for field_name in keys:
+        if field_name not in profile_dict:
+            profile_dict[field_name] = (
                 []
-                if k != "experience_level"
+                if field_name != "experience_level"
                 else {"Python": 0, "JavaScript": 0, "Agentic AI": 0, "AI/ML": 0}
             )
 
@@ -62,50 +62,56 @@ def normalize_parsed(parsed: Dict[str, Any]) -> Dict[str, Any]:
         "projects_mentioned",
         "job_search_keywords",
     ]:
-        if isinstance(parsed.get(list_key), list):
-            parsed[list_key] = normalize_list(parsed[list_key])
+        if isinstance(profile_dict.get(list_key), list):
+            profile_dict[list_key] = normalize_list(profile_dict[list_key])
         else:
-            parsed[list_key] = []
+            profile_dict[list_key] = []
 
     # Normalize experience_level keys and values
-    el = parsed.get("experience_level", {})
-    norm_el = {
-        "Python": int(el.get("Python") or 0),
-        "JavaScript": int(el.get("JavaScript") or 0),
-        "Agentic AI": int(el.get("Agentic AI") or el.get("Agentic_Ai") or 0),
-        "AI/ML": int(el.get("AI/ML") or el.get("AI_ML") or 0),
+    experience_levels = profile_dict.get("experience_level", {})
+    normalized_experience_levels = {
+        "Python": int(experience_levels.get("Python") or 0),
+        "JavaScript": int(experience_levels.get("JavaScript") or 0),
+        "Agentic AI": int(
+            experience_levels.get("Agentic AI")
+            or experience_levels.get("Agentic_Ai")
+            or 0
+        ),
+        "AI/ML": int(
+            experience_levels.get("AI/ML") or experience_levels.get("AI_ML") or 0
+        ),
     }
-    parsed["experience_level"] = norm_el
+    profile_dict["experience_level"] = normalized_experience_levels
 
     # Name normalization
-    if not parsed.get("name") or not isinstance(parsed["name"], str):
-        parsed["name"] = ""
+    if not profile_dict.get("name") or not isinstance(profile_dict["name"], str):
+        profile_dict["name"] = ""
     else:
-        parsed["name"] = parsed["name"].strip()
-    return parsed
+        profile_dict["name"] = profile_dict["name"].strip()
+    return profile_dict
 
 
-def normalize_list(items: List[str]) -> List[str]:
+def normalize_list(skill_items: List[str]) -> List[str]:
     """
-    Normalize list
+    Normalize list of skill items by deduplicating and standardizing capitalization.
 
     Args:
-        items:
+        skill_items: List of skill/item strings to normalize
 
     Returns:
-        normalized:
+        List[str]: Normalized list with duplicates removed and proper capitalization
     """
 
     normalized = []
     seen = set()
 
-    for item in items:
+    for item in skill_items:
         if not isinstance(item, str):
             continue
-        val = _normalize_token(item)
-        if val and val not in seen:
-            normalized.append(val)
-            seen.add(val)
+        normalized_value = _normalize_token(item)
+        if normalized_value and normalized_value not in seen:
+            normalized.append(normalized_value)
+            seen.add(normalized_value)
 
     return normalized
 
@@ -144,25 +150,24 @@ def normalize_text(text: str) -> str:
 # ------------------------------
 # Internal function
 # ------------------------------
-def _normalize_token(tok: str) -> str:
+def _normalize_token(token: str) -> str:
     """
     Normalize token
 
     Args:
-        tok:
+        token (str): The token string to normalize
 
     Returns:
-        token:
-        token.capitalize():
+        str: The normalized token (capitalized or mapped via alias)
     """
 
-    token = tok.strip()
+    token = token.strip()
     if not token:
         return token
-    low = token.lower()
-    if low in SKILL_ALIAS_MAP:
-        return SKILL_ALIAS_MAP[low]
+    token_lowercase = token.lower()
+    if token_lowercase in SKILL_ALIAS_MAP:
+        return SKILL_ALIAS_MAP[token_lowercase]
     # Basic capitalization rules
-    if low.isupper():
+    if token_lowercase.isupper():
         return token
     return token if any(c.isupper() for c in token) else token.capitalize()

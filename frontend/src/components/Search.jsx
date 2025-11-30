@@ -130,12 +130,12 @@ export default function Search() {
 
       // Programmatically trigger file download
       // Create temporary anchor element, click it, then remove it
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
+      const download_link = document.createElement("a");
+      download_link.href = url;
+      download_link.download = filename;
+      document.body.appendChild(download_link);
+      download_link.click();
+      download_link.remove();
 
       // Clean up the blob URL to free memory
       window.URL.revokeObjectURL(url);
