@@ -78,6 +78,8 @@ class SearcherAgent:
                 logger.info(" Searching %s for query '%s'", job_board, query)
                 if job_board.lower() == "duunitori":
                     jobs = scrape_duunitori(query, deep_mode=self.deep_mode)
+                elif job_board.lower() == "jobly":
+                    jobs = scrape_jobly(query, deep_mode=self.deep_mode)
                 else:
                     # Placeholder for other boards
                     jobs = []
