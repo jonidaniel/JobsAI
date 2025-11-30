@@ -286,10 +286,20 @@ OUTPUT_SCHEMA = """{
 
 class ExperienceLevels(BaseModel):
     """
-    asd
+    Experience level ratings for key technology areas.
 
-    Args:
-        BaseModel:
+    Values represent years of experience on a scale:
+    - 0: No experience
+    - 1: Less than half a year
+    - 2: Less than a year
+    - 3: Less than 1.5 years
+    - 4: Less than 2 years
+    - 5: Less than 2.5 years
+    - 6: Less than 3 years
+    - 7: Over 3 years
+
+    Fields use aliases to support both Python naming conventions and
+    display-friendly names (e.g., "Agentic AI" contains a space).
     """
 
     Python: int = 0
@@ -299,7 +309,10 @@ class ExperienceLevels(BaseModel):
 
     class Config:
         """
-        asd
+        Pydantic model configuration.
+
+        validate_by_name: Allows access by both field name and alias
+        json_schema_extra: Example values for API documentation
         """
 
         validate_by_name = True
@@ -310,26 +323,38 @@ class ExperienceLevels(BaseModel):
 
 class SkillProfile(BaseModel):
     """
-    A candidate's skill profile.
+    A candidate's comprehensive skill profile.
 
-    Args:
-        BaseModel:
+    This is the central data structure that represents a candidate's skills,
+    experience, and qualifications. It's created by the ProfilerAgent from
+    form submissions and used throughout the pipeline for:
+    - Generating job search queries
+    - Scoring job relevancy
+    - Writing personalized cover letters
+
+    All list fields are automatically deduplicated and normalized during processing.
     """
 
-    name: str = ""
-    core_languages: List[str] = []
-    frameworks_and_libraries: List[str] = []
-    tools_and_platforms: List[str] = []
-    agentic_ai_experience: List[str] = []
-    ai_ml_experience: List[str] = []
-    soft_skills: List[str] = []
-    projects_mentioned: List[str] = []
-    experience_level: ExperienceLevels = Field(default_factory=ExperienceLevels)
-    job_search_keywords: List[str] = []
+    name: str = ""  # Candidate's name (optional)
+    core_languages: List[str] = []  # Programming languages (Python, JavaScript, etc.)
+    frameworks_and_libraries: List[str] = (
+        []
+    )  # Frameworks and libraries (React, FastAPI, etc.)
+    tools_and_platforms: List[str] = []  # Tools and platforms (Docker, AWS, etc.)
+    agentic_ai_experience: List[str] = []  # Agentic AI tools/technologies
+    ai_ml_experience: List[str] = []  # AI/ML technologies and tools
+    soft_skills: List[str] = []  # Soft skills (communication, teamwork, etc.)
+    projects_mentioned: List[str] = []  # Project names/titles mentioned
+    experience_level: ExperienceLevels = Field(
+        default_factory=ExperienceLevels
+    )  # Experience ratings
+    job_search_keywords: List[str] = []  # Additional keywords for job searching
 
     class Config:
         """
-        asd
+        Pydantic model configuration.
+
+        validate_by_name: Allows access by both field name and alias
         """
 
         validate_by_name = True

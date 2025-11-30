@@ -15,8 +15,6 @@ import logging
 from datetime import datetime
 from typing import Dict
 
-from docx import Document
-
 from jobsai.agents import (
     ProfilerAgent,
     SearcherAgent,
@@ -38,44 +36,69 @@ logging.basicConfig(level=logging.INFO)
 # logging.basicConfig(level=logging.DEBUG)
 
 
-def main(submits: Dict) -> Document:
-    """Launch the agent pipeline.
+def main(submits: Dict) -> Dict:
+    """
+    Launch the complete JobsAI agent pipeline.
+
+    This is the main orchestration function that runs all agents in sequence:
+    1. ProfilerAgent: Creates/updates candidate skill profile from form submissions
+    2. SearcherAgent: Scrapes job boards for relevant job listings
+    3. ScorerAgent: Scores job listings based on skill profile match
+    4. ReporterAgent: Generates analysis report on top-scoring jobs
+    5. GeneratorAgent: Creates cover letter document based on report
+
+    Args:
+        submits (Dict): Form data from frontend containing:
+            - General questions (text fields)
+            - Technology experience levels (slider values 0-7)
+            - Multiple choice selections (e.g., experience levels)
 
     Returns:
-        Document: The final cover letter.
+        Dict: Dictionary containing:
+            - "document" (Document): The generated cover letter as a Word document
+            - "timestamp" (str): Timestamp used for file naming (format: YYYYMMDD_HHMMSS)
+            - "filename" (str): Suggested filename for the cover letter document
     """
 
-    # A constant timestamp for the whole workflow
+    # Generate a constant timestamp for the whole workflow
+    # Used for consistent file naming across all agents
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-    # Initialize agents with constant values
+    # Initialize all agents with the shared timestamp
+    # Each agent uses the timestamp to create consistently named output files
     profiler = ProfilerAgent(timestamp)
     searcher = SearcherAgent(job_boards, deep_mode, timestamp)
     scorer = ScorerAgent(timestamp)
     reporter = ReporterAgent(timestamp)
     generator = GeneratorAgent(timestamp)
 
-    # 1. Assess a candidate and return a skill profile of them
+    # Step 1: Assess candidate and create/update skill profile
+    # Uses LLM to extract structured skill information from form submissions
     skill_profile = profiler.create_profile(submits)
 
-    # 2. Build search queries based on the skill profile
-    # Then scrape job boards for job listings
-    # Store the raw listings to /data/job_listings/raw/
+    # Step 2: Build search queries from skill profile and scrape job boards
+    # Queries are generated deterministically from profile keywords
+    # Raw job listings are saved to /data/job_listings/raw/{timestamp}_{job_board}_{query}.json
     searcher.search_jobs(skill_profile.model_dump())
 
-    # 3. Load the raw listings from /data/job_listings/raw/
-    # Then score them based on relevancy to the candidate's skill profile
-    # Save the scored listings to /data/job_listings/scored/scored_jobs.json
+    # Step 3: Score job listings based on relevancy to candidate's skill profile
+    # Compares job descriptions with profile keywords to compute match scores
+    # Scored listings are saved to /data/job_listings/scored/{timestamp}_scored_jobs.json
     scorer.score_jobs(skill_profile=skill_profile)
 
-    # 4. Write a report/an analysis on the findings and save it to /data/reports/job_report.txt
+    # Step 4: Generate analysis report on top-scoring jobs
+    # Uses LLM to create personalized cover letter instructions for each job (used by GeneratorAgent)
+    # Report is saved to /data/reports/job_report.txt
     job_report = reporter.generate_report(skill_profile, report_size)
 
-    # 5. Generate cover letters for each job
+    # Step 5: Generate cover letter document
+    # Uses LLM to write cover letter based on skill profile and job report
+    # Document is saved to /data/cover_letters/{timestamp}_cover_letter.docx and returned
     document = generator.generate_letters(
         skill_profile, job_report, letter_style, contact_information
     )
 
+    # Return document and metadata for API response
     return {
         "document": document,
         "timestamp": timestamp,

@@ -109,38 +109,56 @@ class ProfilerAgent:
     # ------------------------------
 
     def _build_prompt(self, submits: Dict) -> str:
-        """Build the final user prompt for an LLM.
+        """
+        Build the final user prompt for the LLM by combining form data.
+
+        Transforms frontend form submissions into a natural language prompt:
+        - Extracts general text input (background summary, skills, etc.)
+        - Converts slider values (0-7) to experience descriptions
+        - Maps technology keys to proper names (e.g., "javascript" -> "JavaScript")
+        - Combines everything into a coherent text for the LLM
 
         Args:
-            submits (Dict): The user's submits from frontend.
+            submits (Dict): The user's form submissions from frontend containing:
+                - "general": General text input (background, skills, etc.)
+                - Technology keys: Slider values (0-7) representing experience levels
+                - Multiple choice arrays: Selected experience levels
 
         Returns:
-            str: The final user prompt for an LLM.
+            str: The formatted user prompt ready to send to the LLM
         """
 
-        # Extract general text and build experience lines in a single pass
+        # Extract general text input (background summary, key skills, etc.)
         user_input = submits.get("general", "")
         experience_lines = []
 
+        # Process each form field
         for key, value in submits.items():
-            # Skip "general" key as it's already handled
+            # Skip "general" key as it's already handled above
             if key == "general":
                 continue
 
-            # Map key to proper term (e.g. "javascript" to "JavaScript")
+            # Skip multiple choice arrays (handled separately if needed)
+            if isinstance(value, list):
+                continue
+
+            # Map frontend key to proper technology name
+            # e.g., "javascript" -> "JavaScript", "html-css" -> "HTML/CSS"
             mapped_key = SUBMIT_ALIAS_MAP.get(key, key)
 
-            # Convert frontend's index-like values (1–7) into actual years
+            # Convert frontend's numeric slider values (0-7) into natural language
+            # e.g., 1 -> "less than half a year", 7 -> "over 3 years"
             if value in EXPERIENCE_ALIAS_MAP:
                 experience_text = EXPERIENCE_ALIAS_MAP[value]
                 experience_lines.append(
                     f"\nI have {experience_text} of experience with {mapped_key}."
                 )
 
-        # Combine general input with experience lines
+        # Combine general input with experience statements
         user_input = user_input + "".join(experience_lines)
 
-        # Insert user input and output schema into the user prompt to create final user prompt
+        # Insert user input and output schema into the base user prompt template
+        # The LLM will use this to extract structured skill profile
         final_user_prompt = USER_PROMPT.format(
             user_input=user_input, output_schema=OUTPUT_SCHEMA
         )
@@ -150,18 +168,30 @@ class ProfilerAgent:
         return final_user_prompt
 
     def _merge_profiles(self, skill_profile: SkillProfile) -> SkillProfile:
-        """Merge the new skill profile into the existing skill profile.
+        """
+        Merge the new skill profile with an existing profile (if one exists).
+
+        Merging strategy:
+        - Lists: Combine and deduplicate (union of all skills)
+        - Experience levels: Take maximum value (highest experience wins)
+        - Name: Use new name if provided, otherwise keep existing
+
+        This allows the profile to grow over time as the candidate submits
+        additional information through multiple form submissions.
 
         Args:
-            skill_profile (SkillProfile): The candidate's skill profile.
+            skill_profile (SkillProfile): The newly created skill profile from current submission
 
         Returns:
-            SkillProfile: The skill profile unmodified if there is not an existing skill profile, a merged skill profile if there was an existing skill profile.
+            SkillProfile:
+                - The new profile unchanged if no existing profile exists
+                - A merged profile combining new and existing data if profile exists
         """
         # Load existing skill profile from /src/jobsai/memory/vector_db/
+        # Returns None if no profile exists (first time running)
         existing = self._load_profile()
 
-        # If running for the first time
+        # If running for the first time, just save and return the new profile
         if not existing:
             self._save_profile(skill_profile)
             return skill_profile
@@ -169,8 +199,11 @@ class ProfilerAgent:
         print()
         logger.info(" MERGING SKILL PROFILE WITH EXISTING PROFILE ...")
 
-        # Merge lists
+        # Start with existing profile as base
         merged = existing.model_dump()
+
+        # Merge list fields: combine lists and remove duplicates
+        # Uses dict.fromkeys() trick to preserve order while deduplicating
         for list_key in [
             "core_languages",
             "frameworks_and_libraries",
@@ -188,7 +221,9 @@ class ProfilerAgent:
                 )
             )
 
-        # Merge experience levels (take max)
+        # Merge experience levels: take the maximum value
+        # This ensures we keep the highest experience level if candidate
+        # has provided different values in different submissions
         el_existing = existing.experience_level.model_dump(by_alias=True)
         el_new = skill_profile.experience_level.model_dump(by_alias=True)
         merged_el = {}
@@ -197,7 +232,11 @@ class ProfilerAgent:
                 int(el_existing.get(k, 0) or 0), int(el_new.get(k, 0) or 0)
             )
         merged["experience_level"] = merged_el
+
+        # Use new name if provided, otherwise keep existing name
         merged["name"] = skill_profile.name or existing.name
+
+        # Create merged profile object and validate
         merged_profile = SkillProfile(**merged)
 
         # Save merged skill profile to /src/jobsai/memory/vector_db/

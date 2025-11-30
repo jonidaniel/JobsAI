@@ -36,18 +36,28 @@ client = OpenAI(api_key=OPENAI_API_KEY)
 
 def call_llm(system_prompt: str, user_prompt: str, max_tokens: int = 800) -> str:
     """
-    Call an LLM.
+    Call OpenAI LLM API with system and user prompts.
+
+    This is the central function for all LLM interactions in the JobsAI system.
+    It's used by:
+    - ProfilerAgent: To extract skill profiles from form submissions
+    - ReporterAgent: To generate cover letter instructions
+    - GeneratorAgent: To write cover letter content
 
     Args:
-        user_prompt: user prompt
-        system_prompt: system prompt
-        max_tokens: maximum amount of tokens reserved for the call
+        system_prompt (str): System prompt defining the LLM's role and behavior
+        user_prompt (str): User prompt containing the actual task/input
+        max_tokens (int): Maximum number of tokens in the response (default: 800)
 
     Returns:
-        text: the complete LLM response text
+        str: The complete LLM response text
+
+    Raises:
+        Exception: If OpenAI API call fails (handled by caller)
     """
 
-    # Get response from LLM
+    # Make API call to OpenAI
+    # Temperature is set low (0.2) for more deterministic, focused responses
     response = client.chat.completions.create(
         model=OPENAI_MODEL,
         messages=[
@@ -55,11 +65,13 @@ def call_llm(system_prompt: str, user_prompt: str, max_tokens: int = 800) -> str
             {"role": "user", "content": user_prompt},
         ],
         max_tokens=max_tokens,
-        temperature=0.2,
+        temperature=0.2,  # Low temperature for consistent, focused output
     )
 
+    # Extract text content from response
     text = response.choices[0].message.content
 
+    # Log first 500 characters for debugging (full response may be very long)
     logger.debug(" LLM response: %s", text[:500])
 
     return text
@@ -67,33 +79,48 @@ def call_llm(system_prompt: str, user_prompt: str, max_tokens: int = 800) -> str
 
 def extract_json(text: str) -> Optional[str]:
     """
-    Extract the JSON substring from the raw LLM response.
+    Extract JSON substring from raw LLM response text.
+
+    LLMs often return JSON wrapped in markdown code blocks or with extra text.
+    This function finds and extracts just the JSON portion by:
+    1. Finding the first opening brace '{'
+    2. Balancing braces to find the matching closing brace '}'
+    3. Extracting the substring between them
 
     Args:
-        text: the raw LLM response
+        text (str): The raw LLM response text (may contain markdown, explanations, etc.)
 
     Returns:
-        text: the extracted JSON
-        None: if JSON cannot be extracted from the response
+        Optional[str]:
+            - The extracted JSON string if valid JSON is found
+            - None if no valid JSON can be extracted
+
+    Example:
+        Input: "Here is the profile: ```json\n{\"name\": \"John\"}\n```"
+        Output: '{"name": "John"}'
     """
 
-    # Find where the JSON starts
+    # Find where the JSON object starts (first opening brace)
     start = text.find("{")
 
-    # If a brace isn't present
+    # If no opening brace found, there's no JSON
     if start == -1:
         return None
 
-    # Attempt to balance braces
+    # Balance braces to find the matching closing brace
+    # This handles nested objects correctly
     brace = 0
     for i in range(start, len(text)):
         if text[i] == "{":
             brace += 1
         elif text[i] == "}":
             brace -= 1
+            # When braces are balanced, we've found the complete JSON object
             if brace == 0:
                 return text[start : i + 1]
-    # Fallback: try direct load
+
+    # Fallback: if brace balancing didn't work, try parsing the entire text
+    # This handles cases where the text is already valid JSON
     try:
         json.loads(text)
         return text

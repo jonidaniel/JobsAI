@@ -127,20 +127,31 @@ class GeneratorAgent:
     def _write_letter(
         self, system_prompt: str, user_prompt: str, contact_info: Dict
     ) -> Document:
-        """Write the cover letter.
+        """
+        Write the cover letter document with proper formatting.
+
+        Creates a Word document with:
+        1. Contact information (top-right)
+        2. Date (top-right)
+        3. Recipient placeholder (top-right)
+        4. LLM-generated cover letter body
+        5. Signature placeholder (bottom-right)
+
+        The document follows standard business letter formatting conventions.
 
         Args:
-            system_prompt (str): The system prompt that is used to write the cover letter.
-            user_prompt (str): The user prompt that is used to write the cover letter.
-            contact_info (Dict): The candidate's contact information.
+            system_prompt (str): System prompt defining LLM's role as cover letter writer
+            user_prompt (str): User prompt containing skill profile and job report
+            contact_info (Dict): Candidate's contact information dictionary
 
         Returns:
-            Document: The ready cover letter.
+            Document: The complete cover letter as a python-docx Document object
         """
 
         cover_letter = Document()
 
-        # Contact information at the top right
+        # Add contact information at the top right
+        # Format: website, LinkedIn, GitHub (blank line) email, phone
         p = cover_letter.add_paragraph()
         p.alignment = WD_ALIGN_PARAGRAPH.RIGHT
         p.add_run(f'{contact_info.get("website")}\n')
@@ -149,15 +160,17 @@ class GeneratorAgent:
         p.add_run(f'{contact_info.get("email")}\n')
         p.add_run(f'{contact_info.get("phone")}\n\n')
 
-        # Turn the timestamp into a 'pretty date'
+        # Convert timestamp (YYYYMMDD_HHMMSS) to human-readable date
+        # Format: "Month Day, Year" (e.g., "November 30, 2025")
         dt = datetime.strptime(self.timestamp, "%Y%m%d_%H%M%S")
         pretty_date = dt.strftime("%B %d, %Y")
-        # Add the date (align right)
+        # Add the date (aligned right)
         cover_letter.add_paragraph(f"{pretty_date}\n").alignment = (
             WD_ALIGN_PARAGRAPH.RIGHT
         )
 
-        # Add the recipient (align right)
+        # Add recipient placeholder (aligned right)
+        # User should manually fill these in before sending
         cover_letter.add_paragraph("ADD RECRUITER/HIRING TEAM").alignment = (
             WD_ALIGN_PARAGRAPH.RIGHT
         )
@@ -165,18 +178,20 @@ class GeneratorAgent:
             WD_ALIGN_PARAGRAPH.RIGHT
         )
 
-        # Get the actual body/content of the cover letter and normalize it
+        # Generate cover letter body using LLM
+        # The LLM writes the actual cover letter content based on prompts
         raw = call_llm(system_prompt, user_prompt)
+        # Normalize text (clean whitespace, line breaks, etc.)
         normalized = normalize_text(raw)
-        # Insert the body to the document
+        # Insert the body into the document
         cover_letter.add_paragraph(normalized)
 
-        # Add signature
+        # Add signature section (aligned right)
         cover_letter.add_paragraph("Best regards,").alignment = WD_ALIGN_PARAGRAPH.RIGHT
         cover_letter.add_paragraph("ADD YOUR NAME").alignment = WD_ALIGN_PARAGRAPH.RIGHT
 
+        # Save the document to disk
         filename = f"{self.timestamp}_cover_letter.docx"
-        # Save the cover letter to /src/jobsai/data/cover_letters/
         cover_letter.save(os.path.join(COVER_LETTER_PATH, filename))
 
         return cover_letter

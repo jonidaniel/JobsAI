@@ -46,34 +46,45 @@ class ReporterAgent:
     # Public interface
     # ------------------------------
     def generate_report(self, skill_profile: SkillProfile, report_size: int) -> str:
-        """Generate a summary report on the most-scored jobs.
+        """
+        Generate a summary report on the most-scored jobs.
 
-        Saves it to src/jobsai/data/job_reports/ and also returns the job report.
+        For each top-scoring job, this function:
+        1. Uses LLM to generate personalized cover letter instructions
+        2. Formats job details (title, company, location, score, etc.)
+        3. Combines everything into a readable report
+
+        The report is saved to src/jobsai/data/job_reports/ and also returned.
 
         Args:
-            report_size (int): The desired number of top jobs to include in the report.
+            skill_profile (SkillProfile): The candidate's skill profile
+            report_size (int): The desired number of top jobs to include in the report
 
         Returns:
-            str: The job report.
+            str: The complete job report as a formatted text string
         """
 
         logger.info(" WRITING JOB REPORT ...")
 
+        # Load scored jobs from previous step
         scored_jobs = self._load_scored_jobs()
         if not scored_jobs:
             logger.warning(" No scored jobs found for reporting.")
             return ""
 
-        # Sort jobs by score descending (already done in scorer, but safe)
+        # Sort jobs by score descending (already done in scorer, but safe to re-sort)
         scored_jobs.sort(key=lambda x: x.get("score", 0), reverse=True)
 
-        # ????
+        # Initialize report with header
         report_lines = ["Job Report", "=" * 40, f"Top {report_size} Jobs:\n"]
 
+        # Process each top-scoring job
         for job in scored_jobs[:report_size]:
             full_description = job.get("full_description")
 
-            # Generate instructions on what kind of cover letter to write
+            # Generate personalized cover letter instructions using LLM
+            # The LLM analyzes the job description and skill profile to create
+            # specific instructions for writing a tailored cover letter
             instructions = call_llm(
                 SYSTEM_PROMPT,
                 USER_PROMPT.format(

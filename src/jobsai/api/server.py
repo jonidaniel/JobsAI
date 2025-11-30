@@ -50,26 +50,54 @@ class FrontendPayload(BaseModel):
 # ------------- API Route -------------
 @app.post("/api/endpoint")
 async def run_agent_pipeline(payload: FrontendPayload):
-    """Run the agent pipeline.
+    """
+    Run the complete JobsAI agent pipeline and return cover letter document.
 
-    HandleThe request body is the JSON collected from slider and text field questions.
+    This endpoint receives form data from the frontend (slider values, text fields,
+    multiple choice selections) and triggers the full agent pipeline:
+    1. Profile creation
+    2. Job searching
+    3. Job scoring
+    4. Report generation
+    5. Cover letter generation
+
+    The response is a Word document (.docx) that the browser will download.
+
+    Args:
+        payload (FrontendPayload): Form data from frontend containing:
+            - General questions (text fields)
+            - Technology experience levels (slider values 0-7)
+            - Multiple choice selections
+
+    Returns:
+        Response: HTTP response with:
+            - Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document
+            - Content-Disposition: attachment header for file download
+            - Body: Binary content of the .docx file
     """
 
+    # Extract dictionary from Pydantic model
     data = payload.model_dump()
 
     logging.info(f"Received an API request with {len(data)} fields.")
 
-    # Initiate agent pipeline with the frontend payload
+    # Run the complete agent pipeline
+    # This may take several minutes depending on:
+    # - Number of job boards to scrape
+    # - Deep mode (whether to fetch full job descriptions)
+    # - Number of LLM calls required
     result = jobsai.main(data)
     document = result["document"]
     filename = result["filename"]
 
-    # Convert Document to BytesIO
+    # Convert Python-docx Document object to bytes for HTTP response
+    # Document is saved to in-memory buffer (BytesIO)
     buffer = BytesIO()
     document.save(buffer)
-    buffer.seek(0)
+    buffer.seek(0)  # Reset buffer position to beginning for reading
 
-    # Return file as response
+    # Return file as HTTP response with appropriate headers
+    # Browser will automatically trigger download due to Content-Disposition header
     return Response(
         content=buffer.read(),
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",

@@ -131,17 +131,31 @@ class ScorerAgent:
         return f"{title}|{query}|{snippet_prefix}"
 
     def _compute_job_score(self, job: Dict, skill_profile: SkillProfile) -> Dict:
-        """Compute a simple matching score for the job based on the cnadidate's skill profile.
+        """
+        Compute a relevancy score for a job based on the candidate's skill profile.
+
+        Scoring algorithm:
+        1. Extract all skill keywords from the candidate's profile
+        2. Search for these keywords in the job description (title, snippet, full description)
+        3. Calculate score as percentage of matched skills
+        4. Return job dict enriched with score and matched/missing skills lists
 
         Args:
-            job (Dict):
-            skill_profile (SkillProfile): The candidate's skill profile.
+            job (Dict): Job listing dictionary containing:
+                - "title": Job title
+                - "description_snippet": Short description from search results
+                - "full_description": Full job description (if deep mode was used)
+            skill_profile (SkillProfile): The candidate's skill profile
 
         Returns:
-            Dict: The
+            Dict: Job dictionary with added fields:
+                - "score": Integer score (0-100) representing match percentage
+                - "matched_skills": List of profile skills found in job description
+                - "missing_skills": List of profile skills not found in job description
         """
 
-        # Combine all skill keywords from the profile
+        # Combine all skill keywords from all profile categories
+        # This creates a comprehensive list of skills to search for
         profile_keywords = (
             skill_profile.core_languages
             + skill_profile.frameworks_and_libraries
@@ -152,8 +166,11 @@ class ScorerAgent:
             + skill_profile.projects_mentioned
             + skill_profile.job_search_keywords
         )
+        # Normalize keywords (deduplicate, standardize capitalization)
         profile_keywords = normalize_list(profile_keywords)
 
+        # Combine all job text into a single searchable string
+        # Includes title, snippet, and full description (if available)
         job_text = " ".join(
             [
                 str(job.get("title", "")),
@@ -162,12 +179,15 @@ class ScorerAgent:
             ]
         ).lower()
 
+        # Find which profile skills appear in the job description
         matched_skills = [kw for kw in profile_keywords if kw.lower() in job_text]
         missing_skills = [kw for kw in profile_keywords if kw.lower() not in job_text]
 
-        # Simple scoring: percentage of matched skills
+        # Calculate score as percentage of matched skills
+        # Score ranges from 0-100, where 100 means all profile skills were found
         score = int(len(matched_skills) / max(1, len(profile_keywords)) * 100)
 
+        # Enrich job dict with scoring information
         job_copy = job.copy()
         job_copy.update(
             {
