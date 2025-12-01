@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef } from "react";
 
 import QuestionSets from "./QuestionSets";
-import ErrorMessage from "./ErrorMessage";
 import SuccessMessage from "./SuccessMessage";
+import ErrorMessage from "./ErrorMessage";
+
 import { API_ENDPOINTS } from "../config/api";
+
 import { transformFormData } from "../utils/formDataTransform";
 import { downloadBlob } from "../utils/fileDownload";
 import { getErrorMessage } from "../utils/errorMessages";
@@ -131,11 +133,11 @@ export default function Search() {
       {/* Question sets component with blue/gray background - contains all question sets and manages all form inputs */}
       <QuestionSets onFormDataChange={setFormData} />
 
-      {/* Error message - displayed when submission fails */}
-      {error && <ErrorMessage message={error} />}
-
       {/* Success message - displayed when document is successfully downloaded */}
       {success && <SuccessMessage />}
+
+      {/* Error message - displayed when submission fails */}
+      {error && <ErrorMessage message={error} />}
 
       {/* Black 'Find Jobs' submit button - triggers form submission and document generation */}
       <div className="flex justify-center mt-6">

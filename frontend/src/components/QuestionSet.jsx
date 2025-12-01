@@ -2,7 +2,13 @@ import Slider from "./questions/Slider";
 import TextField from "./questions/TextField";
 import MultipleChoice from "./questions/MultipleChoice";
 import SingleChoice from "./questions/SingleChoice";
-import { SLIDER_DATA } from "../config/sliderData";
+
+import {
+  TOTAL_QUESTION_SETS,
+  GENERAL_QUESTIONS_COUNT,
+  SLIDER_DEFAULT,
+  GENERAL_QUESTIONS_INDEX,
+} from "../config/constants";
 import {
   GENERAL_QUESTION_LABELS,
   GENERAL_QUESTION_KEYS,
@@ -13,12 +19,7 @@ import {
   JOB_COUNT_OPTIONS,
 } from "../config/generalQuestions";
 import { QUESTION_SET_TITLES } from "../config/questionSetTitles";
-import {
-  TOTAL_QUESTION_SETS,
-  GENERAL_QUESTIONS_COUNT,
-  SLIDER_DEFAULT,
-  GENERAL_QUESTIONS_INDEX,
-} from "../config/constants";
+import { SLIDER_DATA } from "../config/sliderData";
 
 /**
  * QuestionSet Component
