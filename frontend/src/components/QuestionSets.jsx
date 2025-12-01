@@ -3,8 +3,8 @@ import QuestionSet from "./QuestionSet";
 import {
   TOTAL_QUESTION_SETS,
   GENERAL_QUESTIONS_COUNT,
-  GENERAL_QUESTION_KEYS,
 } from "../config/constants";
+import { GENERAL_QUESTION_KEYS } from "../config/generalQuestions";
 
 /**
  * QuestionSets Component
