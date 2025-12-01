@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import QuestionSets from "./QuestionSets";
 import { API_ENDPOINTS } from "../config/api";
 import { transformFormData } from "../utils/formDataTransform";
+import { downloadBlob } from "../utils/fileDownload";
 
 import "../styles/search.css";
 
@@ -86,6 +87,8 @@ export default function Search() {
     // Transform form data into grouped structure for backend API
     const result = transformFormData(formData);
 
+    console.log("RESULT IN HANDLE_SUBMIT: ", result);
+
     // Send to backend and download document
     try {
       // Send POST request with form data
@@ -105,29 +108,8 @@ export default function Search() {
       // Get the response as a blob (binary data for .docx file)
       const blob = await response.blob();
 
-      // Extract filename from Content-Disposition header if available
-      // Format: "attachment; filename=\"document.docx\""
-      const contentDisposition = response.headers.get("Content-Disposition");
-      let filename = "document.docx"; // default fallback
-      if (contentDisposition) {
-        const match = contentDisposition.match(/filename="?(.+)"?/);
-        if (match && match[1]) filename = match[1];
-      }
-
-      // Create a temporary URL for the blob
-      const url = window.URL.createObjectURL(blob);
-
-      // Programmatically trigger file download
-      // Create temporary anchor element, click it, then remove it
-      const download_link = document.createElement("a");
-      download_link.href = url;
-      download_link.download = filename;
-      document.body.appendChild(download_link);
-      download_link.click();
-      download_link.remove();
-
-      // Clean up the blob URL to free memory
-      window.URL.revokeObjectURL(url);
+      // Download the file
+      downloadBlob(blob, response.headers);
 
       // Show success message
       setSuccess(true);
