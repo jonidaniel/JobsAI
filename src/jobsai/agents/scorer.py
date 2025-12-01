@@ -1,17 +1,15 @@
 """
-JobsAI/src/jobsai/agents/scorer.py
-
-Acts as the SCORER AGENT.
+Orchestrates the scoring of the raw job listings.
 
 CLASSES:
-    ScorerAgent
+    ScorerService
 
 FUNCTIONS (in order of workflow):
-    1. ScorerAgent.score_jobs           (public use)
-    2. ScorerAgent._load_job_listings   (internal use)
-    3. ScorerAgent._job_identity        (internal use)
-    4. ScorerAgent._compute_job_score   (internal use)
-    5. ScorerAgent._save_scored_jobs    (internal use)
+    1. score_jobs           (public use)
+    2. _load_job_listings   (internal use)
+    3. _job_identity        (internal use)
+    4. _compute_job_score   (internal use)
+    5. _save_scored_jobs    (internal use)
 """
 
 import os
@@ -27,7 +25,7 @@ from jobsai.utils.normalization import normalize_list
 logger = logging.getLogger(__name__)
 
 
-class ScorerAgent:
+class ScorerService:
     """Orchestrates the scoring of the raw job listings.
 
     Responsibilities:
@@ -47,7 +45,7 @@ class ScorerAgent:
     def score_jobs(self, skill_profile: SkillProfile):
         """Score the raw job listings based on the candidate's skill profile.
 
-        Saves the scored jobs to src/jobsai/data/job_listings/scored/.
+        Saves the scored jobs to SCORED_JOB_LISTING_PATH.
 
         Args:
             skill_profile (SkillProfile): The candidate's skill profile.
@@ -58,8 +56,6 @@ class ScorerAgent:
             logger.warning(" No job listings found to score.")
             return
 
-        logger.info(" SCORING JOBS ...")
-
         scored_jobs = [
             self._compute_job_score(job, skill_profile) for job in job_listings
         ]
@@ -68,7 +64,7 @@ class ScorerAgent:
         self._save_scored_jobs(scored_jobs)
 
         logger.info(
-            f" SCORED {len(scored_jobs)} JOBS AND SAVED THEM TO /{SCORED_JOB_LISTING_PATH}/{self.timestamp}_scored_jobs.json\n"
+            f" Scored {len(scored_jobs)} jobs to /{SCORED_JOB_LISTING_PATH}/{self.timestamp}_scored_jobs.json"
         )
 
     # ------------------------------
@@ -76,10 +72,12 @@ class ScorerAgent:
     # ------------------------------
 
     def _load_job_listings(self) -> List[Dict]:
-        """Load all JSON files from src/jobsai/data/job_listings/raw and return them as a list.
+        """Load the raw job listings.
+
+        Loads all JSON files from /src/jobsai/data/job_listings/raw and returns them as a list.
 
         Returns:
-            List[Dict]: The job listings.
+            List[Dict]: The list of raw job listings.
         """
 
         jobs = []
@@ -111,13 +109,14 @@ class ScorerAgent:
         Prefer URL, otherwise a hashable combo of fields that tends to be stable across scrapes.
 
         Args:
-            job (Dict):
+            job (Dict): The job listing dictionary.
 
         Returns:
-            str: The
+            str: The job identifier.
         """
-
+        # Try to use the URL as the identifier
         url = (job.get("url") or "").strip()
+        # If the URL is not empty, return it
         if url:
             return url
 
@@ -141,17 +140,17 @@ class ScorerAgent:
         4. Return job dict enriched with score and matched/missing skills lists
 
         Args:
-            job (Dict): Job listing dictionary containing:
+            job (Dict): The job listing dictionary containing:
                 - "title": Job title
                 - "description_snippet": Short description from search results
                 - "full_description": Full job description (if deep mode was used)
-            skill_profile (SkillProfile): The candidate's skill profile
+            skill_profile (SkillProfile): The skill profile.
 
         Returns:
-            Dict: Job dictionary with added fields:
+            Dict: The job dictionary with added fields:
                 - "score": Integer score (0-100) representing match percentage
-                - "matched_skills": List of profile skills found in job description
-                - "missing_skills": List of profile skills not found in job description
+                - "matched_skills": The list of profile skills found in the job description
+                - "missing_skills": The list of profile skills not found in the job description
         """
 
         # Combine all skill keywords from all profile categories
