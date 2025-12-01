@@ -2,12 +2,7 @@ import { useState, useEffect, useRef } from "react";
 
 import QuestionSets from "./QuestionSets";
 import { API_ENDPOINTS } from "../config/api";
-import {
-  QUESTION_SET_NAMES,
-  GENERAL_QUESTIONS_INDEX,
-} from "../config/constants";
-import { GENERAL_QUESTION_KEYS } from "../config/generalQuestions";
-import { SLIDER_DATA } from "../config/sliderData";
+import { transformFormData } from "../utils/formDataTransform";
 
 import "../styles/search.css";
 
@@ -88,66 +83,8 @@ export default function Search() {
     setSuccess(false);
     setIsSubmitting(true);
 
-    /**
-     * Filter form data to only include non-empty values
-     * - Strings: Include if trimmed value is not empty
-     * - Numbers: Include if value is not 0 (sliders default to 0)
-     * - Arrays: Include if array has at least one element (checkboxes)
-     */
-    const filtered = Object.fromEntries(
-      Object.entries(formData)
-        .filter(([, value]) => {
-          if (typeof value === "string") return value.trim() !== "";
-          if (typeof value === "number") return value !== 0;
-          if (Array.isArray(value)) return value.length > 0;
-          return false;
-        })
-        .map(([key, value]) => [
-          key,
-          typeof value === "string" ? value.trim() : value,
-        ])
-    );
-
-    /**
-     * Group filtered data by question set
-     * Structure: { "general": [{key: value}, ...], "languages": [...], ... }
-     */
-    const result = {};
-
-    // Group general questions (index 0)
-    const generalQuestions = GENERAL_QUESTION_KEYS.filter(
-      (key) => filtered[key] !== undefined
-    ).map((key) => ({ [key]: filtered[key] }));
-    if (generalQuestions.length > 0) {
-      result[QUESTION_SET_NAMES[GENERAL_QUESTIONS_INDEX]] = generalQuestions;
-    }
-
-    // Group slider question sets (indices 1-8)
-    for (let i = 1; i < QUESTION_SET_NAMES.length - 1; i++) {
-      const questionSetData = [
-        ...Object.keys(SLIDER_DATA[i - 1])
-          .filter((key) => filtered[key] !== undefined)
-          .map((key) => ({ [key]: filtered[key] })),
-        ...(filtered[`text-field${i}`] !== undefined
-          ? [{ [`text-field${i}`]: filtered[`text-field${i}`] }]
-          : []),
-      ];
-
-      if (questionSetData.length > 0) {
-        result[QUESTION_SET_NAMES[i]] = questionSetData;
-      }
-    }
-
-    // Group text-only question set (index 9)
-    if (filtered["additional-info"] !== undefined) {
-      result[QUESTION_SET_NAMES[9]] = [
-        { "additional-info": filtered["additional-info"] },
-      ];
-    }
-
-    console.log();
-    console.log("RESULT IN HANDLE_SUBMIT (not stringified yet): ", result);
-    console.log();
+    // Transform form data into grouped structure for backend API
+    const result = transformFormData(formData);
 
     // Send to backend and download document
     try {
