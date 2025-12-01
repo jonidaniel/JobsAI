@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+
 import { SLIDER_DATA } from "../config/sliderData";
 import {
   GENERAL_QUESTION_LABELS,

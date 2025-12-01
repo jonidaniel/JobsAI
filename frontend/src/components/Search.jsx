@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+
 import QuestionSets from "./QuestionSets";
 import { API_ENDPOINTS } from "../config/api";
 import {
@@ -7,6 +8,7 @@ import {
 } from "../config/constants";
 import { GENERAL_QUESTION_KEYS } from "../config/generalQuestions";
 import { SLIDER_DATA } from "../config/sliderData";
+
 import "../styles/search.css";
 
 /**
