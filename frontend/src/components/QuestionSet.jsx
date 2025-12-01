@@ -31,6 +31,7 @@ import { SLIDER_DATA, SLIDER_DEFAULT } from "../config/sliders";
  * @param {object} sectionRef - React ref callback to store DOM reference for scrolling
  * @param {object} formData - Current form data state (all question values)
  * @param {function} onFormChange - Callback to update form data when inputs change
+ * @param {object} validationErrors - Object mapping question keys to error messages
  */
 export default function QuestionSet({
   index,
@@ -38,6 +39,7 @@ export default function QuestionSet({
   sectionRef,
   formData,
   onFormChange,
+  validationErrors = {},
 }) {
   return (
     <section
@@ -46,6 +48,7 @@ export default function QuestionSet({
       aria-hidden={!isActive}
       role="tabpanel"
       aria-labelledby={`question-set-${index}-title`}
+      data-index={index}
     >
       <h3 className="text-3xl" id={`question-set-${index}-title`}>
         {index + 1}/{TOTAL_QUESTION_SETS}
@@ -77,6 +80,8 @@ export default function QuestionSet({
                   options={NAME_OPTIONS}
                   value={formData[keyName] || []}
                   onChange={onFormChange}
+                  error={validationErrors[keyName]}
+                  required={true}
                 />
               );
             } else if (j === 1) {
@@ -92,6 +97,8 @@ export default function QuestionSet({
                     options={JOB_BOARD_OPTIONS}
                     value={formData[keyName] || []}
                     onChange={onFormChange}
+                    error={validationErrors[keyName]}
+                    required={true}
                   />
                 </div>
               );
@@ -106,6 +113,8 @@ export default function QuestionSet({
                   options={DEEP_MODE_OPTIONS}
                   value={formData[keyName] || ""}
                   onChange={onFormChange}
+                  error={validationErrors[keyName]}
+                  required={true}
                 />
               );
             } else if (j === 3) {
@@ -123,6 +132,8 @@ export default function QuestionSet({
                     options={JOB_COUNT_OPTIONS}
                     value={formData[keyName] || ""}
                     onChange={onFormChange}
+                    error={validationErrors[keyName]}
+                    required={true}
                   />
                 </div>
               );
@@ -137,6 +148,8 @@ export default function QuestionSet({
                   options={COVER_LETTER_STYLE_OPTIONS}
                   value={formData[keyName] || ""}
                   onChange={onFormChange}
+                  error={validationErrors[keyName]}
+                  required={true}
                 />
               );
             }

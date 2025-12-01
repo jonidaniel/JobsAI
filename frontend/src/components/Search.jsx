@@ -9,6 +9,7 @@ import { API_ENDPOINTS } from "../config/api";
 import { transformFormData } from "../utils/formDataTransform";
 import { downloadBlob } from "../utils/fileDownload";
 import { getErrorMessage } from "../utils/errorMessages";
+import { validateGeneralQuestions } from "../utils/validation";
 
 import "../styles/search.css";
 
@@ -34,6 +35,26 @@ export default function Search() {
 
   // Form data received from QuestionSets component via callback
   const [formData, setFormData] = useState({});
+
+  // Validation errors for general questions
+  const [validationErrors, setValidationErrors] = useState({});
+
+  /**
+   * Handle form data changes and clear validation errors when user fixes them
+   */
+  const handleFormDataChange = (newFormData) => {
+    setFormData(newFormData);
+    // Clear validation errors if user has fixed the issues
+    if (Object.keys(validationErrors).length > 0) {
+      const validation = validateGeneralQuestions(newFormData);
+      if (validation.isValid) {
+        setValidationErrors({});
+      } else {
+        // Update validation errors to reflect current state
+        setValidationErrors(validation.errors);
+      }
+    }
+  };
 
   // Ref to track timeout for auto-dismissing success message
   const successTimeoutRef = useRef(null);
@@ -62,6 +83,28 @@ export default function Search() {
     // Clear previous errors and success messages
     setError(null);
     setSuccess(false);
+
+    // Validate general questions before submission
+    const validation = validateGeneralQuestions(formData);
+    if (!validation.isValid) {
+      setValidationErrors(validation.errors);
+      // Scroll to first question set (general questions) if validation fails
+      setTimeout(() => {
+        const firstQuestionSet = document.querySelector(
+          `#question-set-wrapper section[data-index="0"]`
+        );
+        if (firstQuestionSet) {
+          firstQuestionSet.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+          });
+        }
+      }, 100);
+      return;
+    }
+
+    // Clear validation errors if validation passes
+    setValidationErrors({});
     setIsSubmitting(true);
 
     // Transform form data into grouped structure for backend API
@@ -131,7 +174,10 @@ export default function Search() {
         Answer questions in each category and we will find jobs relevant to you
       </h3>
       {/* Question sets component with blue/gray background - contains all question sets and manages all form inputs */}
-      <QuestionSets onFormDataChange={setFormData} />
+      <QuestionSets
+        onFormDataChange={handleFormDataChange}
+        validationErrors={validationErrors}
+      />
 
       {/* Success message - displayed when document is successfully downloaded */}
       {success && <SuccessMessage />}

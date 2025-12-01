@@ -17,8 +17,12 @@ import { GENERAL_QUESTION_KEYS } from "../config/generalQuestions";
  *
  * @param {function} onFormDataChange - Callback to notify parent when form data changes
  *                                      Receives the complete formData object
+ * @param {object} validationErrors - Object mapping question keys to error messages
  */
-export default function QuestionSets({ onFormDataChange }) {
+export default function QuestionSets({
+  onFormDataChange,
+  validationErrors = {},
+}) {
   // Current active question set index (0-9)
   const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -141,6 +145,7 @@ export default function QuestionSets({ onFormDataChange }) {
             }}
             formData={formData}
             onFormChange={handleFormChange}
+            validationErrors={validationErrors}
           />
         ))}
       </div>

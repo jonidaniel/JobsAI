@@ -12,6 +12,8 @@
  * @param {string[]} value - Array of currently selected options
  * @param {function} onChange - Callback function called when checkbox state changes
  *                              Receives (keyName, newArray) as parameters
+ * @param {string} error - Optional error message to display
+ * @param {boolean} required - Whether this field is required (default: false)
  */
 export default function MultipleChoice({
   keyName,
@@ -19,6 +21,8 @@ export default function MultipleChoice({
   options,
   value,
   onChange,
+  error,
+  required = false,
 }) {
   /**
    * Handles checkbox change events
@@ -40,7 +44,15 @@ export default function MultipleChoice({
 
   return (
     <div className="flex flex-col w-full">
-      <label className="mb-1">{label}</label>
+      <label className="mb-1">
+        {label}
+        {required && <span className="text-red-500 ml-1">*</span>}
+      </label>
+      {error && (
+        <p className="text-red-500 text-sm mb-2" role="alert">
+          {error}
+        </p>
+      )}
       {options.map((option) => {
         const optionKey = option.toLowerCase().replace(/\s+/g, "-");
         const isChecked = value && value.includes(option);
