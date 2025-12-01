@@ -1,15 +1,13 @@
 """
-JobsAI/src/jobsai/agents/searcher.py
-
-Acts as the SEARCHER AGENT.
+Orchestrate the job listings search.
 
 CLASSES:
-    SearcherAgent
+    SearcherService
 
 FUNCTIONS (in order of workflow):
-    1. SearcherAgent.search_jobs          (public use)
-    2. SearcherAgent._save_raw_jobs       (internal use)
-    3. SearcherAgent._deduplicate_jobs    (internal use)
+    1. search_jobs          (public use)
+    2. _save_raw_jobs       (internal use)
+    3. _deduplicate_jobs    (internal use)
 """
 
 import os
@@ -26,7 +24,7 @@ from jobsai.utils.queries import build_queries
 logger = logging.getLogger(__name__)
 
 
-class SearcherAgent:
+class SearcherService:
     """Orchestrate the job listings search.
 
     Responsibilities:
@@ -36,17 +34,19 @@ class SearcherAgent:
     4. Store the job listings
 
     Args:
-        job_boards (List[str]):
-        deep_mode (bool):
-        timestamp (str): The backend-wide timestamp of the moment when the main function was started.
+        job_boards (List[str]): The job boards to search.
+        deep_mode (bool): If True, fetch each job's detail page to extract the full description.
+        timestamp (str): The backend-wide timestamp for consistent file naming.
     """
 
     def __init__(
         self,
+        job_level: str,
         job_boards: List[str],
         deep_mode: bool,
         timestamp: str,
     ):
+        self.job_level = job_level
         self.job_boards = job_boards
         self.deep_mode = deep_mode
         self.timestamp = timestamp
@@ -58,24 +58,23 @@ class SearcherAgent:
         """Run searches on all job boards using queries from the skill profile.
 
         Args:
-            skill_profile (dict): HUOM DICT
+            skill_profile (dict): The skill profile.
 
         Returns:
-            callable: A deduplicated list of jobs.
+            List[Dict]: The deduplicated list of jobs.
         """
-
-        logger.info(" WEB SCRAPING ...")
 
         all_jobs = []
 
-        # Build deterministic job search queries from a structured skill profile
+        # Build deterministic job search queries
         queries = build_queries(skill_profile)
 
         for query in queries:
-            # Iterate over all job boards (duunitori, jobly, etc.) defined in /config/settings.py
             for job_board in self.job_boards:
                 print()
                 logger.info(" Searching %s for query '%s'", job_board, query)
+                # User sends through UI which job board to use
+
                 if job_board.lower() == "duunitori":
                     jobs = scrape_duunitori(query, deep_mode=self.deep_mode)
                 elif job_board.lower() == "jobly":
@@ -87,9 +86,6 @@ class SearcherAgent:
                 all_jobs.extend(jobs)
                 self._save_raw_jobs(jobs, job_board, query)
 
-        print()
-        logger.info(" WEB SCRAPING COMPLETED\n")
-
         return self._deduplicate_jobs(all_jobs)
 
     # ------------------------------
@@ -97,12 +93,14 @@ class SearcherAgent:
     # ------------------------------
 
     def _save_raw_jobs(self, jobs: List[Dict], board: str, query: str):
-        """Save raw job listings to src/jobsai/data/job_listings/raw/
+        """Save raw job listings.
+
+        Saves to RAW_JOB_LISTING_PATH.
 
         Args:
-            jobs (List[Dict]):
-            board (str):
-            query (str):
+            jobs (List[Dict]): The job listings.
+            board (str): The job board name, used for filename.
+            query (str): The query, used for filename.
         """
 
         if not jobs:
@@ -127,7 +125,7 @@ class SearcherAgent:
         """Remove duplicate the job listings.
 
         Args:
-            jobs (List[Dict]):
+            jobs (List[Dict]): The job listings.
 
         Returns:
             List[Dict]: The deduplicated list of jobs.
