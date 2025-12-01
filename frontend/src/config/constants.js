@@ -44,8 +44,6 @@ export const SLIDER_DEFAULT = 0;
  * Constants for identifying question set types by index
  */
 export const GENERAL_QUESTIONS_INDEX = 0;
-export const FIRST_SLIDER_INDEX = 1;
-export const LAST_SLIDER_INDEX = 8;
 
 /**
  * Question Set Names
