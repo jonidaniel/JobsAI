@@ -15,9 +15,6 @@
 /** Total number of question sets (0-9, inclusive) */
 export const TOTAL_QUESTION_SETS = 10;
 
-/** Number of slider-based question sets (indices 1-8) */
-export const SLIDER_QUESTION_SETS_COUNT = 8;
-
 /**
  * Question Set Names
  *

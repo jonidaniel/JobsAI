@@ -26,6 +26,3 @@ export const API_ENDPOINTS = {
   /** Endpoint for submitting form data and generating job search document */
   SUBMIT_FORM: `${API_BASE_URL}/api/endpoint`,
 };
-
-// Export base URL for other uses if needed
-export { API_BASE_URL };
