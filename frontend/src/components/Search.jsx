@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 
 import QuestionSets from "./QuestionSets";
+import ErrorMessage from "./ErrorMessage";
+import SuccessMessage from "./SuccessMessage";
 import { API_ENDPOINTS } from "../config/api";
 import { transformFormData } from "../utils/formDataTransform";
 import { downloadBlob } from "../utils/fileDownload";
@@ -129,63 +131,11 @@ export default function Search() {
       {/* Question sets component with blue/gray background - contains all question sets and manages all form inputs */}
       <QuestionSets onFormDataChange={setFormData} />
 
-      {/* Red error message - displayed when submission fails */}
-      {error && (
-        <div className="flex justify-center mt-4">
-          <div
-            className="bg-red-900 border border-red-700 text-red-100 px-6 py-3 rounded-lg shadow-lg max-w-2xl w-full"
-            role="alert"
-          >
-            <div className="flex items-center">
-              <svg
-                className="w-5 h-5 mr-2 flex-shrink-0"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                  clipRule="evenodd"
-                />
-              </svg>
-              <div>
-                <p className="font-semibold">Error</p>
-                <p className="text-sm">{error}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Error message - displayed when submission fails */}
+      {error && <ErrorMessage message={error} />}
 
-      {/* Green success message - displayed when document is successfully downloaded */}
-      {success && (
-        <div className="flex justify-center mt-4">
-          <div
-            className="bg-green-900 border border-green-700 text-green-100 px-6 py-3 rounded-lg shadow-lg max-w-2xl w-full"
-            role="alert"
-          >
-            <div className="flex items-center">
-              <svg
-                className="w-5 h-5 mr-2 flex-shrink-0"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                  clipRule="evenodd"
-                />
-              </svg>
-              <div>
-                <p className="font-semibold">Success!</p>
-                <p className="text-sm">
-                  Your document has been generated and downloaded.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Success message - displayed when document is successfully downloaded */}
+      {success && <SuccessMessage />}
 
       {/* Black 'Find Jobs' submit button - triggers form submission and document generation */}
       <div className="flex justify-center mt-6">
