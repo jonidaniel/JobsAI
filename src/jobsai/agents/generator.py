@@ -1,8 +1,5 @@
-"""JobsAI/src/jobsai/agents/generator.py
-
-Acts as the GENERATOR AGENT.
-
-python -m uvicorn jobsai.api.server:app --reload --app-dir src
+"""
+Generates cover letters.
 
 CLASSES:
     GeneratorAgent
@@ -11,12 +8,12 @@ FUNCTIONS (in order of workflow):
     1. GeneratorAgent.generate_letters     (public use)
     2. GeneratorAgent._build_system_prompt (internal use)
     3. GeneratorAgent._build_user_prompt   (internal use)
-    4. GeneratorAgent._write_letter        (internal use)"""
+    4. GeneratorAgent._write_letter        (internal use)
+"""
 
 import os
 import logging
 from datetime import datetime
-from typing import Dict
 
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -35,10 +32,10 @@ logger = logging.getLogger(__name__)
 
 
 class GeneratorAgent:
-    """Generates cover letters.
+    """Generate cover letters.
 
     Args:
-        timestamp (str): The backend-wide timestamp of the moment when the main function was started.
+        timestamp (str): The backend-wide timestamp for consistent file naming.
     """
 
     def __init__(self, timestamp: str):
@@ -52,7 +49,6 @@ class GeneratorAgent:
         skill_profile: SkillProfile,
         job_report: str,
         letter_style: str,
-        contact_info: Dict,
     ) -> Document:
         """Produce a tailored job-application message based on the candidate's skills and the job report.
 
@@ -68,11 +64,7 @@ class GeneratorAgent:
         system_prompt = self._build_system_prompt(letter_style)
         user_prompt = self._build_user_prompt(skill_profile, job_report)
 
-        logger.info(" GENERATING COVER LETTER ...")
-
-        cover_letter = self._write_letter(system_prompt, user_prompt, contact_info)
-
-        logger.info(" COVER LETTER GENERATED\n")
+        cover_letter = self._write_letter(system_prompt, user_prompt)
 
         return cover_letter
 
@@ -125,9 +117,7 @@ class GeneratorAgent:
 
         return USER_PROMPT.format(json_profile=json_profile, job_report=job_report)
 
-    def _write_letter(
-        self, system_prompt: str, user_prompt: str, contact_info: Dict
-    ) -> Document:
+    def _write_letter(self, system_prompt: str, user_prompt: str) -> Document:
         """
         Write the cover letter document with proper formatting.
 
@@ -143,7 +133,6 @@ class GeneratorAgent:
         Args:
             system_prompt (str): System prompt defining LLM's role as cover letter writer
             user_prompt (str): User prompt containing skill profile and job report
-            contact_info (Dict): Candidate's contact information dictionary
 
         Returns:
             Document: The complete cover letter as a python-docx Document object
@@ -155,11 +144,11 @@ class GeneratorAgent:
         # Format: website, LinkedIn, GitHub (blank line) email, phone
         contact_paragraph = cover_letter.add_paragraph()
         contact_paragraph.alignment = WD_ALIGN_PARAGRAPH.RIGHT
-        contact_paragraph.add_run(f'{contact_info.get("website")}\n')
-        contact_paragraph.add_run(f'{contact_info.get("linkedin")}\n')
-        contact_paragraph.add_run(f'{contact_info.get("github")}\n\n')
-        contact_paragraph.add_run(f'{contact_info.get("email")}\n')
-        contact_paragraph.add_run(f'{contact_info.get("phone")}\n\n')
+        contact_paragraph.add_run("ADD WEBSITE\n")
+        contact_paragraph.add_run("ADD LINKEDIN\n")
+        contact_paragraph.add_run("ADD GITHUB\n\n")
+        contact_paragraph.add_run("ADD EMAIL\n")
+        contact_paragraph.add_run("ADD PHONE\n\n")
 
         # Convert timestamp (YYYYMMDD_HHMMSS) to human-readable date
         # Format: "Month Day, Year" (e.g., "November 30, 2025")
