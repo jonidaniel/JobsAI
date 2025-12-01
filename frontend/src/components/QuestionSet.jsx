@@ -61,9 +61,11 @@ export default function QuestionSet({
           // Text-only question set (index 9): Single text input field
           <TextField
             keyName="additional-info"
-            label="Additional Information"
+            label="Give us a short, top-level depiction of who you are, and what are your main interests and aspirations. This will help us find the most relevant jobs for you. You don't have to repeat any of the information you've already given in earlier question sets. Consider this answer as 'the engine' of the job search."
             value={formData["additional-info"] || ""}
             onChange={onFormChange}
+            error={validationErrors["additional-info"]}
+            required={true}
           />
         ) : index === GENERAL_QUESTIONS_INDEX ? (
           // General Questions (index 0): 5 questions, all are multiple choice

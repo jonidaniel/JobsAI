@@ -1,11 +1,15 @@
 import { GENERAL_QUESTION_KEYS } from "../config/generalQuestions";
 
 /**
- * Validates that all general questions are answered
+ * Validates that all mandatory questions are answered
+ *
+ * Validates:
+ * - All 5 general questions (questions 1-5)
+ * - Personal description question (question 10)
  *
  * @param {Object} formData - The form data object
  * @returns {Object} Validation result with:
- *   - isValid: boolean indicating if all questions are answered
+ *   - isValid: boolean indicating if all mandatory questions are answered
  *   - errors: object mapping question keys to error messages
  */
 export function validateGeneralQuestions(formData) {
@@ -40,6 +44,13 @@ export function validateGeneralQuestions(formData) {
   const coverLetterStyle = formData[GENERAL_QUESTION_KEYS[4]];
   if (!coverLetterStyle || coverLetterStyle.trim() === "") {
     errors[GENERAL_QUESTION_KEYS[4]] = "Please select an option.";
+  }
+
+  // Question 10 (additional-info): Personal description is mandatory (string)
+  const additionalInfo = formData["additional-info"];
+  if (!additionalInfo || additionalInfo.trim() === "") {
+    errors["additional-info"] =
+      "Please provide a personal description to help us find the most relevant jobs for you.";
   }
 
   return {
