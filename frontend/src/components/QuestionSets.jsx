@@ -226,7 +226,15 @@ function QuestionSet({ index, isActive, sectionRef, formData, onFormChange }) {
 
       {/* Questions */}
       <div className="space-y-4">
-        {index === GENERAL_QUESTIONS_INDEX ? (
+        {index === 9 ? (
+          // Text-only question set (index 9): Single text input field
+          <TextField
+            keyName="additional-info"
+            label="Additional Information"
+            value={formData["additional-info"] || ""}
+            onChange={onFormChange}
+          />
+        ) : index === GENERAL_QUESTIONS_INDEX ? (
           // General Questions (index 0): 5 questions, all are multiple choice
           Array.from({ length: GENERAL_QUESTIONS_COUNT }).map((_, j) => {
             const keyName = GENERAL_QUESTION_KEYS[j];
@@ -370,9 +378,12 @@ export default function QuestionSets({ onFormDataChange }) {
     // Set default values for slider question sets (question sets 1-8)
     // Sliders default to 0 (handled in Slider component)
     // Only need to initialize the "Other" text fields
-    for (let i = 1; i < TOTAL_QUESTION_SETS; i++) {
+    for (let i = 1; i < TOTAL_QUESTION_SETS - 1; i++) {
       initial[`text-field${i}`] = "";
     }
+
+    // Set default value for text-only question set (index 9)
+    initial["additional-info"] = "";
 
     return initial;
   });
