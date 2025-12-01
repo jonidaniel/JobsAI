@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 
 import QuestionSets from "./QuestionSets";
 import SuccessMessage from "./messages/SuccessMessage";
@@ -40,21 +40,36 @@ export default function Search() {
   const [validationErrors, setValidationErrors] = useState({});
 
   /**
-   * Handle form data changes and clear validation errors when user fixes them
+   * Handle form data changes
+   * Memoized to prevent infinite loops in QuestionSets useEffect
    */
-  const handleFormDataChange = (newFormData) => {
+  const handleFormDataChange = useCallback((newFormData) => {
     setFormData(newFormData);
-    // Clear validation errors if user has fixed the issues
+  }, []);
+
+  /**
+   * Clear validation errors when user fixes them
+   * Runs separately from handleFormDataChange to avoid loops
+   * Only runs when formData changes and there are existing errors
+   */
+  useEffect(() => {
+    // Only validate if there are existing errors (user is fixing them)
     if (Object.keys(validationErrors).length > 0) {
-      const validation = validateGeneralQuestions(newFormData);
+      const validation = validateGeneralQuestions(formData);
       if (validation.isValid) {
         setValidationErrors({});
       } else {
         // Update validation errors to reflect current state
-        setValidationErrors(validation.errors);
+        // Only update if errors have actually changed to avoid loops
+        const errorKeys = Object.keys(validation.errors).sort().join(",");
+        const currentErrorKeys = Object.keys(validationErrors).sort().join(",");
+        if (errorKeys !== currentErrorKeys) {
+          setValidationErrors(validation.errors);
+        }
       }
     }
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData]);
 
   // Ref to track timeout for auto-dismissing success message
   const successTimeoutRef = useRef(null);
