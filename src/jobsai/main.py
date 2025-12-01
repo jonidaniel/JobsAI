@@ -54,11 +54,11 @@ def main(form_submissions: Dict) -> Dict:
             - "filename" (str): Suggested filename for the cover letter document
     """
 
-    job_level = form_submissions.get("general").get("job-level")
-    job_boards = form_submissions.get("general").get("job-boards")
-    deep_mode = form_submissions.get("general").get("deep-mode")
-    cover_letter_num = form_submissions.get("general").get("cover-letter-num")
-    cover_letter_style = form_submissions.get("general").get("cover-letter-style")
+    job_level = form_submissions.get("general")[0].get("job-level")
+    job_boards = form_submissions.get("general")[1].get("job-boards")
+    deep_mode = form_submissions.get("general")[2].get("deep-mode")
+    cover_letter_num = form_submissions.get("general")[3].get("cover-letter-num")
+    cover_letter_style = form_submissions.get("general")[4].get("cover-letter-style")
     print(job_level)
     print(job_boards)
     print(deep_mode)
