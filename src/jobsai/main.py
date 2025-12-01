@@ -17,18 +17,10 @@ from typing import Dict
 
 from jobsai.agents import (
     ProfilerAgent,
-    SearcherAgent,
-    ScorerAgent,
+    SearcherService,
+    ScorerService,
     ReporterAgent,
     GeneratorAgent,
-)
-
-from jobsai.config.settings import (
-    job_boards,
-    deep_mode,
-    report_size,
-    letter_style,
-    contact_information,
 )
 
 logging.basicConfig(level=logging.INFO)
@@ -62,8 +54,14 @@ def main(form_submissions: Dict) -> Dict:
             - "filename" (str): Suggested filename for the cover letter document
     """
 
-    # Generate a constant timestamp for the whole workflow
-    # Used for consistent file naming across all agents
+    job_level = form_submissions.get("general").get("job-level")
+    job_boards = form_submissions.get("general").get("job-boards")
+    deep_mode = form_submissions.get("general").get("deep-mode")
+    print(job_level)
+    print(job_boards)
+    print(deep_mode)
+
+    # Generate a constant timestamp for consistent file naming across pipeline
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
     try:
@@ -71,8 +69,8 @@ def main(form_submissions: Dict) -> Dict:
         # Each agent uses the timestamp to create consistently named output files
         logger.info("Initializing agents...")
         profiler = ProfilerAgent(timestamp)
-        searcher = SearcherAgent(job_boards, deep_mode, timestamp)
-        scorer = ScorerAgent(timestamp)
+        searcher = SearcherService(job_level, job_boards, deep_mode, timestamp)
+        scorer = ScorerService(timestamp)
         reporter = ReporterAgent(timestamp)
         generator = GeneratorAgent(timestamp)
     except Exception as e:
@@ -83,11 +81,11 @@ def main(form_submissions: Dict) -> Dict:
     # Step 1: Assess candidate and create/update skill profile
     # Uses LLM to extract structured skill information from form submissions
     try:
-        logger.info("Step 1/5: Creating skill profile...")
+        logger.info(" Step 1/5: Creating skill profile...")
         skill_profile = profiler.create_profile(form_submissions)
-        logger.info("Step 1/5: Skill profile created successfully")
+        logger.info(" Step 1/5: Skill profile created successfully")
     except Exception as e:
-        error_msg = f"Step 1/5 (Profile Creation) failed: {str(e)}"
+        error_msg = f" Step 1/5 Skill profile creation failed: {str(e)}"
         logger.error(error_msg)
         raise RuntimeError(error_msg) from e
 
@@ -95,11 +93,12 @@ def main(form_submissions: Dict) -> Dict:
     # Queries are generated deterministically from profile keywords
     # Raw job listings are saved to /data/job_listings/raw/{timestamp}_{job_board}_{query}.json
     try:
-        logger.info("Step 2/5: Searching job boards...")
+        logger.info(" Step 2/5: Searching job boards...")
         searcher.search_jobs(skill_profile.model_dump())
-        logger.info("Step 2/5: Job search completed successfully")
+        print()
+        logger.info(" Step 2/5: Job search completed successfully")
     except Exception as e:
-        error_msg = f"Step 2/5 (Job Search) failed: {str(e)}"
+        error_msg = f" Step 2/5 Job search failed: {str(e)}"
         logger.error(error_msg)
         raise RuntimeError(error_msg) from e
 
@@ -107,11 +106,12 @@ def main(form_submissions: Dict) -> Dict:
     # Compares job descriptions with profile keywords to compute match scores
     # Scored listings are saved to /data/job_listings/scored/{timestamp}_scored_jobs.json
     try:
-        logger.info("Step 3/5: Scoring job listings...")
+        print()
+        logger.info(" Step 3/5: Scoring job listings...")
         scorer.score_jobs(skill_profile=skill_profile)
-        logger.info("Step 3/5: Job scoring completed successfully")
+        logger.info(" Step 3/5: Job scoring completed successfully")
     except Exception as e:
-        error_msg = f"Step 3/5 (Job Scoring) failed: {str(e)}"
+        error_msg = f" Step 3/5 Job scoring failed: {str(e)}"
         logger.error(error_msg)
         raise RuntimeError(error_msg) from e
 
@@ -119,11 +119,11 @@ def main(form_submissions: Dict) -> Dict:
     # Uses LLM to create personalized cover letter instructions for each job (used by GeneratorAgent)
     # Report is saved to /data/reports/job_report.txt
     try:
-        logger.info("Step 4/5: Generating job report...")
-        job_report = reporter.generate_report(skill_profile, report_size)
-        logger.info("Step 4/5: Job report generated successfully")
+        logger.info(" Step 4/5: Generating job report...")
+        job_report = reporter.generate_report(skill_profile, cover_letter_num)
+        logger.info(" Step 4/5: Job report generated successfully")
     except Exception as e:
-        error_msg = f"Step 4/5 (Report Generation) failed: {str(e)}"
+        error_msg = f" Step 4/5 Report generation failed: {str(e)}"
         logger.error(error_msg)
         raise RuntimeError(error_msg) from e
 
@@ -131,18 +131,18 @@ def main(form_submissions: Dict) -> Dict:
     # Uses LLM to write cover letter based on skill profile and job report
     # Document is saved to /data/cover_letters/{timestamp}_cover_letter.docx and returned
     try:
-        logger.info("Step 5/5: Generating cover letter...")
+        logger.info(" Step 5/5: Generating cover letter...")
         document = generator.generate_letters(
-            skill_profile, job_report, letter_style, contact_information
+            skill_profile, job_report, cover_letter_style
         )
-        logger.info("Step 5/5: Cover letter generated successfully")
+        logger.info(" Step 5/5: Cover letter generated successfully")
     except Exception as e:
-        error_msg = f"Step 5/5 (Cover Letter Generation) failed: {str(e)}"
+        error_msg = f" Step 5/5 Cover letter generation failed: {str(e)}"
         logger.error(error_msg)
         raise RuntimeError(error_msg) from e
 
     # Return document and metadata for API response
-    logger.info("Pipeline completed successfully")
+    logger.info(" Pipeline completed successfully")
     return {
         "document": document,
         "timestamp": timestamp,
