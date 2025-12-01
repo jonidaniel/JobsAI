@@ -1,7 +1,7 @@
-import Slider from "./Slider";
-import TextField from "./TextField";
-import MultipleChoice from "./MultipleChoice";
-import SingleChoice from "./SingleChoice";
+import Slider from "./questions/Slider";
+import TextField from "./questions/TextField";
+import MultipleChoice from "./questions/MultipleChoice";
+import SingleChoice from "./questions/SingleChoice";
 import { SLIDER_DATA } from "../config/sliderData";
 import {
   GENERAL_QUESTION_LABELS,
