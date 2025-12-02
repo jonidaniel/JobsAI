@@ -37,7 +37,6 @@ export default function TextField({
           {error}
         </p>
       )}
-      <br />
       {height ? (
         <textarea
           id={keyName}

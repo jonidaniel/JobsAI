@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 
-import QuestionSets from "./QuestionSets";
+import QuestionSets from "./QuestionSetList";
 import SuccessMessage from "./messages/SuccessMessage";
 import ErrorMessage from "./messages/ErrorMessage";
 

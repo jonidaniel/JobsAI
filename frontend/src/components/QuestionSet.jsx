@@ -59,6 +59,7 @@ export default function QuestionSet({
     return count;
   };
   const [otherFieldCount, setOtherFieldCount] = useState(countOtherFields);
+  const [addMoreClicked, setAddMoreClicked] = useState(false);
 
   const label = <p>The last question.</p>;
   const label2 = (
@@ -259,14 +260,54 @@ export default function QuestionSet({
               );
             })}
             {/* Button to add another "Other" field set */}
-            <button
-              type="button"
-              onClick={() => setOtherFieldCount(otherFieldCount + 1)}
-              className="mt-4 px-4 py-2 text-sm border border-gray-400 rounded hover:bg-gray-800 transition-colors"
-              style={{ backgroundColor: "#0e0e0e" }}
-            >
-              Add more
-            </button>
+            {(() => {
+              // Get the last/most recently added field key
+              const lastFieldKey =
+                otherFieldCount === 1
+                  ? baseOtherFieldKey
+                  : `${baseOtherFieldKey}-${otherFieldCount}`;
+              const lastSliderKey = `${lastFieldKey}-slider`;
+
+              const lastFieldValue = formData[lastFieldKey] || "";
+              const lastSliderValue = formData[lastSliderKey] ?? SLIDER_DEFAULT;
+              // Both must be filled: field must not be empty AND slider must not be 0
+              const isFieldEmpty = !lastFieldValue.trim();
+              const isSliderZero = lastSliderValue === 0;
+              const shouldShowWarning = isFieldEmpty || isSliderZero;
+
+              // Reset the clicked state if conditions are no longer met
+              if (!shouldShowWarning && addMoreClicked) {
+                setAddMoreClicked(false);
+              }
+
+              const handleAddMore = () => {
+                if (shouldShowWarning) {
+                  setAddMoreClicked(true);
+                } else {
+                  setOtherFieldCount(otherFieldCount + 1);
+                  setAddMoreClicked(false);
+                }
+              };
+
+              return (
+                <div className="flex flex-col items-start">
+                  <button
+                    type="button"
+                    onClick={handleAddMore}
+                    className="mt-4 px-4 py-2 text-sm border border-gray-400 rounded hover:bg-gray-800 transition-colors"
+                    style={{ backgroundColor: "#0e0e0e" }}
+                  >
+                    Add more
+                  </button>
+                  {shouldShowWarning && addMoreClicked && (
+                    <p className="text-red-500 text-sm mt-2" role="alert">
+                      Please fill in the experience field and set the years
+                      before adding more.
+                    </p>
+                  )}
+                </div>
+              );
+            })()}
           </>
         )}
       </div>

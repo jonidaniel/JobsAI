@@ -109,6 +109,7 @@ export default function MultipleChoice({
       <label className="mb-1">
         {renderLabel(label)}
         {required && <span className="text-red-400 ml-1">*</span>}
+        {/* {renderLabel(label2)} */}
       </label>
       {error && (
         <p className="text-red-300 text-sm mb-2" role="alert">
