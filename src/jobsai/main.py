@@ -57,8 +57,24 @@ def main(form_submissions: Dict) -> Dict:
     job_level = form_submissions.get("general")[0].get("job-level")
     job_boards = form_submissions.get("general")[1].get("job-boards")
     deep_mode = form_submissions.get("general")[2].get("deep-mode")
-    cover_letter_num = form_submissions.get("general")[3].get("cover-letter-num")
-    cover_letter_style = form_submissions.get("general")[4].get("cover-letter-style")
+    # Convert cover_letter_num to integer (comes from frontend as string)
+    try:
+        cover_letter_num = int(
+            form_submissions.get("general")[3].get("cover-letter-num")
+        )
+    except (ValueError, TypeError) as e:
+        logger.warning(f"Invalid cover_letter_num, defaulting to 5: {e}")
+        cover_letter_num = 5
+
+    # Handle cover_letter_style (can be string or array from frontend)
+    cover_letter_style_raw = form_submissions.get("general")[4].get(
+        "cover-letter-style"
+    )
+    if isinstance(cover_letter_style_raw, list):
+        # If array, join with " and " (e.g., ["Professional", "Friendly"] -> "Professional and Friendly")
+        cover_letter_style = " and ".join(cover_letter_style_raw)
+    else:
+        cover_letter_style = cover_letter_style_raw or "Professional"
     description = form_submissions.get("additional-info")[0].get("additional-info")
     print(job_level)
     print(job_boards)
@@ -138,6 +154,9 @@ def main(form_submissions: Dict) -> Dict:
     # Document is saved to /data/cover_letters/{timestamp}_cover_letter.docx and returned
     try:
         logger.info(" Step 5/5: Generating cover letter...")
+        print(skill_profile)
+        print(job_report)
+        print(cover_letter_style)
         document = generator.generate_letters(
             skill_profile, job_report, cover_letter_style
         )

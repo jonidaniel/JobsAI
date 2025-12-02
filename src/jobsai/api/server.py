@@ -13,7 +13,7 @@ To run the server:
 import logging
 from io import BytesIO
 
-from pydantic import ValidationError
+# from pydantic import ValidationError
 from fastapi import FastAPI, Response, HTTPException, status, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError

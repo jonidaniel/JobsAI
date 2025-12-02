@@ -108,54 +108,105 @@ class ProfilerAgent:
         Build the final user prompt for the LLM by combining form data.
 
         Transforms frontend form submissions into a natural language prompt:
-        - Extracts general text input (background summary, skills, etc.)
+        - Extracts "additional-info" (personal description) as the main user input
+        - Processes technology sets (languages, databases, etc.) to build experience statements
         - Converts slider values (0-7) to experience descriptions
         - Maps technology keys to proper names (e.g., "javascript" -> "JavaScript")
+        - Includes custom text fields (e.g., "text-field1") as additional context
         - Combines everything into a coherent text for the LLM
 
         Args:
             form_submissions (Dict): The user's form submissions from frontend containing:
-                - "general": General text input (background, skills, etc.)
-                - Technology keys: Slider values (0-7) representing experience levels
-                - Multiple choice arrays: Selected experience levels
+                - "general": Array of general question items (not used for prompt building)
+                - "additional-info": Array with personal description
+                - Technology sets (e.g., "languages", "databases"): Arrays of single-key dicts
+                  where keys are technology names (with numeric values 0-7) or "text-field*" (with string values)
 
         Returns:
             str: The formatted user prompt.
         """
 
-        user_input = "My name is Joni Potala. I've developed software for 10 years. I'm an expert in AWS. I'm collaborative and I'm a quick learner."
+        # Extract personal description from "additional-info"
+        # Structure: {"additional-info": [{"additional-info": "Personal description..."}]}
+        user_input_parts = []
+
+        additional_info = form_submissions.get("additional-info")
+        if (
+            additional_info
+            and isinstance(additional_info, list)
+            and len(additional_info) > 0
+        ):
+            description = additional_info[0].get("additional-info", "")
+            if description and description.strip():
+                user_input_parts.append(description.strip())
+
+        # If no description provided, use a default message
+        if not user_input_parts:
+            user_input_parts.append(
+                "I am a software developer looking for new opportunities."
+            )
+
         experience_lines = []
+        additional_context_lines = []
 
-        # LOOPPI ODOTTAA FLÄTTIDATAA
-        # Process each form field (technology keys, slider values, multiple choice arrays)
-        for key, value in form_submissions.items():
-            # Skip "general" key as it's already handled above
-            if key == "general":
+        # Process technology sets (languages, databases, web-frameworks, etc.)
+        # Structure: {"languages": [{"javascript": 5}, {"python": 3}, {"text-field1": "Custom tech..."}]}
+        for question_set_name, items in form_submissions.items():
+            # Skip "general" and "additional-info" as they're handled separately
+            if question_set_name in ("general", "additional-info"):
                 continue
 
-            # Skip multiple choice arrays
-            if isinstance(value, list):
+            # Skip if not a list (shouldn't happen, but defensive)
+            if not isinstance(items, list):
                 continue
 
-            # Map frontend key to proper technology name
-            # e.g., "javascript" -> "JavaScript", "html-css" -> "HTML/CSS"
-            mapped_key = SUBMIT_ALIAS_MAP.get(key, key)
+            # Process each item in the technology set
+            for item in items:
+                if not isinstance(item, dict):
+                    continue
 
-            # Convert frontend's numeric slider values (0-7) into natural language
-            # e.g., 1 -> "less than half a year", 7 -> "over 3 years"
-            if value in EXPERIENCE_ALIAS_MAP:
-                experience_text = EXPERIENCE_ALIAS_MAP[value]
-                experience_lines.append(
-                    f"I have {experience_text} of experience with {mapped_key}.\n"
-                )
-        # Combine general input with experience statements
-        user_input = user_input + "".join(experience_lines)
+                # Each item is a single-key dictionary
+                for key, value in item.items():
+                    # Handle technology keys with numeric experience values (0-7)
+                    if isinstance(value, (int, float)) and 0 <= value <= 7:
+                        # Map frontend key to proper technology name
+                        # e.g., "javascript" -> "JavaScript", "html-css" -> "HTML/CSS"
+                        mapped_key = SUBMIT_ALIAS_MAP.get(key, key.title())
+
+                        # Convert numeric slider values (0-7) into natural language
+                        # e.g., 1 -> "less than half a year", 7 -> "over 3 years"
+                        if value in EXPERIENCE_ALIAS_MAP:
+                            experience_text = EXPERIENCE_ALIAS_MAP[value]
+                            experience_lines.append(
+                                f"I have {experience_text} of experience with {mapped_key}."
+                            )
+
+                    # Handle custom text fields (e.g., "text-field1", "text-field1-2")
+                    elif isinstance(value, str) and key.startswith("text-field"):
+                        if value.strip():
+                            additional_context_lines.append(value.strip())
+
+        # Combine all parts into final user input
+        # Start with personal description
+        user_input = user_input_parts[0]
+
+        # Add experience statements
+        if experience_lines:
+            user_input += "\n\n" + "\n".join(experience_lines)
+
+        # Add additional context from custom text fields
+        if additional_context_lines:
+            user_input += "\n\n" + "\n".join(additional_context_lines)
 
         # Insert user input and output schema into the base user prompt template
         # The LLM will use this to extract structured skill profile
         final_user_prompt = USER_PROMPT.format(
             user_input=user_input, output_schema=OUTPUT_SCHEMA
         )
+
+        print("FINAL_USER_PROMPT_START")
+        print(final_user_prompt)
+        print("FINAL_USER_PROMPT_END")
 
         return final_user_prompt
 
