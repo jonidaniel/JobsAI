@@ -82,18 +82,17 @@ class GeneratorAgent:
             str: The system prompt that is used to write the cover letter.
         """
 
+        print("AAA")
+        print(style)
+        print("BBB")
+
         tone_instructions = {
-            "professional": (
-                "Write in a clear, respectful, concise, professional tone. "
-                "Use well-structured paragraphs. Avoid exaggerations."
-            ),
-            "friendly": ("Write in a warm, positive tone but keep it professional."),
-            "confident": (
-                "Write with a confident, proactive tone without sounding arrogant."
-            ),
+            "Professional": "Write in a clear, respectful, concise, professional tone. Use well-structured paragraphs. Avoid exaggerations.",
+            "friendly": "Write in a warm, positive tone but keep it professional.",
+            "confident": "Write with a confident, proactive tone without sounding arrogant.",
         }
 
-        base_style = tone_instructions.get(style, tone_instructions["professional"])
+        base_style = tone_instructions.get(style, tone_instructions["Professional"])
 
         return SYSTEM_PROMPT.format(base_style=base_style)
 
