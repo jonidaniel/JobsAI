@@ -4,16 +4,17 @@
   padding: 280px 10%;
 }
 #contact h2 {
-  font-size: 2.4rem;
+  font-size: 3.2rem;
   margin-bottom: 20px;
   text-align: center;
   border-bottom: 5px solid #7dd3fc;
-  padding-bottom: 15px;
   max-width: 42rem;
   margin-left: auto;
   margin-right: auto;
+  margin-bottom: 75px;
 }
 #contact h3 {
+  font-size: 1.4rem;
   margin-bottom: 20px;
   max-width: 42rem;
   margin-left: auto;
@@ -29,5 +30,4 @@
   font-size: 1.4rem;
   opacity: 0.85;
   color: lightblue;
-  text-decoration: underline;
 }
