@@ -86,6 +86,8 @@ export default function QuestionSet({
       There's no need to repeat any of the information here that you've already
       given in earlier steps. Don't enter any personally identifiable
       information.
+      <br />
+      <br />
     </p>
   );
 
