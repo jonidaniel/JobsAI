@@ -24,11 +24,11 @@ export const GENERAL_QUESTIONS_COUNT = 5;
  * 4: Cover letter style (single choice - see COVER_LETTER_STYLE_OPTIONS)
  */
 export const GENERAL_QUESTION_LABELS = [
-  "First things first.\nWhat's the *level of job* you're looking for? (you might select two adjacent levels)",
-  "We'll scrape popular job boards with many keywords.\n*What boards* do you want us to include?",
-  "Do you want to use *deep search*?\nIf yes, we'll open every job post and analyze them in detail. This will take a bit longer, but it'll find jobs with more relevance to you.",
-  "Once we've found jobs, we'll rank them, and then write cover letters for them.\n*How many top jobs* do you want cover letters for?",
-  "How about the *style* of the letters?\nStrictly professional or something else? A combination of two?",
+  "First things first.\nWhat's the *level of job* you're looking for? *\n{small}(you might select two adjacent levels){/small}",
+  "{small}We'll scrape popular job boards with many keywords.{/small}\n*What boards* do you want us to include? *",
+  "Do you want to use *deep search*? *\n{small}If yes, we'll open every job post and analyze them in detail. This will take a bit longer, but it'll find jobs with more relevance to you.{/small}",
+  "{small}Once we've found jobs, we'll rank them, and then write cover letters for them.{/small}\n*How many top jobs* do you want cover letters for? *",
+  "How about the *style* of the letters? *\n{small}Strictly professional or something else? A combination of two?{/small}",
 ];
 
 export const GENERAL_QUESTION_KEYS = [
