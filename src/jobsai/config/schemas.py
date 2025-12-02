@@ -396,7 +396,7 @@ VALID_JOB_BOARDS = {"Duunitori", "Jobly"}
 VALID_DEEP_MODE = {"Yes", "No"}
 
 # Valid cover letter count options
-VALID_COVER_LETTER_NUM = {"1", "2", "3", "4", "5", "10"}
+VALID_COVER_LETTER_NUM = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10"}
 
 # Valid cover letter style options
 VALID_COVER_LETTER_STYLE = {"Professional", "Friendly", "Confident", "Funny"}
