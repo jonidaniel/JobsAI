@@ -531,6 +531,11 @@ class TechnologySetItem(BaseModel):
             # Text field: must be a string (can be empty for optional fields)
             if not isinstance(v, str):
                 raise ValueError(f"Text field '{key}' must be a string")
+            # Validate length: max 50 characters
+            if len(v) > 50:
+                raise ValueError(
+                    f"Text field '{key}' must be at most 50 characters, got {len(v)}"
+                )
         else:
             # Slider value: must be an integer 0-7
             if not isinstance(v, int) or v < 0 or v > 7:
@@ -572,6 +577,11 @@ class AdditionalInfoItem(BaseModel):
             raise ValueError("additional-info must be a string")
         if value.strip() == "":
             raise ValueError("additional-info cannot be empty")
+        # Validate length: max 3000 characters
+        if len(value) > 3000:
+            raise ValueError(
+                f"additional-info must be at most 3000 characters, got {len(value)}"
+            )
 
         return data
 
@@ -601,38 +611,49 @@ class FrontendPayload(BaseModel):
         ..., min_length=5, max_length=5, description="General questions (5 required)"
     )
     languages: List[TechnologySetItem] = Field(
-        default_factory=list, description="Programming languages experience"
+        default_factory=list,
+        max_length=42,
+        description="Programming languages experience (max 42 items)",
     )
     databases: List[TechnologySetItem] = Field(
-        default_factory=list, description="Databases experience"
+        default_factory=list,
+        max_length=30,
+        description="Databases experience (max 30 items)",
     )
     cloud_development: List[TechnologySetItem] = Field(
         default_factory=list,
+        max_length=42,
         alias="cloud-development",
-        description="Cloud development experience",
+        description="Cloud development experience (max 42 items)",
     )
     web_frameworks: List[TechnologySetItem] = Field(
         default_factory=list,
+        max_length=28,
         alias="web-frameworks",
-        description="Web frameworks experience",
+        description="Web frameworks experience (max 28 items)",
     )
     dev_ides: List[TechnologySetItem] = Field(
         default_factory=list,
+        max_length=27,
         alias="dev-ides",
-        description="Dev IDEs experience",
+        description="Dev IDEs experience (max 27 items)",
     )
     llms: List[TechnologySetItem] = Field(
-        default_factory=list, description="Large language models experience"
+        default_factory=list,
+        max_length=17,
+        description="Large language models experience (max 17 items)",
     )
     doc_and_collab: List[TechnologySetItem] = Field(
         default_factory=list,
+        max_length=25,
         alias="doc-and-collab",
-        description="Documentation and collaboration experience",
+        description="Documentation and collaboration experience (max 25 items)",
     )
     operating_systems: List[TechnologySetItem] = Field(
         default_factory=list,
+        max_length=15,
         alias="operating-systems",
-        description="Operating systems experience",
+        description="Operating systems experience (max 15 items)",
     )
     additional_info: List[AdditionalInfoItem] = Field(
         ...,

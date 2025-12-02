@@ -11,8 +11,15 @@ import { SLIDER_MIN, SLIDER_MAX } from "../../config/sliders";
  * @param {number} value - Current slider value (0-7)
  * @param {function} onChange - Callback function called when slider value changes
  *                              Receives (keyName, newValue) as parameters
+ * @param {boolean} disabled - Whether the slider is disabled/read-only (default: false)
  */
-export default function Slider({ keyName, label, value, onChange }) {
+export default function Slider({
+  keyName,
+  label,
+  value,
+  onChange,
+  disabled = false,
+}) {
   return (
     <div className="flex flex-col w-full">
       {label && (
@@ -22,12 +29,15 @@ export default function Slider({ keyName, label, value, onChange }) {
       )}
       <input
         id={keyName}
-        className="slider accent-blue-500 w-full"
+        className={`slider accent-blue-500 w-full ${
+          disabled ? "opacity-60 cursor-not-allowed" : ""
+        }`}
         type="range"
         min={SLIDER_MIN}
         max={SLIDER_MAX}
         value={value}
         onChange={(e) => onChange(keyName, Number(e.target.value))}
+        disabled={disabled}
         data-key={keyName}
         aria-label={label}
         aria-valuemin={SLIDER_MIN}

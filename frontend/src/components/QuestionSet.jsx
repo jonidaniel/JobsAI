@@ -43,18 +43,18 @@ export default function QuestionSet({
   validationErrors = {},
 }) {
   // State to track how many "Other" field sets are shown for slider question sets (indices 1-8)
-  // Always show at least one "Other" field set
+  // Start with 0 fields, show first field only after clicking "Add more"
   const baseOtherFieldKey = `text-field${index}`;
-  // Count how many "other" fields have values, default to 1
+  // Count how many "other" fields have values, default to 0
   const countOtherFields = () => {
-    let count = 1; // Always show at least one
+    let count = 0;
     let i = 1;
     while (
       formData[`${baseOtherFieldKey}${i > 1 ? `-${i}` : ""}`] ||
       formData[`${baseOtherFieldKey}${i > 1 ? `-${i}` : ""}-slider`]
     ) {
       i++;
-      count = i;
+      count = i - 1;
     }
     return count;
   };
@@ -127,6 +127,7 @@ export default function QuestionSet({
             error={validationErrors["additional-info"]}
             required={true}
             height="150px"
+            maxLength={3000}
           />
         ) : index === GENERAL_QUESTIONS_INDEX ? (
           // Create 'General Questions' set (index 0)
@@ -238,7 +239,7 @@ export default function QuestionSet({
                 onChange={onFormChange}
               />
             ))}
-            {/* "Other" text fields and sliders - always show at least one, can add more */}
+            {/* "Other" text fields and sliders - shown only after clicking "Add more" */}
             {Array.from({ length: otherFieldCount }).map((_, i) => {
               const fieldIndex = i + 1;
               const fieldKey =
@@ -247,31 +248,69 @@ export default function QuestionSet({
                   : `${baseOtherFieldKey}-${fieldIndex}`;
               const sliderKey = `${fieldKey}-slider`;
 
-              const isFirst = fieldIndex === 1;
+              // Check if this is the last (currently editable) field
+              const isLastField = i === otherFieldCount - 1;
+              const fieldValue = formData[fieldKey] || "";
 
               return (
                 <div key={fieldKey} className="mt-4">
-                  <TextField
-                    keyName={fieldKey}
-                    label={
-                      isFirst
-                        ? "Type a new experience and choose amount of years"
-                        : ""
-                    }
-                    value={formData[fieldKey] || ""}
-                    onChange={onFormChange}
-                  />
-                  <Slider
-                    keyName={sliderKey}
-                    label=""
-                    value={formData[sliderKey] || SLIDER_DEFAULT}
-                    onChange={onFormChange}
-                  />
+                  {isLastField ? (
+                    // Last field: editable
+                    <>
+                      <TextField
+                        keyName={fieldKey}
+                        label=""
+                        value={fieldValue}
+                        onChange={onFormChange}
+                        showValidation={false}
+                      />
+                      <Slider
+                        keyName={sliderKey}
+                        label=""
+                        value={formData[sliderKey] || SLIDER_DEFAULT}
+                        onChange={onFormChange}
+                      />
+                    </>
+                  ) : (
+                    // Previous fields: read-only, styled like default sliders
+                    <>
+                      {fieldValue && (
+                        <Slider
+                          keyName={sliderKey}
+                          label={fieldValue}
+                          value={formData[sliderKey] || SLIDER_DEFAULT}
+                          onChange={() => {}} // No-op, field is read-only
+                          disabled={true}
+                        />
+                      )}
+                    </>
+                  )}
                 </div>
               );
             })}
             {/* Button to add another "Other" field set */}
             {(() => {
+              // If no fields are shown yet, allow adding the first one
+              if (otherFieldCount === 0) {
+                const handleAddMore = () => {
+                  setOtherFieldCount(1);
+                  setAddMoreClicked(false);
+                };
+
+                return (
+                  <div className="flex flex-col items-start">
+                    <button
+                      type="button"
+                      onClick={handleAddMore}
+                      className="mt-4 px-4 py-2 text-sm border border-gray-400 rounded hover:bg-gray-800 transition-colors"
+                      style={{ backgroundColor: "#0e0e0e" }}
+                    >
+                      Add more
+                    </button>
+                  </div>
+                );
+              }
+
               // Get the last/most recently added field key
               const lastFieldKey =
                 otherFieldCount === 1
@@ -281,10 +320,40 @@ export default function QuestionSet({
 
               const lastFieldValue = formData[lastFieldKey] || "";
               const lastSliderValue = formData[lastSliderKey] ?? SLIDER_DEFAULT;
+
               // Both must be filled: field must not be empty AND slider must not be 0
               const isFieldEmpty = !lastFieldValue.trim();
               const isSliderZero = lastSliderValue === 0;
-              const shouldShowWarning = isFieldEmpty || isSliderZero;
+
+              // Check for duplicate experiences
+              // Get default slider labels for this question set
+              const defaultLabels = Object.values(SLIDER_DATA[index - 1] || {});
+
+              // Get all already added custom experiences (excluding the current one)
+              const addedExperiences = [];
+              for (let j = 1; j < otherFieldCount; j++) {
+                const fieldKey =
+                  j === 1 ? baseOtherFieldKey : `${baseOtherFieldKey}-${j}`;
+                const experienceValue = formData[fieldKey] || "";
+                if (experienceValue.trim()) {
+                  addedExperiences.push(experienceValue.trim());
+                }
+              }
+
+              // Normalize for comparison (case-insensitive, trimmed)
+              const normalizedCurrentValue = lastFieldValue
+                .trim()
+                .toLowerCase();
+              const isDuplicateOfDefault = defaultLabels.some(
+                (label) => label.toLowerCase() === normalizedCurrentValue
+              );
+              const isDuplicateOfAdded = addedExperiences.some(
+                (exp) => exp.toLowerCase() === normalizedCurrentValue
+              );
+              const isDuplicate = isDuplicateOfDefault || isDuplicateOfAdded;
+
+              const shouldShowWarning =
+                isFieldEmpty || isSliderZero || isDuplicate;
 
               // Reset the clicked state if conditions are no longer met
               if (!shouldShowWarning && addMoreClicked) {
@@ -312,8 +381,9 @@ export default function QuestionSet({
                   </button>
                   {shouldShowWarning && addMoreClicked && (
                     <p className="text-red-500 text-sm mt-2" role="alert">
-                      Please fill in the experience field and set the years
-                      before adding more.
+                      {isDuplicate
+                        ? "This experience already exists. Please enter a different one."
+                        : "Please fill in the experience field and set the years before adding more."}
                     </p>
                   )}
                 </div>
