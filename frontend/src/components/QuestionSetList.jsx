@@ -162,7 +162,7 @@ export default function QuestionSetList({
       <div
         className="prev-btn-container sticky self-start h-0 flex items-center z-10"
         style={{
-          top: "clamp(100px, 20vh, 250px)",
+          top: "clamp(450px, 20vh, 250px)",
           maxHeight: "calc(100vh - 100px)",
         }}
       >
@@ -203,7 +203,7 @@ export default function QuestionSetList({
       <div
         className="next-btn-container sticky self-start h-0 flex items-center z-10 ml-auto"
         style={{
-          top: "clamp(100px, 20vh, 250px)",
+          top: "clamp(450px, 20vh, 250px)",
           maxHeight: "calc(100vh - 100px)",
         }}
       >
