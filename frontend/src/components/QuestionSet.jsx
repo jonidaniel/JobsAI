@@ -68,8 +68,10 @@ export default function QuestionSet({
   // State to track how many "Other" field sets are shown for slider question sets (indices 1-8)
   // Start with 0 fields, show first field only after clicking "Add more"
   const baseOtherFieldKey = `text-field${index}`;
+
   // Count how many "other" fields have values, default to 0
-  const countOtherFields = () => {
+  // Use lazy initialization to only calculate once on mount
+  const [otherFieldCount, setOtherFieldCount] = useState(() => {
     let count = 0;
     let i = 1;
     while (
@@ -80,8 +82,7 @@ export default function QuestionSet({
       count = i - 1;
     }
     return count;
-  };
-  const [otherFieldCount, setOtherFieldCount] = useState(countOtherFields);
+  });
   const [addMoreClicked, setAddMoreClicked] = useState(false);
 
   // Helper to generate field key for a given index
