@@ -4,6 +4,7 @@ import QuestionSet from "./QuestionSet";
 
 import { TOTAL_QUESTION_SETS } from "../config/questionSet";
 import { GENERAL_QUESTION_KEYS } from "../config/generalQuestions";
+import { SCROLL_OFFSET, SCROLL_DELAY } from "../config/constants";
 
 /**
  * QuestionSets Component
@@ -127,19 +128,18 @@ export default function QuestionSetList({
         setTimeout(() => {
           // Calculate position with offset to show question set number clearly
           const rect = section.getBoundingClientRect();
-          const scrollOffset = 120; // Offset to show question set number (e.g., "3/10")
-          const targetPosition = window.scrollY + rect.top - scrollOffset;
+          const targetPosition = window.scrollY + rect.top - SCROLL_OFFSET;
 
           window.scrollTo({
             top: targetPosition,
             behavior: "smooth",
           });
-        }, 100);
+        }, SCROLL_DELAY);
       }
       // Reset the flag after scrolling
       isUserNavigation.current = false;
     }
-  }, [currentIndex]);
+  }, [currentIndex, skipInitialScroll]);
 
   /**
    * Navigate to previous question set

@@ -20,6 +20,29 @@ import {
   JOB_COUNT_OPTIONS,
 } from "../config/generalQuestions";
 import { SLIDER_DATA, SLIDER_DEFAULT } from "../config/sliders";
+import { PERSONAL_DESCRIPTION_MAX_LENGTH } from "../config/constants";
+
+/**
+ * Shared button component for "Add more"
+ * Declared outside component to avoid recreation on each render
+ */
+const AddMoreButton = ({ onClick, warningMessage }) => (
+  <div className="flex flex-col items-start">
+    <button
+      type="button"
+      onClick={onClick}
+      className="mt-4 px-4 py-2 text-sm border border-gray-400 rounded hover:bg-gray-800 transition-colors"
+      style={{ backgroundColor: "#0e0e0e" }}
+    >
+      Add more
+    </button>
+    {warningMessage && (
+      <p className="text-red-500 text-sm mt-2" role="alert">
+        {warningMessage}
+      </p>
+    )}
+  </div>
+);
 
 /**
  * QuestionSet Component
@@ -65,24 +88,64 @@ export default function QuestionSet({
   const getFieldKey = (fieldIndex) =>
     fieldIndex === 1 ? baseOtherFieldKey : `${baseOtherFieldKey}-${fieldIndex}`;
 
-  // Shared button component for "Add more"
-  const AddMoreButton = ({ onClick, warningMessage }) => (
-    <div className="flex flex-col items-start">
-      <button
-        type="button"
-        onClick={onClick}
-        className="mt-4 px-4 py-2 text-sm border border-gray-400 rounded hover:bg-gray-800 transition-colors"
-        style={{ backgroundColor: "#0e0e0e" }}
-      >
-        Add more
-      </button>
-      {warningMessage && (
-        <p className="text-red-500 text-sm mt-2" role="alert">
-          {warningMessage}
-        </p>
-      )}
-    </div>
-  );
+  /**
+   * Renders the "Add more" button with validation logic for existing fields
+   * Validates that the last field is filled, slider is not zero, and no duplicates exist
+   */
+  const renderAddMoreButtonWithValidation = () => {
+    const lastFieldKey = getFieldKey(otherFieldCount);
+    const lastFieldValue = formData[lastFieldKey] || "";
+    const lastSliderValue =
+      formData[`${lastFieldKey}-slider`] ?? SLIDER_DEFAULT;
+
+    const isFieldEmpty = !lastFieldValue.trim();
+    const isSliderZero = lastSliderValue === 0;
+
+    // Check for duplicate experiences
+    const defaultLabels = Object.values(SLIDER_DATA[index - 1] || {});
+    const addedExperiences = Array.from(
+      { length: otherFieldCount - 1 },
+      (_, j) => {
+        return formData[getFieldKey(j + 1)]?.trim() || "";
+      }
+    ).filter(Boolean);
+
+    const normalizedCurrentValue = lastFieldValue.trim().toLowerCase();
+    const isDuplicate =
+      defaultLabels.some(
+        (label) => label.toLowerCase() === normalizedCurrentValue
+      ) ||
+      addedExperiences.some(
+        (exp) => exp.toLowerCase() === normalizedCurrentValue
+      );
+
+    const shouldShowWarning = isFieldEmpty || isSliderZero || isDuplicate;
+
+    // Reset the clicked state if conditions are no longer met
+    if (!shouldShowWarning && addMoreClicked) {
+      setAddMoreClicked(false);
+    }
+
+    return (
+      <AddMoreButton
+        onClick={() => {
+          if (shouldShowWarning) {
+            setAddMoreClicked(true);
+          } else {
+            setOtherFieldCount(otherFieldCount + 1);
+            setAddMoreClicked(false);
+          }
+        }}
+        warningMessage={
+          shouldShowWarning && addMoreClicked
+            ? isDuplicate
+              ? "This experience already exists. Please enter a different one."
+              : "Please fill in the experience field and set the years before adding more."
+            : null
+        }
+      />
+    );
+  };
 
   const label = <p>The last question.</p>;
   const label2 = (
@@ -150,7 +213,7 @@ export default function QuestionSet({
             error={validationErrors["additional-info"]}
             required={true}
             height="150px"
-            maxLength={3000}
+            maxLength={PERSONAL_DESCRIPTION_MAX_LENGTH}
           />
         ) : index === GENERAL_QUESTIONS_INDEX ? (
           // Create 'General Questions' set (index 0)
@@ -306,65 +369,7 @@ export default function QuestionSet({
                 }}
               />
             ) : (
-              (() => {
-                const lastFieldKey = getFieldKey(otherFieldCount);
-                const lastFieldValue = formData[lastFieldKey] || "";
-                const lastSliderValue =
-                  formData[`${lastFieldKey}-slider`] ?? SLIDER_DEFAULT;
-
-                const isFieldEmpty = !lastFieldValue.trim();
-                const isSliderZero = lastSliderValue === 0;
-
-                // Check for duplicate experiences
-                const defaultLabels = Object.values(
-                  SLIDER_DATA[index - 1] || {}
-                );
-                const addedExperiences = Array.from(
-                  { length: otherFieldCount - 1 },
-                  (_, j) => {
-                    return formData[getFieldKey(j + 1)]?.trim() || "";
-                  }
-                ).filter(Boolean);
-
-                const normalizedCurrentValue = lastFieldValue
-                  .trim()
-                  .toLowerCase();
-                const isDuplicate =
-                  defaultLabels.some(
-                    (label) => label.toLowerCase() === normalizedCurrentValue
-                  ) ||
-                  addedExperiences.some(
-                    (exp) => exp.toLowerCase() === normalizedCurrentValue
-                  );
-
-                const shouldShowWarning =
-                  isFieldEmpty || isSliderZero || isDuplicate;
-
-                // Reset the clicked state if conditions are no longer met
-                if (!shouldShowWarning && addMoreClicked) {
-                  setAddMoreClicked(false);
-                }
-
-                return (
-                  <AddMoreButton
-                    onClick={() => {
-                      if (shouldShowWarning) {
-                        setAddMoreClicked(true);
-                      } else {
-                        setOtherFieldCount(otherFieldCount + 1);
-                        setAddMoreClicked(false);
-                      }
-                    }}
-                    warningMessage={
-                      shouldShowWarning && addMoreClicked
-                        ? isDuplicate
-                          ? "This experience already exists. Please enter a different one."
-                          : "Please fill in the experience field and set the years before adding more."
-                        : null
-                    }
-                  />
-                );
-              })()
+              renderAddMoreButtonWithValidation()
             )}
           </>
         )}

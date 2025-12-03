@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { DEFAULT_TEXT_FIELD_MAX_LENGTH } from "../../config/constants";
 
 /**
  * TextField Component
@@ -26,7 +27,7 @@ export default function TextField({
   error,
   required = false,
   height,
-  maxLength = 50,
+  maxLength = DEFAULT_TEXT_FIELD_MAX_LENGTH,
   showValidation = true,
 }) {
   const [hasInteracted, setHasInteracted] = useState(false);

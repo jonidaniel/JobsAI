@@ -11,6 +11,11 @@ import { downloadBlob } from "../utils/fileDownload";
 import { getErrorMessage } from "../utils/errorMessages";
 import { validateGeneralQuestions } from "../utils/validation";
 import { GENERAL_QUESTION_KEYS } from "../config/generalQuestions";
+import {
+  SUCCESS_MESSAGE_TIMEOUT,
+  SCROLL_OFFSET,
+  SCROLL_DELAY,
+} from "../config/constants";
 
 import "../styles/search.css";
 
@@ -117,14 +122,13 @@ export default function Search() {
         const questionSetSection = document.querySelector('[data-index="0"]');
         if (questionSetSection) {
           const rect = questionSetSection.getBoundingClientRect();
-          const scrollOffset = 120; // Offset to show question set number clearly
-          const targetPosition = window.scrollY + rect.top - scrollOffset;
+          const targetPosition = window.scrollY + rect.top - SCROLL_OFFSET;
           window.scrollTo({
             top: targetPosition,
             behavior: "smooth",
           });
         }
-      }, 100);
+      }, SCROLL_DELAY);
       return;
     }
 
@@ -187,15 +191,14 @@ export default function Search() {
           );
           if (errorQuestion) {
             const rect = errorQuestion.getBoundingClientRect();
-            const scrollOffset = 120; // Offset to show question clearly
-            const targetPosition = window.scrollY + rect.top - scrollOffset;
+            const targetPosition = window.scrollY + rect.top - SCROLL_OFFSET;
 
             window.scrollTo({
               top: targetPosition,
               behavior: "smooth",
             });
           }
-        }, 150);
+        }, SCROLL_DELAY + 50);
       }
       return;
     }
@@ -247,7 +250,7 @@ export default function Search() {
       successTimeoutRef.current = setTimeout(() => {
         setSuccess(false); // Hide the green success message, but text stays via hasSuccessfulSubmission
         successTimeoutRef.current = null;
-      }, 5000);
+      }, SUCCESS_MESSAGE_TIMEOUT);
     } catch (error) {
       setError(getErrorMessage(error));
       setSuccess(false);
@@ -261,47 +264,23 @@ export default function Search() {
   // Restore scroll position after component remounts and success message appears
   useEffect(() => {
     if (!isSubmitting && savedScrollPosition.current !== null) {
-      // Restore scroll position aggressively using multiple methods
+      const targetScroll = savedScrollPosition.current;
+
+      // Restore scroll position using requestAnimationFrame for smooth restoration
       const restoreScroll = () => {
-        if (savedScrollPosition.current !== null) {
-          const targetScroll = savedScrollPosition.current;
-          // Use scrollTo
-          window.scrollTo(0, targetScroll);
-          // Also set scrollY directly if possible
-          if (window.scrollY !== targetScroll) {
-            window.scrollTo({
-              top: targetScroll,
-              behavior: "auto",
-              left: 0,
-            });
-          }
+        if (window.scrollY !== targetScroll) {
+          window.scrollTo({
+            top: targetScroll,
+            behavior: "auto",
+          });
         }
       };
 
-      // Restore immediately in current frame
-      restoreScroll();
+      // Restore in next animation frame and after a brief delay to catch late DOM updates
+      requestAnimationFrame(restoreScroll);
+      const timeoutId = setTimeout(restoreScroll, SCROLL_DELAY);
 
-      // Restore in next animation frame
-      requestAnimationFrame(() => {
-        restoreScroll();
-        // And again after a microtask
-        Promise.resolve().then(() => {
-          restoreScroll();
-        });
-      });
-
-      // Restore after various delays to catch any late scrolls
-      const timeouts = [
-        setTimeout(restoreScroll, 0),
-        setTimeout(restoreScroll, 10),
-        setTimeout(restoreScroll, 50),
-        setTimeout(restoreScroll, 100),
-        setTimeout(restoreScroll, 200),
-      ];
-
-      return () => {
-        timeouts.forEach(clearTimeout);
-      };
+      return () => clearTimeout(timeoutId);
     }
   }, [isSubmitting, success]);
 
