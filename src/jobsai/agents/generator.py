@@ -1,14 +1,14 @@
 """
-Generates cover letters.
+Orchestrates the generation of cover letters.
 
 CLASSES:
     GeneratorAgent
 
 FUNCTIONS (in order of workflow):
-    1. GeneratorAgent.generate_letters     (public use)
-    2. GeneratorAgent._build_system_prompt (internal use)
-    3. GeneratorAgent._build_user_prompt   (internal use)
-    4. GeneratorAgent._write_letter        (internal use)
+    1. generate_letters     (public use)
+    2. _build_system_prompt (internal use)
+    3. _build_user_prompt   (internal use)
+    4. _write_letters        (internal use)
 """
 
 import os
@@ -46,15 +46,15 @@ class GeneratorAgent:
     # ------------------------------
     def generate_letters(
         self,
-        skill_profile: SkillProfile,
-        job_report: str,
+        job_analysis: str,
+        profile: SkillProfile,
         letter_style: str,
     ) -> Document:
-        """Produce a tailored job-application message based on the candidate's skills and the job report.
+        """Produce a tailored job-application message based on the candidate's skills and the job analysis.
 
         Args:
-            skill_profile (SkillProfile): The candidate's skill profile.
-            job_report (str): The job report that contains instructions for what kind of cover letter to write.
+            profile (SkillProfile): The candidate profile.
+            job_analysis (str): The job analysis that contains instructions for what kind of cover letter to write.
             letter_style (str): The intended style/tone of the cover letter.
 
         Returns:
@@ -62,9 +62,9 @@ class GeneratorAgent:
         """
 
         system_prompt = self._build_system_prompt(letter_style)
-        user_prompt = self._build_user_prompt(skill_profile, job_report)
+        user_prompt = self._build_user_prompt(profile, job_analysis)
 
-        cover_letter = self._write_letter(system_prompt, user_prompt)
+        cover_letter = self._write_letters(system_prompt, user_prompt)
 
         return cover_letter
 
@@ -82,10 +82,6 @@ class GeneratorAgent:
             str: The system prompt that is used to write the cover letter.
         """
 
-        print("AAA")
-        print(style)
-        print("BBB")
-
         tone_instructions = {
             "Professional": "Write in a clear, respectful, concise, professional tone. Use well-structured paragraphs. Avoid exaggerations.",
             "friendly": "Write in a warm, positive tone but keep it professional.",
@@ -98,27 +94,27 @@ class GeneratorAgent:
 
     def _build_user_prompt(
         self,
-        skill_profile: SkillProfile,
-        job_report: str,
+        profile: SkillProfile,
+        job_analysis: str,
     ) -> str:
         """Build the user prompt that is used to write the cover letter.
 
         Args:
-            skill_profile (SkillProfile): The candidate's skill profile.
-            job_report (str): The job report that contains instructions for what kind of cover letter to write.
+            profile (SkillProfile): The candidate's skill profile.
+            job_analysis (str): The job analysis that contains instructions for what kind of cover letter to write.
 
         Returns:
             str: The user prompt that is used to write the cover letter.
         """
 
         # KS:DJNÖJKSD
-        json_profile = skill_profile.model_dump_json(indent=2)
+        json_profile = profile.model_dump_json(indent=2)
 
-        return USER_PROMPT.format(json_profile=json_profile, job_report=job_report)
+        return USER_PROMPT.format(json_profile=json_profile, job_analysis=job_analysis)
 
-    def _write_letter(self, system_prompt: str, user_prompt: str) -> Document:
+    def _write_letters(self, system_prompt: str, user_prompt: str) -> Document:
         """
-        Write the cover letter document with proper formatting.
+        Write the cover letters with proper formatting.
 
         Creates a Word document with:
         1. Contact information (top-right)
@@ -131,7 +127,7 @@ class GeneratorAgent:
 
         Args:
             system_prompt (str): System prompt defining LLM's role as cover letter writer
-            user_prompt (str): User prompt containing skill profile and job report
+            user_prompt (str): User prompt containing profile and job analysis
 
         Returns:
             Document: The complete cover letter as a python-docx Document object

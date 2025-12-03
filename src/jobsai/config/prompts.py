@@ -50,12 +50,12 @@ Also generate job search keywords based on the overall profile.
 
 Now produce the skill profile following the schema."""
 
-# --- REPORTER AGENT PROMPTS ---
+# --- ANALYZER AGENT PROMPTS ---
 
-REPORTER_SYSTEM_PROMPT = """You are an expert on planning cover letters to be attached to job applications.
+ANALYZER_SYSTEM_PROMPT = """You are an expert on planning cover letters to be attached to job applications.
 You base your plans on job descriptions and candidates' skill profiles."""
 
-REPORTER_USER_PROMPT = """Here is a job description:
+ANALYZER_USER_PROMPT = """Here is a job description:
 \"\"\"
 {full_description}
 \"\"\"
@@ -94,10 +94,10 @@ Candidate Skill Profile (JSON):
 {json_profile}
 
 Job Match Analysis:
-{job_report}
+{job_analysis}
 
 Instructions:
 - Produce a compelling but concise job-application message.
-- Highlight the candidate's relevant skills based on the report.
+- Highlight the candidate's relevant skills based on the analysis.
 - If employer or job title are given, tailor the message to them.
 - Keep it truthful, specific, and readable."""

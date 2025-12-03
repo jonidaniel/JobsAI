@@ -16,6 +16,7 @@ import json
 from typing import List, Dict
 
 from jobsai.config.paths import RAW_JOB_LISTING_PATH
+from jobsai.config.schemas import SkillProfile
 
 from jobsai.utils.scrapers.duunitori import scrape_duunitori
 from jobsai.utils.scrapers.jobly import scrape_jobly
@@ -28,7 +29,7 @@ class SearcherService:
     """Orchestrate the job listings search.
 
     Responsibilities:
-    1. Build queries from skill profile
+    1. Build queries from candidate profile
     2. Fetch job listings from supported job boards
     3. Deduplicate the job listings
     4. Store the job listings
@@ -41,24 +42,24 @@ class SearcherService:
 
     def __init__(
         self,
-        job_level: str,
-        job_boards: List[str],
-        deep_mode: bool,
         timestamp: str,
     ):
-        self.job_level = job_level
-        self.job_boards = job_boards
-        self.deep_mode = deep_mode
         self.timestamp = timestamp
 
     # ------------------------------
     # Public interface
     # ------------------------------
-    def search_jobs(self, skill_profile: dict) -> List[Dict]:
-        """Run searches on all job boards using queries from the skill profile.
+    def search_jobs(
+        self,
+        profile: SkillProfile,
+        job_level: str,
+        job_boards: List[str],
+        deep_mode: bool,
+    ) -> List[Dict]:
+        """Run searches on all job boards using queries from the candidate profile.
 
         Args:
-            skill_profile (dict): The skill profile.
+            profile (SkillProfile): The candidate profile.
 
         Returns:
             List[Dict]: The deduplicated list of jobs.
@@ -67,18 +68,18 @@ class SearcherService:
         all_jobs = []
 
         # Build deterministic job search queries
-        queries = build_queries(skill_profile)
+        queries = build_queries(profile.model_dump())
 
         for query in queries:
-            for job_board in self.job_boards:
+            for job_board in job_boards:
                 print()
                 logger.info(" Searching %s for query '%s'", job_board, query)
                 # User sends through UI which job board to use
 
                 if job_board.lower() == "duunitori":
-                    jobs = scrape_duunitori(query, deep_mode=self.deep_mode)
+                    jobs = scrape_duunitori(query, deep_mode=deep_mode)
                 elif job_board.lower() == "jobly":
-                    jobs = scrape_jobly(query, deep_mode=self.deep_mode)
+                    jobs = scrape_jobly(query, deep_mode=deep_mode)
                 else:
                     # Placeholder for other boards
                     jobs = []
@@ -95,7 +96,7 @@ class SearcherService:
     def _save_raw_jobs(self, jobs: List[Dict], board: str, query: str):
         """Save raw job listings.
 
-        Saves to RAW_JOB_LISTING_PATH.
+        Saves to /data/job_listings/raw/{timestamp}_{job_board}_{query}.json.
 
         Args:
             jobs (List[Dict]): The job listings.

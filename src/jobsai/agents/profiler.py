@@ -42,7 +42,7 @@ class ProfilerAgent:
 
     Responsibilities:
     1. Assess the candidate's skills
-    2. Form a skill profile of the candidate
+    2. Form a candidate profile
     3. Merge the profile with existing profile
     4. Save the profile
 
@@ -60,7 +60,7 @@ class ProfilerAgent:
         self,
         form_submissions: Dict,
     ) -> SkillProfile:
-        """Create the candidate's skill profile.
+        """Create the candidate profile.
 
         Makes an LLM call, extracts JSON from the response, parses the JSON, and normalizes it.
 
@@ -68,7 +68,7 @@ class ProfilerAgent:
             form_submissions (Dict): The user's form submissions from frontend.
 
         Returns:
-            SkillProfile: The candidate's skill profile.
+            SkillProfile: The candidate profile.
         """
 
         # Build the user prompt for the LLM to do the extraction of the skill profile
@@ -202,9 +202,12 @@ class ProfilerAgent:
             user_input=user_input, output_schema=OUTPUT_SCHEMA
         )
 
-        print("FINAL_USER_PROMPT_START")
+        print()
+        print("START OF FINAL_USER_PROMPT IN PROFILER")
+        print(type(final_user_prompt))
         print(final_user_prompt)
-        print("FINAL_USER_PROMPT_END")
+        print("END OF FINAL_USER_PROMPT IN PROFILER")
+        print()
 
         return final_user_prompt
 
@@ -238,18 +241,20 @@ class ProfilerAgent:
 
         return None
 
-    def _save_profile(self, skill_profile: SkillProfile):
-        """Save the candidate's skill profile to the vector database.
+    def _save_profile(self, profile: SkillProfile):
+        """Save the candidate profile to the vector database.
+
+        Saves to /src/jobsai/memory/vector_db/{timestamp}_profile.json.
 
         Args:
-            skill_profile (SkillProfile): The candidate's skill profile (merged or unmodified).
+            profile (SkillProfile): The candidate profile (merged or unmodified).
         """
 
-        # ???
-        out = json.loads(skill_profile.model_dump_json(by_alias=True))
+        # Convert the profile to a dictionary
+        out = json.loads(profile.model_dump_json(by_alias=True))
 
         # Form a dated filename and make a path
-        filename = f"{self.timestamp}_skill_profile.json"
+        filename = f"{self.timestamp}_profile.json"
         path = os.path.join(SKILL_PROFILE_PATH, filename)
 
         try:
@@ -263,9 +268,9 @@ class ProfilerAgent:
         except Exception as e:
             logger.error(f" Skill profile failed: {e}\n")
 
-    def _merge_profiles(self, skill_profile: SkillProfile) -> SkillProfile:
+    def _merge_profiles(self, profile: SkillProfile) -> SkillProfile:
         """
-        Merge the new skill profile with an existing profile (if one exists).
+        Merge the new candidate profile with an existing profile (if one exists).
 
         Merging strategy:
         - Lists: Combine and deduplicate (union of all skills)
@@ -276,7 +281,7 @@ class ProfilerAgent:
         additional information through multiple form submissions.
 
         Args:
-            skill_profile (SkillProfile): The newly created skill profile from current submission
+            profile (SkillProfile): The newly created candidate profile from current submission
 
         Returns:
             SkillProfile:
@@ -289,11 +294,8 @@ class ProfilerAgent:
 
         # If running for the first time, just save and return the new profile
         if not existing:
-            self._save_profile(skill_profile)
-            return skill_profile
-
-        print()
-        logger.info(" MERGING SKILL PROFILE WITH EXISTING PROFILE ...")
+            self._save_profile(profile)
+            return profile
 
         # Start with existing profile as base
         merged_profile_dict = existing.model_dump()
@@ -312,8 +314,7 @@ class ProfilerAgent:
         ]:
             merged_profile_dict[list_key] = list(
                 dict.fromkeys(
-                    existing.model_dump()[list_key]
-                    + skill_profile.model_dump()[list_key]
+                    existing.model_dump()[list_key] + profile.model_dump()[list_key]
                 )
             )
 
@@ -321,7 +322,7 @@ class ProfilerAgent:
         # This ensures we keep the highest experience level if candidate
         # has provided different values in different submissions
         existing_experience_levels = existing.experience_level.model_dump(by_alias=True)
-        new_experience_levels = skill_profile.experience_level.model_dump(by_alias=True)
+        new_experience_levels = profile.experience_level.model_dump(by_alias=True)
         merged_experience_levels = {}
         for technology_name in ["Python", "JavaScript", "Agentic AI", "AI/ML"]:
             merged_experience_levels[technology_name] = max(
@@ -331,12 +332,12 @@ class ProfilerAgent:
         merged_profile_dict["experience_level"] = merged_experience_levels
 
         # Use new name if provided, otherwise keep existing name
-        merged_profile_dict["name"] = skill_profile.name or existing.name
+        merged_profile_dict["name"] = profile.name or existing.name
 
         # Create merged profile object and validate
         merged_profile = SkillProfile(**merged_profile_dict)
 
-        # Save merged skill profile to /src/jobsai/memory/vector_db/
+        # Save merged candidate profile to /src/jobsai/memory/vector_db/
         self._save_profile(merged_profile)
 
         return merged_profile

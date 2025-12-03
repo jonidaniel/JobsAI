@@ -1,7 +1,6 @@
 # ---------- SCHEMAS ----------
 
-from typing import List, Dict, Any, Union
-from enum import Enum
+from typing import List, Dict, Any
 
 from pydantic import BaseModel, Field, model_validator, field_validator, ConfigDict
 

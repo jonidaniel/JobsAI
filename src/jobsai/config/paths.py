@@ -23,9 +23,9 @@ RAW_JOB_LISTING_PATH = Path("src/jobsai/data/job_listings/raw/")
 # Files are named: {timestamp}_scored_jobs.json
 SCORED_JOB_LISTING_PATH = Path("src/jobsai/data/job_listings/scored/")
 
-# Path where job analysis reports are saved
-# Files are named: {timestamp}_job_report.txt
-JOB_REPORT_PATH = Path("src/jobsai/data/job_reports/")
+# Path where job analyses are saved
+# Files are named: {timestamp}_job_analysis.txt
+JOB_ANALYSIS_PATH = Path("src/jobsai/data/job_analyses/")
 
 # Path where generated cover letter documents are saved
 # Files are named: {timestamp}_cover_letter.docx
@@ -36,7 +36,7 @@ COVER_LETTER_PATH = Path("src/jobsai/data/cover_letters/")
 SKILL_PROFILE_PATH.mkdir(parents=True, exist_ok=True)
 RAW_JOB_LISTING_PATH.mkdir(parents=True, exist_ok=True)
 SCORED_JOB_LISTING_PATH.mkdir(parents=True, exist_ok=True)
-JOB_REPORT_PATH.mkdir(parents=True, exist_ok=True)
+JOB_ANALYSIS_PATH.mkdir(parents=True, exist_ok=True)
 COVER_LETTER_PATH.mkdir(parents=True, exist_ok=True)
 
 # ----- URLS -----
