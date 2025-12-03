@@ -26,8 +26,28 @@ export function downloadBlob(blob, headers, defaultFilename = "document.docx") {
   const download_link = document.createElement("a");
   download_link.href = url;
   download_link.download = filename;
+  // Hide the link completely to prevent any visual changes or scrolling
+  download_link.style.display = "none";
+  download_link.style.position = "absolute";
+  download_link.style.left = "-9999px";
+  download_link.style.top = "-9999px";
+  download_link.style.visibility = "hidden";
+  download_link.style.opacity = "0";
+  download_link.setAttribute("aria-hidden", "true");
   document.body.appendChild(download_link);
+
+  // Save scroll position right before click
+  const scrollBeforeClick = window.scrollY || window.pageYOffset;
+
   download_link.click();
+
+  // Immediately restore scroll if it changed
+  requestAnimationFrame(() => {
+    if (window.scrollY !== scrollBeforeClick) {
+      window.scrollTo(0, scrollBeforeClick);
+    }
+  });
+
   download_link.remove();
 
   // Clean up the blob URL to free memory

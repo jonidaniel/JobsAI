@@ -20,6 +20,7 @@ import { GENERAL_QUESTION_KEYS } from "../config/generalQuestions";
  * @param {object} validationErrors - Object mapping question keys to error messages
  * @param {number} activeIndex - Optional external control of active question set index
  * @param {function} onCurrentIndexChange - Optional callback to report current question set index
+ * @param {boolean} skipInitialScroll - If true, skip scrolling to top on initial mount (used when remounting after submission)
  */
 export default function QuestionSetList({
   onFormDataChange,
@@ -27,6 +28,7 @@ export default function QuestionSetList({
   activeIndex,
   onActiveIndexChange,
   onCurrentIndexChange,
+  skipInitialScroll = false,
 }) {
   // Current active question set index (0-9)
   // Use activeIndex prop if provided, otherwise use internal state
@@ -100,12 +102,20 @@ export default function QuestionSetList({
    * Scroll to active question set when navigation changes
    * - On page refresh: scroll to top of page
    * - On arrow click: scroll to top of question set
+   * - On remount after submission: skip scrolling (preserve position)
    */
   useEffect(() => {
     if (isInitialMount.current) {
       // On initial mount (page refresh), scroll to top of page
+      // But skip if this is a remount after submission
       isInitialMount.current = false;
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      if (!skipInitialScroll) {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      } else {
+        // If we're skipping scroll, ensure we don't scroll at all
+        // This is a remount after submission, preserve position
+        return;
+      }
       return;
     }
 

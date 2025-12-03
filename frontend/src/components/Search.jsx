@@ -33,6 +33,12 @@ export default function Search() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
+  // Track if we just completed a submission (to prevent scroll on remount)
+  const justCompletedSubmission = useRef(false);
+  // Store scroll position to restore after download
+  const savedScrollPosition = useRef(null);
+  // Track if we've had a successful submission (to keep question sets hidden)
+  const hasSuccessfulSubmission = useRef(false);
 
   // Form data received from QuestionSets component via callback
   const [formData, setFormData] = useState({});
@@ -97,6 +103,31 @@ export default function Search() {
     e.preventDefault();
     e.stopPropagation();
 
+    // If this is a "Find Again" click, navigate to question set 1 and reset
+    if (hasSuccessfulSubmission.current) {
+      // Reset states
+      setError(null);
+      setSuccess(false);
+      justCompletedSubmission.current = false;
+      hasSuccessfulSubmission.current = false;
+      // Navigate to question set 1 (index 0)
+      setActiveQuestionSetIndex(0);
+      // Scroll to question set 1 after a brief delay to ensure DOM is ready
+      setTimeout(() => {
+        const questionSetSection = document.querySelector('[data-index="0"]');
+        if (questionSetSection) {
+          const rect = questionSetSection.getBoundingClientRect();
+          const scrollOffset = 120; // Offset to show question set number clearly
+          const targetPosition = window.scrollY + rect.top - scrollOffset;
+          window.scrollTo({
+            top: targetPosition,
+            behavior: "smooth",
+          });
+        }
+      }, 100);
+      return;
+    }
+
     // Prevent double submission
     if (isSubmitting) {
       return;
@@ -105,6 +136,9 @@ export default function Search() {
     // Clear previous errors and success messages
     setError(null);
     setSuccess(false);
+    justCompletedSubmission.current = false;
+    // Reset successful submission flag when starting a new submission
+    hasSuccessfulSubmission.current = false;
 
     // Validate general questions before submission
     const validation = validateGeneralQuestions(formData);
@@ -193,30 +227,95 @@ export default function Search() {
       // Get the response as a blob (binary data for .docx file)
       const blob = await response.blob();
 
+      // Save scroll position before any state changes
+      savedScrollPosition.current = window.scrollY || window.pageYOffset;
+
       // Download the file
       downloadBlob(blob, response.headers);
 
       // Show success message
       setSuccess(true);
       setError(null);
+      justCompletedSubmission.current = true;
+      hasSuccessfulSubmission.current = true;
 
-      // Auto-dismiss success message after 5 seconds
+      // Auto-dismiss success message after 5 seconds (but keep the text visible)
       // Clear any existing timeout first to prevent multiple timers
       if (successTimeoutRef.current) {
         clearTimeout(successTimeoutRef.current);
       }
       successTimeoutRef.current = setTimeout(() => {
-        setSuccess(false);
+        setSuccess(false); // Hide the green success message, but text stays via hasSuccessfulSubmission
         successTimeoutRef.current = null;
       }, 5000);
     } catch (error) {
       setError(getErrorMessage(error));
       setSuccess(false);
+      justCompletedSubmission.current = true;
     } finally {
       // Reset submission flag after request completes (success or error)
       setIsSubmitting(false);
     }
   };
+
+  // Restore scroll position after component remounts and success message appears
+  useEffect(() => {
+    if (!isSubmitting && savedScrollPosition.current !== null) {
+      // Restore scroll position aggressively using multiple methods
+      const restoreScroll = () => {
+        if (savedScrollPosition.current !== null) {
+          const targetScroll = savedScrollPosition.current;
+          // Use scrollTo
+          window.scrollTo(0, targetScroll);
+          // Also set scrollY directly if possible
+          if (window.scrollY !== targetScroll) {
+            window.scrollTo({
+              top: targetScroll,
+              behavior: "auto",
+              left: 0,
+            });
+          }
+        }
+      };
+
+      // Restore immediately in current frame
+      restoreScroll();
+
+      // Restore in next animation frame
+      requestAnimationFrame(() => {
+        restoreScroll();
+        // And again after a microtask
+        Promise.resolve().then(() => {
+          restoreScroll();
+        });
+      });
+
+      // Restore after various delays to catch any late scrolls
+      const timeouts = [
+        setTimeout(restoreScroll, 0),
+        setTimeout(restoreScroll, 10),
+        setTimeout(restoreScroll, 50),
+        setTimeout(restoreScroll, 100),
+        setTimeout(restoreScroll, 200),
+      ];
+
+      return () => {
+        timeouts.forEach(clearTimeout);
+      };
+    }
+  }, [isSubmitting, success]);
+
+  // Reset the submission completion flag after QuestionSetList has remounted
+  useEffect(() => {
+    if (!isSubmitting && justCompletedSubmission.current) {
+      // Reset the flag after a brief delay to ensure QuestionSetList has processed it
+      const timeoutId = setTimeout(() => {
+        justCompletedSubmission.current = false;
+        savedScrollPosition.current = null; // Clear saved position
+      }, 200);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [isSubmitting]);
 
   // Cleanup: Clear timeout if component unmounts
   // This is to prevent memory leaks
@@ -231,52 +330,86 @@ export default function Search() {
   return (
     <section id="search">
       <h2>Search</h2>
-      <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
-        <i>We will find jobs for you.</i>
-      </h3>
-      <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
-        And the way you can make sure we find <i>the most relevant jobs</i> and{" "}
-        <i>write the best cover letters</i> is to provide us with a dose of
-        information.
-      </h3>
-      <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
-        <i>We don't ask you for any personal information.</i>
-      </h3>
-      <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
-        By answering as many questions as possible, you enable us to use all
-        tools in our arsenal when we scrape jobs for you. This is how we find
-        the absolute gems. The questions are easy, and in most of them you just
-        select the option that best describes you. Even if you felt like you
-        didn't have much experience, be truthful -
-      </h3>
-      <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
-        <i>if there is a job matching your skills, we will find it.</i>
-      </h3>
-      <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
-        <i>Find Jobs</i> let's us start the search.
-      </h3>
+      {isSubmitting ? (
+        // Loading state: show simplified message
+        <>
+          <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
+            Finding jobs for you right now
+          </h3>
+          <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
+            This might take a minute
+          </h3>
+        </>
+      ) : hasSuccessfulSubmission.current ? (
+        // Success state: show completion message (stays visible even after success message disappears)
+        <>
+          <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
+            Here are your cover letters. Thank you very much.
+          </h3>
+        </>
+      ) : (
+        // Normal state: show full introductory text
+        <>
+          <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
+            <i>We will find jobs for you.</i>
+          </h3>
+          <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
+            And the way you can make sure we find <i>the most relevant jobs</i>{" "}
+            and <i>write the best cover letters</i> is to provide us with a dose
+            of information.
+          </h3>
+          <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
+            <i>We don't ask you for any personal information.</i>
+          </h3>
+          <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
+            By answering as many questions as possible, you enable us to use all
+            tools in our arsenal when we scrape jobs for you. This is how we
+            find the absolute gems. The questions are easy, and in most of them
+            you just select the option that best describes you. Even if you felt
+            like you didn't have much experience, be truthful -
+          </h3>
+          <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
+            <i>if there is a job matching your skills, we will find it.</i>
+          </h3>
+          <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
+            <i>Find Jobs</i> let's us start the search.
+          </h3>
+        </>
+      )}
       {/* Question sets component with blue/gray background - contains all question sets and manages all form inputs */}
-      <QuestionSetList
-        onFormDataChange={handleFormDataChange}
-        validationErrors={validationErrors}
-        activeIndex={activeQuestionSetIndex}
-        onActiveIndexChange={setActiveQuestionSetIndex}
-        onCurrentIndexChange={setCurrentQuestionSetIndex}
-      />
+      {/* Only show question sets if not submitting AND not successfully completed */}
+      {!isSubmitting && !success && !hasSuccessfulSubmission.current && (
+        <QuestionSetList
+          onFormDataChange={handleFormDataChange}
+          validationErrors={validationErrors}
+          activeIndex={activeQuestionSetIndex}
+          onActiveIndexChange={setActiveQuestionSetIndex}
+          onCurrentIndexChange={setCurrentQuestionSetIndex}
+          skipInitialScroll={justCompletedSubmission.current}
+        />
+      )}
       {/* Success message - displayed when document is successfully downloaded */}
       {success && <SuccessMessage />}
       {/* Error message - displayed when submission fails */}
       {error && <ErrorMessage message={error} />}
-      {/* Black 'Find Jobs' submit button - triggers form submission and document generation */}
+      {/* Black 'Find Jobs' / 'Find Again' submit button - triggers form submission and document generation */}
       <div className="flex justify-center mt-6">
         <button
           id="submit-btn"
           onClick={handleSubmit}
           disabled={isSubmitting}
           className="text-lg sm:text-xl md:text-2xl lg:text-3xl px-4 sm:px-6 py-2 sm:py-3 border border-white bg-transparent text-white font-semibold rounded-lg shadow disabled:opacity-50 disabled:cursor-not-allowed"
-          aria-label="Submit form and generate job search document"
+          aria-label={
+            hasSuccessfulSubmission.current
+              ? "Start a new job search"
+              : "Submit form and generate job search document"
+          }
         >
-          {isSubmitting ? "Finding Jobs..." : "Find Jobs"}
+          {isSubmitting
+            ? "Finding Jobs..."
+            : hasSuccessfulSubmission.current
+            ? "Find Again"
+            : "Find Jobs"}
         </button>
       </div>
     </section>
