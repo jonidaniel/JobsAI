@@ -90,6 +90,77 @@ export default function QuestionSet({
     fieldIndex === 1 ? baseOtherFieldKey : `${baseOtherFieldKey}-${fieldIndex}`;
 
   /**
+   * Renders a general question based on its index
+   * Uses configuration to determine component type and props
+   */
+  const renderGeneralQuestion = (j) => {
+    const keyName = GENERAL_QUESTION_KEYS[j];
+    const commonProps = {
+      keyName,
+      label: GENERAL_QUESTION_LABELS[j],
+      value: formData[keyName] || (j < 2 ? [] : ""),
+      onChange: onFormChange,
+      error: validationErrors[keyName],
+      required: true,
+    };
+
+    // Configuration for each question
+    const questionConfig = [
+      {
+        // Question 0: Job level - MultipleChoice with adjacency requirement
+        component: MultipleChoice,
+        props: {
+          ...commonProps,
+          options: NAME_OPTIONS,
+          maxSelections: 2,
+          requireAdjacent: true,
+        },
+      },
+      {
+        // Question 1: Job boards - MultipleChoice
+        component: MultipleChoice,
+        props: {
+          ...commonProps,
+          options: JOB_BOARD_OPTIONS,
+        },
+      },
+      {
+        // Question 2: Deep mode - SingleChoice
+        component: SingleChoice,
+        props: {
+          ...commonProps,
+          options: DEEP_MODE_OPTIONS,
+        },
+      },
+      {
+        // Question 3: Job count - SingleChoice with split layout
+        component: SingleChoice,
+        props: {
+          ...commonProps,
+          options: JOB_COUNT_OPTIONS,
+          splitAt: 5,
+        },
+      },
+      {
+        // Question 4: Cover letter style - MultipleChoice with max selections
+        component: MultipleChoice,
+        props: {
+          ...commonProps,
+          options: COVER_LETTER_STYLE_OPTIONS,
+          maxSelections: 2,
+        },
+      },
+    ];
+
+    if (j >= 0 && j < questionConfig.length) {
+      const { component: Component, props } = questionConfig[j];
+      return <Component key={j} {...props} />;
+    }
+
+    return null;
+  };
+
+  /**
    * Renders the "Add more" button with validation logic for existing fields
    * Validates that the last field is filled, slider is not zero, and no duplicates exist
    */
@@ -218,88 +289,10 @@ export default function QuestionSet({
           />
         ) : index === GENERAL_QUESTIONS_INDEX ? (
           // Create 'General Questions' set (index 0)
-          // 5 questions, all are multiple choice
-          Array.from({ length: GENERAL_QUESTIONS_COUNT }).map((_, j) => {
-            const keyName = GENERAL_QUESTION_KEYS[j];
-            if (j === 0) {
-              // First question (Job level) is a multiple choice with checkboxes
-              // Options: Expert-level, Intermediate, Entry, Intern
-              // Users can select 1 or 2 options, but if 2, they must be adjacent
-              return (
-                <MultipleChoice
-                  key={j}
-                  keyName={keyName}
-                  label={GENERAL_QUESTION_LABELS[j]}
-                  options={NAME_OPTIONS}
-                  value={formData[keyName] || []}
-                  onChange={onFormChange}
-                  error={validationErrors[keyName]}
-                  required={true}
-                  maxSelections={2}
-                  requireAdjacent={true}
-                />
-              );
-            } else if (j === 1) {
-              return (
-                <MultipleChoice
-                  key={j}
-                  keyName={keyName}
-                  label={GENERAL_QUESTION_LABELS[j]}
-                  options={JOB_BOARD_OPTIONS}
-                  value={formData[keyName] || []}
-                  onChange={onFormChange}
-                  error={validationErrors[keyName]}
-                  required={true}
-                />
-              );
-            } else if (j === 2) {
-              return (
-                <SingleChoice
-                  key={j}
-                  keyName={keyName}
-                  label={GENERAL_QUESTION_LABELS[j]}
-                  options={DEEP_MODE_OPTIONS}
-                  value={formData[keyName] || ""}
-                  onChange={onFormChange}
-                  error={validationErrors[keyName]}
-                  required={true}
-                />
-              );
-            } else if (j === 3) {
-              return (
-                <SingleChoice
-                  key={j}
-                  keyName={keyName}
-                  label={GENERAL_QUESTION_LABELS[j]}
-                  options={JOB_COUNT_OPTIONS}
-                  value={formData[keyName] || ""}
-                  onChange={onFormChange}
-                  error={validationErrors[keyName]}
-                  required={true}
-                  splitAt={5}
-                />
-              );
-            } else if (j === 4) {
-              // Fifth question (Cover letter style) is a multiple choice with checkboxes
-              // Users can select 1 or 2 options
-              // Options: Professional, Friendly, Confident, Funny
-              return (
-                <MultipleChoice
-                  key={j}
-                  keyName={keyName}
-                  label={GENERAL_QUESTION_LABELS[j]}
-                  options={COVER_LETTER_STYLE_OPTIONS}
-                  value={formData[keyName] || []}
-                  onChange={onFormChange}
-                  error={validationErrors[keyName]}
-                  required={true}
-                  maxSelections={2}
-                />
-              );
-            }
-            // All general questions (0-4) are handled above
-            return null;
-          })
+          // 5 questions rendered using configuration-based approach
+          Array.from({ length: GENERAL_QUESTIONS_COUNT }).map((_, j) =>
+            renderGeneralQuestion(j)
+          )
         ) : (
           // Slider question sets (indices 1-8)
           // Multiple sliders + one "Other" text field each
