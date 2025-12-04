@@ -86,3 +86,26 @@
 - Refined the UI so that a more higher quality and more appropriate JSON string is sent to the backend
 - Made the backend pipeline return a real Document object (.docx) back to Fast API server
 - Made the server endpoint respond to frontend with a Response object (.docx), now everything starting from doing selections and clicking 'submit' in the UI and ending to the browser receiving a pre-written and downloadable Word document cover letter works fast and pretty accurately
+
+### 2025/11/29
+
+- Improved the question sets and the arrows
+
+### 2025/11/30
+
+- Designed the first nice look for the UI, picked two different fonts and applied them to the the page. Worked on the frontend payload structuring and sending
+
+### 2025/12/1
+
+- Improved the frontend payload structuring and sending
+
+### 2025/12/2
+
+- Honed form value validations in the frontend and Pydantic validation model in the backend.
+
+### 2025/12/3
+
+- Made the transition from clicking 'Find Jobs' to showing 'Again' button, also clicking 'Again' and then ending up on a new form
+- Changed the way of passing data between agents to _in-memory_, instead of saving data in files and then loading it in the next agent
+- Designed and partly implemented changes to agent's responsibilities
+- Started planning removing 'skill_profile' and making agents communicate with strings instead Skill Profiles.
