@@ -60,14 +60,8 @@ class SearcherService:
             List[Dict]: The deduplicated list of jobs.
         """
 
-        print("START OF KEYWORDS IN SEARCHER")
-        print(type(keywords))
-        print(keywords)
-        print("END OF KEYWORDS IN SEARCHER")
-
         all_jobs = []
 
-        # For every keyword
         for query in keywords:
             for job_board in job_boards:
                 print()

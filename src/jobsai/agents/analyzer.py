@@ -60,15 +60,9 @@ class AnalyzerAgent:
             str: The complete job analysis as a formatted text string.
         """
 
-        # THIS IS NOT NEEDED SINCE WE ARE PASSING THE SCORED JOBS DIRECTLY
-        # scored_jobs = self._load_scored_jobs()
-
         if not jobs:
             logger.warning(" No scored jobs found for analysis.")
             raise ValueError(" No scored jobs found for analysis.")
-
-        # Sort jobs by score descending (already done in scorer, but safe to re-sort)
-        jobs.sort(key=lambda x: x.get("score", 0), reverse=True)
 
         # Initialize report with header
         analysis_lines = ["Job Analysis", "=" * 40, f"Top {analysis_size} Jobs:\n"]

@@ -29,9 +29,6 @@ class ProfilerAgent:
         2. Return the raw response
     """
 
-    def __init__(self):
-        pass
-
     # ------------------------------
     # Public interface
     # ------------------------------

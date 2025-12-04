@@ -23,15 +23,12 @@ logger = logging.getLogger(__name__)
 
 
 class QueryBuilderAgent:
-    """Builds search queries from thecandidate profile.
+    """Builds search queries from the candidate profile.
 
     Responsibilities:
     1. Call the LLM with the system prompt and the candidate profile text
     2. Return the list of keywords
     """
-
-    def __init__(self, timestamp: str):
-        self.timestamp = timestamp
 
     # ------------------------------
     # Public interface

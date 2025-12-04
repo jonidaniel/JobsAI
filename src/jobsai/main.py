@@ -94,7 +94,7 @@ def main(form_submissions: Dict) -> Dict:
         # Initialize all agents and services
         logger.info("Initializing agents and services...")
         profiler = ProfilerAgent()
-        query_builder = QueryBuilderAgent(timestamp)
+        query_builder = QueryBuilderAgent()
         searcher = SearcherService(timestamp)
         scorer = ScorerService(timestamp)
         analyzer = AnalyzerAgent(timestamp)
@@ -109,7 +109,6 @@ def main(form_submissions: Dict) -> Dict:
     try:
         logger.info(" Step 1/6: Creating candidate profile...")
         profile = profiler.create_profile(form_submissions)
-        # print(profile)
         logger.info(" Step 1/6: Candidate profile created successfully")
     except Exception as e:
         error_msg = f" Step 1/6 Candidate profile creation failed: {str(e)}"
@@ -121,7 +120,6 @@ def main(form_submissions: Dict) -> Dict:
     try:
         logger.info(" Step 2/6: Creating keywords...")
         keywords = query_builder.create_keywords(profile)
-        # print(keywords)
         logger.info(" Step 2/6: Keywords created successfully")
     except Exception as e:
         error_msg = f" Step 2/6 Keywords creation failed: {str(e)}"
@@ -183,7 +181,7 @@ def main(form_submissions: Dict) -> Dict:
     try:
         logger.info(" Step 6/6: Generating cover letters...")
         cover_letters = generator.generate_letters(
-            job_analysis, keywords, cover_letter_style
+            job_analysis, profile, cover_letter_style
         )
         logger.info(" Step 6/6: Cover letters generated successfully")
     except Exception as e:

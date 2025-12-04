@@ -90,14 +90,14 @@ class ScorerService:
     # ------------------------------
     # Public interface
     # ------------------------------
-    def score_jobs(self, raw_jobs: List[Dict], tech_stack: List[str]) -> List[Dict]:
+    def score_jobs(self, raw_jobs: List[Dict], tech_stack: List) -> List[Dict]:
         """Score the raw job listings based on the candidate profile.
 
         Saves the scored jobs to /data/job_listings/scored/{timestamp}_scored_jobs.json.
 
         Args:
             raw_jobs (List[Dict]): The raw job listings from the searcher.
-            tech_stack (List[str]): The candidate tech stack.
+            tech_stack (List): The candidate tech stack (list of technology categories).
 
         Returns:
             List[Dict]: The scored job listings.
@@ -109,7 +109,6 @@ class ScorerService:
 
         scored_jobs = self._compute_scores(raw_jobs, tech_stack)
 
-        # scored_jobs = [self._compute_job_score(job, profile) for job in raw_jobs]
         # Sort by score descending
         scored_jobs.sort(key=lambda x: x["score"], reverse=True)
 
@@ -155,6 +154,7 @@ class ScorerService:
 
         # Find which technologies from the tech stack appear in the job description
         matched_skills = [tech for tech in tech_stack if tech.lower() in job_text]
+        # Compute missing skills as technologies not found in job description
         missing_skills = [tech for tech in tech_stack if tech.lower() not in job_text]
 
         # Calculate score as percentage of matched technologies

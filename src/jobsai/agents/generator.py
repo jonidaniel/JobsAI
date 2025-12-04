@@ -23,7 +23,6 @@ from jobsai.config.prompts import (
     GENERATOR_SYSTEM_PROMPT as SYSTEM_PROMPT,
     GENERATOR_USER_PROMPT as USER_PROMPT,
 )
-from jobsai.config.schemas import SkillProfile
 
 from jobsai.utils.llms import call_llm
 from jobsai.utils.normalization import normalize_text
@@ -47,13 +46,13 @@ class GeneratorAgent:
     def generate_letters(
         self,
         job_analysis: str,
-        profile: SkillProfile,
+        profile: str,
         letter_style: str,
     ) -> Document:
         """Produce a tailored job-application message based on the candidate's skills and the job analysis.
 
         Args:
-            profile (SkillProfile): The candidate profile.
+            profile (str): The candidate profile text.
             job_analysis (str): The job analysis that contains instructions for what kind of cover letter to write.
             letter_style (str): The intended style/tone of the cover letter.
 
