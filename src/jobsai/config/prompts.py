@@ -131,6 +131,7 @@ The queries should be based on the candidate profile.
 The queries should be tailored for the specific candidate.
 
 Always include "ai engineer" in the queries.
+Always include "software engineer" in the queries.
 """
 
 QUERY_BUILDER_USER_PROMPT = """
