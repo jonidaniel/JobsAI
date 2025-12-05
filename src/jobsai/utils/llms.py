@@ -10,11 +10,13 @@ Functions related to LLM use.
 import os
 import logging
 import json
+import time
 from typing import Optional
 
 from dotenv import load_dotenv
 
 from openai import OpenAI
+from openai import RateLimitError, APIConnectionError, APITimeoutError
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +45,13 @@ except Exception as e:
     raise ValueError(error_msg) from e
 
 
-def call_llm(system_prompt: str, user_prompt: str, max_tokens: int = 800) -> str:
+def call_llm(
+    system_prompt: str,
+    user_prompt: str,
+    max_tokens: int = 800,
+    max_retries: int = 3,
+    retry_delay: float = 1.0,
+) -> str:
     """
     Call OpenAI LLM API with system and user prompts.
 
@@ -53,29 +61,62 @@ def call_llm(system_prompt: str, user_prompt: str, max_tokens: int = 800) -> str
     - ReporterAgent: To generate cover letter instructions
     - GeneratorAgent: To write cover letter content
 
+    Includes automatic retry logic for transient failures (rate limits, timeouts, connection errors).
+
     Args:
         system_prompt (str): System prompt defining the LLM's role and behavior
         user_prompt (str): User prompt containing the actual task/input
         max_tokens (int): Maximum number of tokens in the response (default: 800)
+        max_retries (int): Maximum number of retry attempts for transient failures (default: 3)
+        retry_delay (float): Initial delay between retries in seconds, doubles on each retry (default: 1.0)
 
     Returns:
         str: The complete LLM response text
 
     Raises:
-        Exception: If OpenAI API call fails (handled by caller)
+        Exception: If OpenAI API call fails after all retries (handled by caller)
     """
 
-    # Make API call to OpenAI
-    # Temperature is set low (0.2) for more deterministic, focused responses
-    response = client.chat.completions.create(
-        model=OPENAI_MODEL,
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ],
-        max_tokens=max_tokens,
-        temperature=0.2,  # Low temperature for consistent, focused output
-    )
+    retryable_errors = (RateLimitError, APIConnectionError, APITimeoutError)
+    last_exception = None
+
+    for attempt in range(max_retries + 1):
+        try:
+            # Make API call to OpenAI
+            # Temperature is set low (0.2) for more deterministic, focused responses
+            response = client.chat.completions.create(
+                model=OPENAI_MODEL,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+                max_tokens=max_tokens,
+                temperature=0.2,  # Low temperature for consistent, focused output
+            )
+            break  # Success, exit retry loop
+
+        except retryable_errors as e:
+            last_exception = e
+            if attempt < max_retries:
+                # Exponential backoff: delay doubles with each retry
+                delay = retry_delay * (2**attempt)
+                logger.warning(
+                    f"LLM API call failed (attempt {attempt + 1}/{max_retries + 1}): {type(e).__name__}. "
+                    f"Retrying in {delay:.1f}s..."
+                )
+                time.sleep(delay)
+            else:
+                # Final attempt failed
+                logger.error(
+                    f"LLM API call failed after {max_retries + 1} attempts: {type(e).__name__}"
+                )
+                raise
+        except Exception as e:
+            # Non-retryable errors (e.g., authentication, invalid request) fail immediately
+            logger.error(
+                f"LLM API call failed with non-retryable error: {type(e).__name__}: {str(e)}"
+            )
+            raise
 
     # Validate response structure
     if not response or not hasattr(response, "choices"):
