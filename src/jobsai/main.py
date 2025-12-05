@@ -19,7 +19,7 @@ For overall project description, see README.md or docs/README.md.
 
 import logging
 from datetime import datetime
-from typing import Dict, Callable, Any
+from typing import Dict, Callable, Any, Optional
 from functools import wraps
 
 from jobsai.agents import (
@@ -32,6 +32,7 @@ from jobsai.agents import (
 )
 
 from jobsai.utils.form_data import extract_form_data
+from jobsai.utils.exceptions import CancellationError
 
 logging.basicConfig(level=logging.INFO)
 
@@ -70,28 +71,42 @@ def pipeline_step(step_name: str, step_number: int, total_steps: int):
     return decorator
 
 
-def main(form_submissions: Dict) -> Dict:
+def main(
+    form_submissions: Dict,
+    progress_callback: Optional[Callable[[str, str], None]] = None,
+    cancellation_check: Optional[Callable[[], bool]] = None,
+) -> Dict:
     """
     Launch the complete JobsAI agent pipeline.
 
     This is the main orchestration function that runs all agents in sequence:
     1. ProfilerAgent: Creates/updates candidate profile from form submissions
-    2. SearcherAgent: Scrapes job boards for relevant job listings
-    3. ScorerAgent: Scores job listings based on skill profile match
-    4. AnalyzerAgent: Writes an analysis on top-scoring jobs
-    5. GeneratorAgent: Creates cover letter document based on the analysis
+    2. QueryBuilderAgent: Generates search keywords from profile
+    3. SearcherService: Searches job boards for relevant positions
+    4. ScorerService: Scores jobs based on candidate profile match
+    5. AnalyzerAgent: Writes an analysis on top-scoring jobs
+    6. GeneratorAgent: Creates cover letter document based on the analysis
 
     Args:
         form_submissions (Dict): Form data from frontend containing:
             - General questions (text fields)
             - Technology experience levels (slider values 0-7)
             - Multiple choice selections (e.g., experience levels)
+        progress_callback (Optional[Callable[[str, str], None]]): Optional callback
+            function that receives (phase, message) for progress updates.
+            Phase values: "profiling", "searching", "scoring", "analyzing", "generating"
+        cancellation_check (Optional[Callable[[], bool]]): Optional callable that
+            returns True if the pipeline should be cancelled. Checked at key points
+            during execution.
 
     Returns:
         Dict: Dictionary containing:
             - "document" (Document): The generated cover letter as a Word document
             - "timestamp" (str): Timestamp used for file naming (format: YYYYMMDD_HHMMSS)
             - "filename" (str): Suggested filename for the cover letter document
+
+    Raises:
+        CancellationError: If cancellation_check returns True during execution
     """
 
     # Extract and transform form submission data
@@ -133,11 +148,20 @@ def main(form_submissions: Dict) -> Dict:
         logger.error(error_msg)
         raise RuntimeError(error_msg) from e
 
+    # Check for cancellation before starting
+    if cancellation_check and cancellation_check():
+        raise CancellationError("Pipeline cancelled before start")
+
     # Step 1: Profile the candidate
     # Uses LLM to extract the candidate's skills and experience from the form submissions
     # Returns a string of the candidate profile (e.g. "John Doe is a software engineer with 5 years of experience in Python and Java.")
+    if progress_callback:
+        progress_callback("profiling", "Creating your profile...")
+
     @pipeline_step("Profiling candidate", 1, 6)
     def _step1_profile():
+        if cancellation_check and cancellation_check():
+            raise CancellationError("Pipeline cancelled during profiling")
         return profiler.create_profile(form_submissions)
 
     profile = _step1_profile()
@@ -145,8 +169,13 @@ def main(form_submissions: Dict) -> Dict:
     # Step 2: Create search keywords
     # Uses LLM to create search keywords from the candidate profile
     # Returns a list of search keywords (e.g. ["ai engineer", "software engineer", "data scientist"])
+    if cancellation_check and cancellation_check():
+        raise CancellationError("Pipeline cancelled before keyword creation")
+
     @pipeline_step("Creating keywords", 2, 6)
     def _step2_keywords():
+        if cancellation_check and cancellation_check():
+            raise CancellationError("Pipeline cancelled during keyword creation")
         return query_builder.create_keywords(profile)
 
     keywords = _step2_keywords()
@@ -156,9 +185,18 @@ def main(form_submissions: Dict) -> Dict:
     # Returns a list of raw job listings
     # (e.g. [{"title": "Software Engineer", "company": "Google", "location": "San Francisco", "url": "https://www.google.com", "description_snippet": "We are looking for a software engineer with 5 years of experience in Python and Java."}])
     # The raw jobs are also saved to /src/jobsai/data/job_listings/raw/{timestamp}_{job_board}_{query}.json for convenience
+    if progress_callback:
+        progress_callback("searching", "Searching for jobs...")
+
+    if cancellation_check and cancellation_check():
+        raise CancellationError("Pipeline cancelled before job search")
+
     @pipeline_step("Searching jobs", 3, 6)
     def _step3_search():
-        return searcher.search_jobs(keywords, job_boards, deep_mode)
+        if cancellation_check and cancellation_check():
+            raise CancellationError("Pipeline cancelled during job search")
+        # Pass cancellation_check to searcher for checking during long operations
+        return searcher.search_jobs(keywords, job_boards, deep_mode, cancellation_check)
 
     raw_jobs = _step3_search()
 
@@ -167,9 +205,18 @@ def main(form_submissions: Dict) -> Dict:
     # Returns a list of scored job listings
     # (e.g. [{"title": "Software Engineer", "company": "Google", "location": "San Francisco", "url": "https://www.google.com", "description_snippet": "We are looking for a software engineer with 5 years of experience in Python and Java.", "score": 80}])
     # The scored jobs are also saved to /src/jobsai/data/job_listings/scored/{timestamp}_scored_jobs.json for convenience
+    if progress_callback:
+        progress_callback("scoring", "Scoring the jobs...")
+
+    if cancellation_check and cancellation_check():
+        raise CancellationError("Pipeline cancelled before scoring")
+
     @pipeline_step("Scoring jobs", 4, 6)
     def _step4_score():
-        scored = scorer.score_jobs(raw_jobs, tech_stack)
+        if cancellation_check and cancellation_check():
+            raise CancellationError("Pipeline cancelled during scoring")
+        # Pass cancellation_check to scorer for checking during job processing loop
+        scored = scorer.score_jobs(raw_jobs, tech_stack, cancellation_check)
         if not scored:
             raise ValueError(
                 "No jobs were scored. This may indicate an issue with job search or scoring logic."
@@ -183,9 +230,20 @@ def main(form_submissions: Dict) -> Dict:
     # Returns a string of the job analysis
     # (e.g. "The top-scoring job is for a software engineer at Google in San Francisco. The job analysis is: We are looking for a software engineer with 5 years of experience in Python and Java.")
     # The job analysis is also saved to /src/jobsai/data/job_analyses/{timestamp}_job_analysis.txt for convenience
+    if progress_callback:
+        progress_callback("analyzing", "Doing analysis...")
+
+    if cancellation_check and cancellation_check():
+        raise CancellationError("Pipeline cancelled before analysis")
+
     @pipeline_step("Analyzing jobs", 5, 6)
     def _step5_analyze():
-        return analyzer.write_analysis(scored_jobs, profile, cover_letter_num)
+        if cancellation_check and cancellation_check():
+            raise CancellationError("Pipeline cancelled during analysis")
+        # Pass cancellation_check to analyzer for checking during LLM calls in loop
+        return analyzer.write_analysis(
+            scored_jobs, profile, cover_letter_num, cancellation_check
+        )
 
     job_analysis = _step5_analyze()
 
@@ -193,8 +251,16 @@ def main(form_submissions: Dict) -> Dict:
     # Uses LLM to write cover letter based on the candidate profile, the job analysis and the cover letter style
     # Returns a Document object
     # The document is also saved to /src/jobsai/data/cover_letters/{timestamp}_cover_letter.docx for convenience
+    if progress_callback:
+        progress_callback("generating", "Generating cover letters for you...")
+
+    if cancellation_check and cancellation_check():
+        raise CancellationError("Pipeline cancelled before generation")
+
     @pipeline_step("Generating cover letters", 6, 6)
     def _step6_generate():
+        if cancellation_check and cancellation_check():
+            raise CancellationError("Pipeline cancelled during generation")
         return generator.generate_letters(job_analysis, profile, cover_letter_style)
 
     cover_letters = _step6_generate()

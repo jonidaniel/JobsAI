@@ -38,6 +38,10 @@ export default function Search() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
+  // Progress tracking for SSE
+  const [currentPhase, setCurrentPhase] = useState(null);
+  const [jobId, setJobId] = useState(null);
+  const eventSourceRef = useRef(null);
   // Consolidated submission state ref
   // Tracks submission-related state that doesn't need to trigger re-renders
   const submissionState = useRef({
@@ -45,6 +49,15 @@ export default function Search() {
     savedScrollPosition: null, // Store scroll position to restore after download
     hasSuccessfulSubmission: false, // Track if we've had a successful submission (to keep question sets hidden)
   });
+
+  // Phase messages mapping
+  const phaseMessages = {
+    profiling: "Creating your profile...",
+    searching: "Searching for jobs...",
+    scoring: "Scoring the jobs...",
+    analyzing: "Doing analysis...",
+    generating: "Generating cover letters for you...",
+  };
 
   // Form data received from QuestionSets component via callback
   const [formData, setFormData] = useState({});
@@ -210,14 +223,17 @@ export default function Search() {
     setValidationErrors({});
     setActiveQuestionSetIndex(undefined); // Clear active index when validation passes
     setIsSubmitting(true);
+    setError(null);
+    setSuccess(false);
+    setCurrentPhase(null);
 
     // Transform form data into grouped structure for backend API
     const result = transformFormData(formData);
 
-    // Send to backend and download document
+    // Send to backend using new SSE-based flow
     try {
-      // Send POST request with form data
-      const response = await fetch(API_ENDPOINTS.SUBMIT_FORM, {
+      // Step 1: Start pipeline and get job_id
+      const startResponse = await fetch(API_ENDPOINTS.START, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -225,44 +241,110 @@ export default function Search() {
         body: JSON.stringify(result),
       });
 
-      // Check if request was successful
-      if (!response.ok) {
-        throw new Error(`Server error: ${response.status}`);
+      if (!startResponse.ok) {
+        const errorData = await startResponse.json().catch(() => ({}));
+        throw new Error(
+          errorData.detail || `Server error: ${startResponse.status}`
+        );
       }
 
-      // Get the response as a blob (binary data for .docx file)
-      const blob = await response.blob();
+      const { job_id } = await startResponse.json();
+      setJobId(job_id);
 
-      // Save scroll position before any state changes
-      submissionState.current.savedScrollPosition =
-        window.scrollY || window.pageYOffset;
+      // Step 2: Connect to SSE progress stream
+      const eventSource = new EventSource(
+        `${API_ENDPOINTS.PROGRESS}/${job_id}`
+      );
+      eventSourceRef.current = eventSource;
 
-      // Download the file
-      downloadBlob(blob, response.headers);
+      eventSource.onmessage = async (event) => {
+        try {
+          const data = JSON.parse(event.data);
 
-      // Show success message
-      setSuccess(true);
-      setError(null);
-      submissionState.current.justCompleted = true;
-      submissionState.current.hasSuccessfulSubmission = true;
+          // Handle progress updates
+          if (data.phase) {
+            setCurrentPhase(data.phase);
+          }
 
-      // Auto-dismiss success message after timeout (but keep the text visible)
-      // Clear any existing timeout first to prevent multiple timers
-      if (successTimeoutRef.current) {
-        clearTimeout(successTimeoutRef.current);
-      }
-      successTimeoutRef.current = setTimeout(() => {
-        // Hide the green success message, but text stays visible via hasSuccessfulSubmission
-        setSuccess(false);
-        successTimeoutRef.current = null;
-      }, SUCCESS_MESSAGE_TIMEOUT);
+          // Handle completion
+          if (data.status === "complete") {
+            eventSource.close();
+            eventSourceRef.current = null;
+
+            // Download the document
+            await downloadDocument(job_id, data.filename);
+
+            // Show success message
+            setSuccess(true);
+            setError(null);
+            submissionState.current.justCompleted = true;
+            submissionState.current.hasSuccessfulSubmission = true;
+            setIsSubmitting(false);
+            setCurrentPhase(null);
+            setJobId(null);
+
+            // Auto-dismiss success message after timeout
+            if (successTimeoutRef.current) {
+              clearTimeout(successTimeoutRef.current);
+            }
+            successTimeoutRef.current = setTimeout(() => {
+              setSuccess(false);
+              successTimeoutRef.current = null;
+            }, SUCCESS_MESSAGE_TIMEOUT);
+          }
+          // Handle errors
+          else if (data.status === "error") {
+            eventSource.close();
+            eventSourceRef.current = null;
+            setError(data.message || "An error occurred during processing");
+            setIsSubmitting(false);
+            setCurrentPhase(null);
+            setJobId(null);
+          }
+          // Handle cancellation
+          else if (data.status === "cancelled") {
+            eventSource.close();
+            eventSourceRef.current = null;
+            setError("Pipeline was cancelled");
+            setIsSubmitting(false);
+            setCurrentPhase(null);
+            setJobId(null);
+          }
+          // Handle SSE errors
+          else if (data.error) {
+            eventSource.close();
+            eventSourceRef.current = null;
+            setError(data.error);
+            setIsSubmitting(false);
+            setCurrentPhase(null);
+            setJobId(null);
+          }
+        } catch (parseError) {
+          console.error("Error parsing SSE event:", parseError);
+        }
+      };
+
+      eventSource.onerror = (error) => {
+        console.error("EventSource error:", error);
+        eventSource.close();
+        eventSourceRef.current = null;
+        setError("Connection lost. Please try again.");
+        setIsSubmitting(false);
+        setCurrentPhase(null);
+        setJobId(null);
+      };
     } catch (error) {
+      // Close EventSource if it was opened
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+        eventSourceRef.current = null;
+      }
       setError(getErrorMessage(error));
       setSuccess(false);
-      submissionState.current.justCompleted = true;
-    } finally {
-      // Reset submission flag after request completes (success or error)
       setIsSubmitting(false);
+      setCurrentPhase(null);
+      setJobId(null);
+      submissionState.current.justCompleted = true;
     }
   };
 
@@ -308,25 +390,82 @@ export default function Search() {
   }, [isSubmitting]);
 
   /**
-   * Cleanup: Clear timeout if component unmounts
-   * Prevents memory leaks by clearing any pending timeouts
+   * Cleanup: Clear timeout and EventSource if component unmounts
+   * Prevents memory leaks by clearing any pending timeouts and connections
    */
   useEffect(() => {
     return () => {
       if (successTimeoutRef.current) {
         clearTimeout(successTimeoutRef.current);
       }
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+        eventSourceRef.current = null;
+      }
     };
   }, []);
+
+  /**
+   * Handles pipeline cancellation
+   * Sends cancel request to backend and closes SSE connection
+   */
+  const handleCancel = async () => {
+    if (jobId && eventSourceRef.current) {
+      try {
+        await fetch(`${API_ENDPOINTS.CANCEL}/${jobId}`, {
+          method: "POST",
+        });
+      } catch (error) {
+        console.error("Error cancelling pipeline:", error);
+      }
+      eventSourceRef.current.close();
+      eventSourceRef.current = null;
+      setIsSubmitting(false);
+      setCurrentPhase(null);
+      setJobId(null);
+      setError("Pipeline was cancelled");
+    }
+  };
+
+  /**
+   * Downloads the generated document
+   * @param {string} jobId - Job identifier
+   * @param {string} filename - Filename for the document (fallback if not in headers)
+   */
+  const downloadDocument = async (jobId, filename) => {
+    try {
+      const response = await fetch(`${API_ENDPOINTS.DOWNLOAD}/${jobId}`);
+
+      if (!response.ok) {
+        throw new Error(`Download failed: ${response.status}`);
+      }
+
+      // Save scroll position before download
+      submissionState.current.savedScrollPosition =
+        window.scrollY || window.pageYOffset;
+
+      // Get the response as a blob
+      const blob = await response.blob();
+
+      // Download the file using response headers (which include Content-Disposition)
+      // Fallback to provided filename if headers don't have it
+      downloadBlob(blob, response.headers, filename);
+    } catch (error) {
+      console.error("Error downloading document:", error);
+      throw error;
+    }
+  };
 
   return (
     <section id="search">
       <h2>Search</h2>
       {isSubmitting ? (
-        // Loading state: show simplified message
+        // Loading state: show progress message
         <>
           <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
-            Finding jobs for you right now
+            {currentPhase && phaseMessages[currentPhase]
+              ? phaseMessages[currentPhase]
+              : "Starting pipeline..."}
           </h3>
           <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
             This might take a minute
@@ -386,8 +525,8 @@ export default function Search() {
       {success && <SuccessMessage />}
       {/* Error message - displayed when submission fails */}
       {error && <ErrorMessage message={error} />}
-      {/* Black 'Find Jobs' / 'Find Again' submit button - triggers form submission and document generation */}
-      <div className="flex justify-center mt-6">
+      {/* Submit button and cancel button */}
+      <div className="flex justify-center items-center gap-4 mt-6">
         <button
           id="submit-btn"
           onClick={handleSubmit}
@@ -405,6 +544,17 @@ export default function Search() {
             ? "Find Again"
             : "Find Jobs"}
         </button>
+        {/* Cancel button - only show when pipeline is running */}
+        {isSubmitting && jobId && (
+          <button
+            id="cancel-btn"
+            onClick={handleCancel}
+            className="text-base sm:text-lg md:text-xl lg:text-2xl px-3 sm:px-4 py-2 sm:py-3 border border-red-400 bg-transparent text-red-400 font-semibold rounded-lg shadow hover:bg-red-400 hover:text-white transition-colors"
+            aria-label="Cancel the current job search"
+          >
+            Cancel
+          </button>
+        )}
       </div>
     </section>
   );

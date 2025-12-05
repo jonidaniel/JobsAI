@@ -16,9 +16,10 @@ The scoring process:
 import os
 import logging
 import json
-from typing import List, Dict
+from typing import List, Dict, Optional, Callable
 
 from jobsai.config.paths import SCORED_JOB_LISTING_PATH
+from jobsai.utils.exceptions import CancellationError
 
 from jobsai.utils.normalization import normalize_list
 
@@ -49,7 +50,12 @@ class ScorerService:
     # ------------------------------
     # Public interface
     # ------------------------------
-    def score_jobs(self, raw_jobs: List[Dict], tech_stack: List) -> List[Dict]:
+    def score_jobs(
+        self,
+        raw_jobs: List[Dict],
+        tech_stack: List,
+        cancellation_check: Optional[Callable[[], bool]] = None,
+    ) -> List[Dict]:
         """Score the raw job listings based on the candidate profile.
 
         Saves the scored jobs to /data/job_listings/scored/{timestamp}_scored_jobs.json.
@@ -57,9 +63,15 @@ class ScorerService:
         Args:
             raw_jobs (List[Dict]): The raw job listings from the searcher.
             tech_stack (List): The candidate tech stack (list of technology categories).
+            cancellation_check (Optional[Callable[[], bool]]): Optional callable
+                that returns True if the operation should be cancelled. Checked
+                periodically during scoring.
 
         Returns:
             List[Dict]: The scored job listings.
+
+        Raises:
+            CancellationError: If cancellation_check returns True during execution
         """
 
         # Handle empty job list
@@ -67,8 +79,13 @@ class ScorerService:
             logger.warning(" No job listings found to score.")
             return []
 
+        # Check for cancellation before starting
+        if cancellation_check and cancellation_check():
+            logger.info(" Job scoring cancelled by user")
+            raise CancellationError("Pipeline cancelled during scoring")
+
         # Compute scores for all jobs
-        scored_jobs = self._compute_scores(raw_jobs, tech_stack)
+        scored_jobs = self._compute_scores(raw_jobs, tech_stack, cancellation_check)
 
         # Sort jobs by score in descending order (highest scores first)
         scored_jobs.sort(key=lambda x: x["score"], reverse=True)
@@ -138,7 +155,12 @@ class ScorerService:
         )
         return scored_job
 
-    def _compute_scores(self, raw_jobs: List[Dict], tech_stack: List) -> List[Dict]:
+    def _compute_scores(
+        self,
+        raw_jobs: List[Dict],
+        tech_stack: List,
+        cancellation_check: Optional[Callable[[], bool]] = None,
+    ) -> List[Dict]:
         """
         Compute a relevancy score for each job based on the candidate tech stack.
 
@@ -147,9 +169,14 @@ class ScorerService:
             tech_stack (List): A list of technology categories, where each category
                 is a list of dicts with format {technology_name: experience_level}.
                 Only technologies with experience_level > 0 are included.
+            cancellation_check (Optional[Callable[[], bool]]): Optional callable
+                that returns True if the operation should be cancelled.
 
         Returns:
             List[Dict]: The scored job listings with added score, matched_skills, and missing_skills.
+
+        Raises:
+            CancellationError: If cancellation_check returns True during execution
         """
         # Flatten the nested tech_stack structure into a single list of technology names
         # Input structure: List of categories, each containing lists of dicts
@@ -187,6 +214,11 @@ class ScorerService:
         # Score each job against the tech stack
         scored_jobs = []
         for job in raw_jobs:
+            # Check for cancellation before processing each job
+            if cancellation_check and cancellation_check():
+                logger.info(" Job scoring cancelled by user")
+                raise CancellationError("Pipeline cancelled during scoring")
+
             scored_job = self._score_job_against_tech_stack(job, flattened_tech_stack)
             scored_jobs.append(scored_job)
 

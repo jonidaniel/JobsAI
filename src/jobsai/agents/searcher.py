@@ -16,9 +16,10 @@ The service:
 import os
 import logging
 import json
-from typing import List, Dict
+from typing import List, Dict, Optional, Callable
 
 from jobsai.config.paths import RAW_JOB_LISTING_PATH
+from jobsai.utils.exceptions import CancellationError
 
 from jobsai.utils.scrapers.duunitori import scrape_duunitori
 from jobsai.utils.scrapers.jobly import scrape_jobly
@@ -54,7 +55,11 @@ class SearcherService:
     # Public interface
     # ------------------------------
     def search_jobs(
-        self, keywords: List[str], job_boards: List[str], deep_mode: bool
+        self,
+        keywords: List[str],
+        job_boards: List[str],
+        deep_mode: bool,
+        cancellation_check=None,
     ) -> List[Dict]:
         """Search all specified job boards using candidate-generated keywords.
 
@@ -71,6 +76,9 @@ class SearcherService:
             deep_mode (bool): If True, fetches full job descriptions for each
                 listing. If False, only fetches description snippets.
                 Deep mode provides better matching accuracy but is slower.
+            cancellation_check (Optional[Callable[[], bool]]): Optional callable
+                that returns True if the operation should be cancelled. Checked
+                before processing each query and job board.
 
         Returns:
             List[Dict]: Deduplicated list of job listings. Each job dict contains:
@@ -80,24 +88,51 @@ class SearcherService:
                 - "url": Job posting URL
                 - "description_snippet": Short description (always present)
                 - "full_description": Full description (only if deep_mode=True)
+
+        Raises:
+            CancellationError: If cancellation_check returns True during execution
         """
         all_jobs = []
 
         # Search each job board with each keyword query
         # This creates a cartesian product: all boards × all keywords
         for query in keywords:
+            # Check for cancellation before processing each query
+            if cancellation_check and cancellation_check():
+                logger.info(" Job search cancelled by user")
+                raise CancellationError("Pipeline cancelled during job search")
+
             for job_board in job_boards:
+                # Check for cancellation before processing each job board
+                if cancellation_check and cancellation_check():
+                    logger.info(" Job search cancelled by user")
+                    raise CancellationError("Pipeline cancelled during job search")
+
                 logger.info(" Searching %s for query '%s'", job_board, query)
 
                 # Route to appropriate scraper based on job board name
+                # Pass cancellation_check to scrapers for checking during long operations
                 if job_board.lower() == "duunitori":
-                    jobs = scrape_duunitori(query, deep_mode=deep_mode)
+                    jobs = scrape_duunitori(
+                        query,
+                        deep_mode=deep_mode,
+                        cancellation_check=cancellation_check,
+                    )
                 elif job_board.lower() == "jobly":
-                    jobs = scrape_jobly(query, deep_mode=deep_mode)
+                    jobs = scrape_jobly(
+                        query,
+                        deep_mode=deep_mode,
+                        cancellation_check=cancellation_check,
+                    )
                 else:
                     # Unknown job board - skip with empty result
                     logger.warning(f" Unknown job board: {job_board}. Skipping.")
                     jobs = []
+
+                # Check for cancellation after scraping (before saving)
+                if cancellation_check and cancellation_check():
+                    logger.info(" Job search cancelled by user")
+                    raise CancellationError("Pipeline cancelled during job search")
 
                 # Collect jobs and save to disk for debugging
                 all_jobs.extend(jobs)

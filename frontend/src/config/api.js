@@ -23,6 +23,14 @@ const API_BASE_URL =
  * All available API endpoints for the application.
  */
 export const API_ENDPOINTS = {
-  /** Endpoint for submitting form data and generating job search document */
+  /** Legacy endpoint for submitting form data (kept for backward compatibility) */
   SUBMIT_FORM: `${API_BASE_URL}/api/endpoint`,
+  /** Start pipeline asynchronously and get job_id */
+  START: `${API_BASE_URL}/api/start`,
+  /** Stream progress updates via Server-Sent Events */
+  PROGRESS: `${API_BASE_URL}/api/progress`,
+  /** Cancel a running pipeline */
+  CANCEL: `${API_BASE_URL}/api/cancel`,
+  /** Download the generated document */
+  DOWNLOAD: `${API_BASE_URL}/api/download`,
 };

@@ -32,12 +32,13 @@ import time
 import logging
 import requests
 import re
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Callable
 from urllib.parse import urljoin, quote_plus
 
 from bs4 import BeautifulSoup
 
 from jobsai.config.headers import HEADERS_DUUNITORI
+from jobsai.utils.exceptions import CancellationError
 from jobsai.config.paths import (
     HOST_URL_DUUNITORI,
     SEARCH_URL_BASE_DUUNITORI,
@@ -55,6 +56,7 @@ def scrape_duunitori(
     deep_mode: bool = True,
     session: Optional[requests.Session] = None,
     per_page_limit: Optional[int] = None,
+    cancellation_check: Optional[Callable[[], bool]] = None,
 ) -> List[Dict]:
     """
     Fetch job listings from Duunitori.
@@ -65,9 +67,15 @@ def scrape_duunitori(
         deep_mode: If True, fetch each job's detail page to extract the full description.
         session: The requests.Session to reuse connections (recommended).
         per_page_limit: The optional cap on total listings (stops when reached).
+        cancellation_check: Optional callable that returns True if the operation
+            should be cancelled. Checked before each page fetch and before each
+            job detail fetch in deep mode.
 
     Returns:
         List[Dict]: The list of normalized job dictionaries.
+
+    Raises:
+        CancellationError: If cancellation_check returns True during execution
     """
 
     if session is None:
@@ -88,6 +96,11 @@ def scrape_duunitori(
 
     # Iterate over a number of webpages (10 by default)
     for page in range(1, num_pages + 1):
+        # Check for cancellation before fetching each page
+        if cancellation_check and cancellation_check():
+            logger.info(" Duunitori scraping cancelled by user")
+            raise CancellationError("Pipeline cancelled during job search")
+
         # Build search URL with slugified query and page number
         search_url = SEARCH_URL_BASE_DUUNITORI.format(query_slug=query_slug, page=page)
 
@@ -130,6 +143,11 @@ def scrape_duunitori(
 
         # Iterate over job cards on current page
         for job_card in job_cards:
+            # Check for cancellation before processing each job (especially important in deep mode)
+            if cancellation_check and cancellation_check():
+                logger.info(" Duunitori scraping cancelled by user")
+                raise CancellationError("Pipeline cancelled during job search")
+
             job = _parse_job_card(job_card)
 
             # If in deep mode, and we have a URL, fetch the full job description

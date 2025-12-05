@@ -11,20 +11,38 @@ To run the server:
 """
 
 import logging
+import uuid
+import asyncio
+import json
 from io import BytesIO
+from typing import Dict, Optional
+from collections import defaultdict
+from datetime import datetime, timedelta
 
 # from pydantic import ValidationError
-from fastapi import FastAPI, Response, HTTPException, status, Request
+from fastapi import FastAPI, Response, HTTPException, status, Request, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 
 import jobsai.main as backend
 
 # Frontend payload validation
 from jobsai.config.schemas import FrontendPayload
+from jobsai.utils.exceptions import CancellationError
 
 logger = logging.getLogger(__name__)
+
+# ------------- State Management -------------
+# In-memory storage for pipeline state
+# In production, consider using Redis or a database for persistence
+pipeline_states: Dict[str, Dict] = (
+    {}
+)  # {job_id: {status, progress, result, error, created_at}}
+cancellation_flags: Dict[str, bool] = defaultdict(bool)  # {job_id: bool}
+
+# Cleanup old completed jobs (older than 1 hour)
+JOB_RETENTION_HOURS = 1
 
 # ------------- FastAPI Setup -------------
 
@@ -78,7 +96,269 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     )
 
 
-# ------------- API Route -------------
+# ------------- Background Task -------------
+def run_pipeline_async(job_id: str, payload: FrontendPayload):
+    """
+    Run pipeline asynchronously and update state.
+
+    This function runs in a background thread (FastAPI BackgroundTasks handles this).
+    The pipeline itself is synchronous, so this function is also synchronous.
+    """
+    try:
+        answers = payload.model_dump(by_alias=True)
+
+        def progress_callback(phase: str, message: str):
+            """Update progress state for SSE streaming."""
+            if job_id in pipeline_states:
+                pipeline_states[job_id]["progress"] = {
+                    "phase": phase,
+                    "message": message,
+                }
+
+        def cancellation_check() -> bool:
+            """Check if pipeline should be cancelled."""
+            return cancellation_flags.get(job_id, False)
+
+        # Run pipeline with progress callback and cancellation check
+        # This is a blocking call, but it runs in a background thread
+        result = backend.main(answers, progress_callback, cancellation_check)
+
+        # Store result
+        pipeline_states[job_id].update(
+            {
+                "status": "complete",
+                "result": {
+                    "document": result["document"],
+                    "filename": result["filename"],
+                    "timestamp": result["timestamp"],
+                },
+            }
+        )
+
+    except CancellationError:
+        pipeline_states[job_id]["status"] = "cancelled"
+        logger.info(f" Pipeline {job_id} was cancelled")
+    except Exception as e:
+        pipeline_states[job_id].update(
+            {
+                "status": "error",
+                "error": str(e),
+            }
+        )
+        logger.error(f" Pipeline {job_id} failed: {str(e)}")
+
+
+# ------------- New API Routes -------------
+@app.post("/api/start")
+async def start_pipeline(
+    payload: FrontendPayload, background_tasks: BackgroundTasks
+) -> JSONResponse:
+    """
+    Start pipeline asynchronously and return job_id for progress tracking.
+
+    This endpoint initiates the pipeline in the background and immediately
+    returns a job_id that can be used to track progress via SSE.
+
+    Args:
+        payload (FrontendPayload): Form data from frontend
+
+    Returns:
+        JSONResponse: Contains job_id for progress tracking
+            {"job_id": "uuid-string"}
+    """
+    job_id = str(uuid.uuid4())
+
+    # Initialize state
+    pipeline_states[job_id] = {
+        "status": "running",
+        "progress": None,
+        "result": None,
+        "error": None,
+        "created_at": datetime.now(),
+    }
+
+    # Run pipeline in background task
+    background_tasks.add_task(run_pipeline_async, job_id, payload)
+
+    logger.info(f" Started pipeline with job_id: {job_id}")
+    return JSONResponse({"job_id": job_id})
+
+
+@app.get("/api/progress/{job_id}")
+async def stream_progress(job_id: str):
+    """
+    Stream progress updates via Server-Sent Events (SSE).
+
+    This endpoint maintains a persistent connection and streams progress
+    updates as the pipeline executes. The client should use EventSource
+    to connect to this endpoint.
+
+    Progress events are sent in the format:
+        data: {"phase": "profiling", "message": "Creating your profile..."}
+
+    Final events:
+        - {"status": "complete", "filename": "..."} - Pipeline completed
+        - {"status": "error", "message": "..."} - Pipeline failed
+        - {"status": "cancelled"} - Pipeline was cancelled
+
+    Args:
+        job_id (str): Job identifier returned from /api/start
+
+    Returns:
+        StreamingResponse: SSE stream with progress updates
+    """
+
+    async def event_generator():
+        """Generate SSE events for progress updates."""
+        last_progress = None
+
+        while True:
+            # Cleanup old jobs periodically
+            cleanup_old_jobs()
+
+            state = pipeline_states.get(job_id)
+
+            if not state:
+                yield f"data: {json.dumps({'error': 'Job not found'})}\n\n"
+                break
+
+            # Send progress update if it changed
+            current_progress = state.get("progress")
+            if current_progress and current_progress != last_progress:
+                yield f"data: {json.dumps(current_progress)}\n\n"
+                last_progress = current_progress
+
+            # Check final status
+            if state["status"] == "complete":
+                result = state.get("result", {})
+                yield f"data: {json.dumps({'status': 'complete', 'filename': result.get('filename', 'cover_letter.docx')})}\n\n"
+                break
+            elif state["status"] == "error":
+                yield f"data: {json.dumps({'status': 'error', 'message': state.get('error', 'Unknown error')})}\n\n"
+                break
+            elif state["status"] == "cancelled":
+                yield f"data: {json.dumps({'status': 'cancelled'})}\n\n"
+                break
+
+            # Poll every 500ms
+            await asyncio.sleep(0.5)
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",  # Disable nginx buffering
+        },
+    )
+
+
+@app.post("/api/cancel/{job_id}")
+async def cancel_pipeline(job_id: str) -> JSONResponse:
+    """
+    Cancel a running pipeline.
+
+    Sets a cancellation flag that the pipeline checks during execution.
+    The pipeline will stop gracefully at the next cancellation check point.
+
+    Args:
+        job_id (str): Job identifier to cancel
+
+    Returns:
+        JSONResponse: Confirmation of cancellation request
+    """
+    if job_id not in pipeline_states:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Job not found"
+        )
+
+    cancellation_flags[job_id] = True
+    pipeline_states[job_id]["status"] = "cancelling"
+    logger.info(f" Cancellation requested for job_id: {job_id}")
+
+    return JSONResponse({"status": "cancellation_requested"})
+
+
+@app.get("/api/download/{job_id}")
+async def download_document(job_id: str) -> Response:
+    """
+    Download the generated cover letter document.
+
+    Args:
+        job_id (str): Job identifier
+
+    Returns:
+        Response: Word document (.docx) file download
+
+    Raises:
+        HTTPException: 404 if job not found or not complete
+    """
+    state = pipeline_states.get(job_id)
+
+    if not state:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Job not found"
+        )
+
+    if state["status"] != "complete":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Document not ready. Status: {state['status']}",
+        )
+
+    result = state.get("result")
+    if not result:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Document result not available",
+        )
+
+    document = result.get("document")
+    filename = result.get("filename", "cover_letter.docx")
+
+    if not document:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Document not available",
+        )
+
+    # Convert document to bytes
+    try:
+        buffer = BytesIO()
+        document.save(buffer)
+        buffer.seek(0)
+    except Exception as e:
+        logger.error(f" Failed to convert document to bytes: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to process document for download.",
+        )
+
+    return Response(
+        content=buffer.read(),
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
+
+
+def cleanup_old_jobs():
+    """Remove completed jobs older than retention period."""
+    cutoff = datetime.now() - timedelta(hours=JOB_RETENTION_HOURS)
+    jobs_to_remove = [
+        job_id
+        for job_id, state in pipeline_states.items()
+        if state.get("created_at")
+        and state["created_at"] < cutoff
+        and state["status"] in ("complete", "error", "cancelled")
+    ]
+
+    for job_id in jobs_to_remove:
+        pipeline_states.pop(job_id, None)
+        cancellation_flags.pop(job_id, None)
+
+
+# ------------- Legacy API Route (kept for backward compatibility) -------------
 # Define the API endpoint
 @app.post("/api/endpoint")
 async def run_pipeline(payload: FrontendPayload) -> Response:

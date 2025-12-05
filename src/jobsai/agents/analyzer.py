@@ -14,7 +14,7 @@ The analysis includes:
 
 import os
 import logging
-from typing import List, Dict
+from typing import List, Dict, Optional, Callable
 
 from jobsai.config.paths import JOB_ANALYSIS_PATH
 from jobsai.config.prompts import (
@@ -23,6 +23,7 @@ from jobsai.config.prompts import (
 )
 
 from jobsai.utils.llms import call_llm
+from jobsai.utils.exceptions import CancellationError
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +50,13 @@ class AnalyzerAgent:
     # ------------------------------
     # Public interface
     # ------------------------------
-    def write_analysis(self, jobs: List[Dict], profile: str, analysis_size: int) -> str:
+    def write_analysis(
+        self,
+        jobs: List[Dict],
+        profile: str,
+        analysis_size: int,
+        cancellation_check: Optional[Callable[[], bool]] = None,
+    ) -> str:
         """
         Write an analysis on the most-scored jobs.
 
@@ -64,9 +71,15 @@ class AnalyzerAgent:
             jobs (List[Dict]): The job listings.
             profile (str): The candidate profile text.
             analysis_size (int): The desired number of top jobs to include in the analysis.
+            cancellation_check (Optional[Callable[[], bool]]): Optional callable
+                that returns True if the operation should be cancelled. Checked
+                before processing each job.
 
         Returns:
             str: The complete job analysis as a formatted text string.
+
+        Raises:
+            CancellationError: If cancellation_check returns True during execution
         """
 
         # Validate input
@@ -79,6 +92,11 @@ class AnalyzerAgent:
 
         # Process each top-scoring job (already sorted by score descending)
         for job in jobs[:analysis_size]:
+            # Check for cancellation before processing each job
+            if cancellation_check and cancellation_check():
+                logger.info(" Job analysis cancelled by user")
+                raise CancellationError("Pipeline cancelled during analysis")
+
             # Get full job description if available (from deep mode)
             # Falls back to description_snippet if full_description not available
             full_description = job.get("full_description") or job.get(
@@ -89,6 +107,7 @@ class AnalyzerAgent:
             # The LLM analyzes the job description against the candidate profile
             # and creates specific instructions for writing a tailored cover letter
             # that highlights relevant skills and experience
+            # Note: LLM call itself cannot be interrupted, but we check before each call
             instructions = call_llm(
                 SYSTEM_PROMPT,
                 USER_PROMPT.format(
@@ -96,6 +115,11 @@ class AnalyzerAgent:
                     profile=profile,
                 ),
             )
+
+            # Check for cancellation after LLM call (before processing result)
+            if cancellation_check and cancellation_check():
+                logger.info(" Job analysis cancelled by user")
+                raise CancellationError("Pipeline cancelled during analysis")
 
             # Extract job metadata for the analysis report
             title = job.get("title") or "N/A"
