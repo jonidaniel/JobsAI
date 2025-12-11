@@ -14,6 +14,7 @@ import logging
 import uuid
 import asyncio
 import json
+import threading
 from io import BytesIO
 from typing import Dict, Optional
 from collections import defaultdict
@@ -166,9 +167,7 @@ def run_pipeline_async(job_id: str, payload: FrontendPayload):
 
 # ------------- New API Routes -------------
 @app.post("/api/start")
-async def start_pipeline(
-    payload: FrontendPayload, background_tasks: BackgroundTasks
-) -> JSONResponse:
+async def start_pipeline(payload: FrontendPayload) -> JSONResponse:
     """
     Start pipeline asynchronously and return job_id for progress tracking.
 
@@ -193,8 +192,11 @@ async def start_pipeline(
         "created_at": datetime.now(),
     }
 
-    # Run pipeline in background task
-    background_tasks.add_task(run_pipeline_async, job_id, payload)
+    # Run pipeline in a separate thread (works better in Lambda than BackgroundTasks)
+    # This ensures the response is returned immediately
+    thread = threading.Thread(target=run_pipeline_async, args=(job_id, payload))
+    thread.daemon = True  # Don't prevent Lambda from exiting
+    thread.start()
 
     logger.info(f" Started pipeline with job_id: {job_id}")
     return JSONResponse({"job_id": job_id})
