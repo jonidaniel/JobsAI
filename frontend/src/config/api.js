@@ -15,7 +15,9 @@
 // Base URL for API requests
 // Falls back to localhost for development if env variable is not set
 const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+  // import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+  import.meta.env.VITE_API_BASE_URL ||
+  "https://knccck3mck.execute-api.eu-north-1.amazonaws.com/prod";
 
 /**
  * API Endpoints
