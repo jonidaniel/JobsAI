@@ -118,3 +118,12 @@
 ### 2025/12/5
 
 - Implemented Server-Sent Events (SSE) with separate POST endpoint to allow users to see pipeline progress and to cancel it, if necessary
+
+### 2025/12/6–10
+
+- Gained understanding on transferring the frontend to an AWS S3 bucket and backend to AWS Lambda, and how GitHub Actions would automate my development workflow
+
+### 2025/12/11
+
+- Transferred the frontend and backend to AWS
+- Set up GitHub Actions to automatically update S3 frontend and Lambda backend on pushes to main branch
