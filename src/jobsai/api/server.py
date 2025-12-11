@@ -185,7 +185,8 @@ async def start_pipeline(payload: FrontendPayload) -> JSONResponse:
     """
     job_id = str(uuid.uuid4())
 
-    # Initialize state
+    # Initialize state IMMEDIATELY and synchronously before starting thread
+    # This ensures state exists even if thread hasn't started yet
     pipeline_states[job_id] = {
         "status": "running",
         "progress": None,
@@ -193,6 +194,10 @@ async def start_pipeline(payload: FrontendPayload) -> JSONResponse:
         "error": None,
         "created_at": datetime.now(),
     }
+
+    logger.info(
+        f"Initialized state for job_id: {job_id}, state exists: {job_id in pipeline_states}"
+    )
 
     # Run pipeline in a separate thread (works better in Lambda than BackgroundTasks)
     # This ensures the response is returned immediately
@@ -205,7 +210,9 @@ async def start_pipeline(payload: FrontendPayload) -> JSONResponse:
     )
     thread.start()
 
-    logger.info(f" Started pipeline with job_id: {job_id}")
+    logger.info(
+        f"Started pipeline thread for job_id: {job_id}, total jobs: {len(pipeline_states)}"
+    )
     return JSONResponse({"job_id": job_id})
 
 
@@ -233,9 +240,15 @@ async def get_progress(job_id: str) -> JSONResponse:
     # Cleanup old jobs periodically (only occasionally to avoid overhead)
     cleanup_old_jobs()
 
+    logger.info(
+        f"Progress check for job_id: {job_id}, available jobs: {list(pipeline_states.keys())}"
+    )
     state = pipeline_states.get(job_id)
 
     if not state:
+        logger.warning(
+            f"Job {job_id} not found in pipeline_states. Available jobs: {list(pipeline_states.keys())}"
+        )
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Job not found"
         )
