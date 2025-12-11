@@ -53,11 +53,25 @@ app = FastAPI(
     version="1.0",
 )
 # Define the allowed origins for CORS
+# Update this with your production frontend URL (S3/CloudFront domain)
+import os
+
+# Get frontend URL from environment variable, or use defaults
+FRONTEND_URL = os.environ.get("FRONTEND_URL", "")
+
 origins = [
-    "http://localhost:3000",  # your frontend URL (if using a dev server)
-    "http://127.0.0.1:3000",  # optional
-    "*",  # allow all origins (only for development)
+    "http://localhost:3000",  # local development
+    "http://127.0.0.1:3000",  # local development
 ]
+
+# Add production frontend URL if provided
+if FRONTEND_URL:
+    origins.append(FRONTEND_URL)
+
+# For development, allow all origins (remove in production)
+# In production, set FRONTEND_URL environment variable in Lambda
+if not FRONTEND_URL:
+    origins.append("*")
 
 # Add the CORS middleware
 app.add_middleware(

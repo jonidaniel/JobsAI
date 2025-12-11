@@ -31,14 +31,14 @@ jobs:
         with:
           bucket: ${{ secrets.S3_BUCKET_NAME }}
           region: ${{ secrets.AWS_REGION }}
-          source-dir: frontend/build
+          source-dir: frontend/dist
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
       - name: (Optional) Invalidate CloudFront Cache
         uses: awact/cloudfront-action@v1.6.2
-        if: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID != '' }}
+        if: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}
         with:
           aws-region: ${{ secrets.AWS_REGION }}
           distribution-id: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}
@@ -54,10 +54,57 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Zip Lambda Source
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      - name: Create Lambda package
         run: |
-          cd src/jobsai
-          zip -r ../../lambda.zip .
+          # Create a temporary directory for Lambda package
+          mkdir -p lambda-package
+
+          # Copy all source code
+          cp -r src/jobsai lambda-package/
+
+          # Copy lambda_handler.py to root of package
+          cp lambda_handler.py lambda-package/
+
+          # Install dependencies to lambda-package directory
+          # Install all required packages with their dependencies
+          uv pip install --target lambda-package \
+            "bs4>=0.0.2" \
+            "fastapi>=0.122.0" \
+            "langchain>=1.0.7" \
+            "mangum>=0.18.0" \
+            "openai>=2.8.1" \
+            "pydantic>=2.12.4" \
+            "python-docx>=1.2.0" \
+            "python-dotenv>=1.2.1" \
+            "uvicorn>=0.38.0" || \
+          pip install --target lambda-package \
+            "bs4>=0.0.2" \
+            "fastapi>=0.122.0" \
+            "langchain>=1.0.7" \
+            "mangum>=0.18.0" \
+            "openai>=2.8.1" \
+            "pydantic>=2.12.4" \
+            "python-docx>=1.2.0" \
+            "python-dotenv>=1.2.1" \
+            "uvicorn>=0.38.0"
+
+          # Create zip file
+          cd lambda-package
+          zip -r ../lambda.zip . -q
+          cd ..
+
+          # Clean up
+          rm -rf lambda-package
 
       - name: Upload to Lambda
         uses: aws-actions/aws-lambda-deploy@v1
