@@ -118,10 +118,11 @@ def run_pipeline_async(job_id: str, payload: FrontendPayload):
     """
     Run pipeline asynchronously and update state.
 
-    This function runs in a background thread (FastAPI BackgroundTasks handles this).
+    This function runs in a background thread.
     The pipeline itself is synchronous, so this function is also synchronous.
     """
     try:
+        logger.info(f"Pipeline thread started for job_id: {job_id}")
         answers = payload.model_dump(by_alias=True)
 
         def progress_callback(phase: str, message: str):
@@ -151,10 +152,11 @@ def run_pipeline_async(job_id: str, payload: FrontendPayload):
                 },
             }
         )
+        logger.info(f"Pipeline completed successfully for job_id: {job_id}")
 
     except CancellationError:
         pipeline_states[job_id]["status"] = "cancelled"
-        logger.info(f" Pipeline {job_id} was cancelled")
+        logger.info(f"Pipeline {job_id} was cancelled")
     except Exception as e:
         pipeline_states[job_id].update(
             {
@@ -162,7 +164,7 @@ def run_pipeline_async(job_id: str, payload: FrontendPayload):
                 "error": str(e),
             }
         )
-        logger.error(f" Pipeline {job_id} failed: {str(e)}")
+        logger.error(f"Pipeline {job_id} failed: {str(e)}", exc_info=True)
 
 
 # ------------- New API Routes -------------
@@ -194,8 +196,13 @@ async def start_pipeline(payload: FrontendPayload) -> JSONResponse:
 
     # Run pipeline in a separate thread (works better in Lambda than BackgroundTasks)
     # This ensures the response is returned immediately
-    thread = threading.Thread(target=run_pipeline_async, args=(job_id, payload))
-    thread.daemon = True  # Don't prevent Lambda from exiting
+    # Note: In Lambda, the thread will continue running even after the response is sent
+    # Lambda keeps the execution context warm for a period after the response
+    thread = threading.Thread(
+        target=run_pipeline_async,
+        args=(job_id, payload),
+        daemon=False,  # Keep thread alive even if main thread exits (Lambda will keep context warm)
+    )
     thread.start()
 
     logger.info(f" Started pipeline with job_id: {job_id}")
@@ -223,7 +230,7 @@ async def get_progress(job_id: str) -> JSONResponse:
     Returns:
         JSONResponse: Current job status and progress
     """
-    # Cleanup old jobs periodically
+    # Cleanup old jobs periodically (only occasionally to avoid overhead)
     cleanup_old_jobs()
 
     state = pipeline_states.get(job_id)
