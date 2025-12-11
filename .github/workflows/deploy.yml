@@ -26,6 +26,16 @@ jobs:
         working-directory: frontend
         run: npm run build
 
+      - name: Verify build output
+        run: |
+          if [ ! -d "frontend/dist" ]; then
+            echo "Error: frontend/dist directory not found!"
+            exit 1
+          fi
+          echo "Build output found:"
+          ls -la frontend/dist/
+          echo "Total files: $(find frontend/dist -type f | wc -l)"
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -33,9 +43,31 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
+      - name: Verify AWS credentials
+        run: |
+          aws sts get-caller-identity
+
+      - name: Check S3 bucket access
+        run: |
+          echo "Checking access to bucket: ${{ secrets.S3_BUCKET_NAME }}"
+          aws s3 ls s3://${{ secrets.S3_BUCKET_NAME }} || {
+            echo "Error: Cannot access S3 bucket. Check:"
+            echo "1. Bucket name is correct: ${{ secrets.S3_BUCKET_NAME }}"
+            echo "2. AWS credentials have s3:ListBucket permission"
+            echo "3. Bucket exists in region: ${{ secrets.AWS_REGION }}"
+            exit 1
+          }
+
       - name: Sync build to S3
         run: |
-          aws s3 sync frontend/dist s3://${{ secrets.S3_BUCKET_NAME }} --delete
+          echo "Syncing frontend/dist to s3://${{ secrets.S3_BUCKET_NAME }}"
+          aws s3 sync frontend/dist s3://${{ secrets.S3_BUCKET_NAME }} --delete || {
+            echo "Error: S3 sync failed. Check:"
+            echo "1. AWS credentials have s3:PutObject and s3:DeleteObject permissions"
+            echo "2. Bucket exists and is accessible"
+            exit 1
+          }
+          echo "Sync completed successfully"
 
       - name: Check CloudFront Distribution ID
         id: check-cloudfront
