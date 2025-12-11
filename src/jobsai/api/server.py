@@ -203,73 +203,55 @@ async def start_pipeline(payload: FrontendPayload) -> JSONResponse:
 
 
 @app.get("/api/progress/{job_id}")
-async def stream_progress(job_id: str):
+async def get_progress(job_id: str) -> JSONResponse:
     """
-    Stream progress updates via Server-Sent Events (SSE).
+    Get current progress for a pipeline job.
 
-    This endpoint maintains a persistent connection and streams progress
-    updates as the pipeline executes. The client should use EventSource
-    to connect to this endpoint.
+    This endpoint returns the current status and progress of a pipeline job.
+    The client should poll this endpoint periodically (e.g., every 1-2 seconds)
+    to get progress updates.
 
-    Progress events are sent in the format:
-        data: {"phase": "profiling", "message": "Creating your profile..."}
-
-    Final events:
-        - {"status": "complete", "filename": "..."} - Pipeline completed
-        - {"status": "error", "message": "..."} - Pipeline failed
-        - {"status": "cancelled"} - Pipeline was cancelled
+    Response format:
+        - {"status": "running", "progress": {"phase": "...", "message": "..."}}
+        - {"status": "complete", "filename": "..."}
+        - {"status": "error", "error": "..."}
+        - {"status": "cancelled"}
 
     Args:
         job_id (str): Job identifier returned from /api/start
 
     Returns:
-        StreamingResponse: SSE stream with progress updates
+        JSONResponse: Current job status and progress
     """
+    # Cleanup old jobs periodically
+    cleanup_old_jobs()
 
-    async def event_generator():
-        """Generate SSE events for progress updates."""
-        last_progress = None
+    state = pipeline_states.get(job_id)
 
-        while True:
-            # Cleanup old jobs periodically
-            cleanup_old_jobs()
+    if not state:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Job not found"
+        )
 
-            state = pipeline_states.get(job_id)
+    # Build response based on current state
+    response_data = {
+        "status": state["status"],
+    }
 
-            if not state:
-                yield f"data: {json.dumps({'error': 'Job not found'})}\n\n"
-                break
+    # Add progress if available
+    if state.get("progress"):
+        response_data["progress"] = state["progress"]
 
-            # Send progress update if it changed
-            current_progress = state.get("progress")
-            if current_progress and current_progress != last_progress:
-                yield f"data: {json.dumps(current_progress)}\n\n"
-                last_progress = current_progress
+    # Add result if complete
+    if state["status"] == "complete":
+        result = state.get("result", {})
+        response_data["filename"] = result.get("filename", "cover_letter.docx")
 
-            # Check final status
-            if state["status"] == "complete":
-                result = state.get("result", {})
-                yield f"data: {json.dumps({'status': 'complete', 'filename': result.get('filename', 'cover_letter.docx')})}\n\n"
-                break
-            elif state["status"] == "error":
-                yield f"data: {json.dumps({'status': 'error', 'message': state.get('error', 'Unknown error')})}\n\n"
-                break
-            elif state["status"] == "cancelled":
-                yield f"data: {json.dumps({'status': 'cancelled'})}\n\n"
-                break
+    # Add error if failed
+    if state["status"] == "error":
+        response_data["error"] = state.get("error", "Unknown error")
 
-            # Poll every 500ms
-            await asyncio.sleep(0.5)
-
-    return StreamingResponse(
-        event_generator(),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "X-Accel-Buffering": "no",  # Disable nginx buffering
-        },
-    )
+    return JSONResponse(response_data)
 
 
 @app.post("/api/cancel/{job_id}")

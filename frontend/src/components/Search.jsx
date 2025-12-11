@@ -47,10 +47,10 @@ export default function Search() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
-  // Progress tracking for SSE
+  // Progress tracking with polling
   const [currentPhase, setCurrentPhase] = useState(null);
   const [jobId, setJobId] = useState(null);
-  const eventSourceRef = useRef(null);
+  const pollingIntervalRef = useRef(null);
   // Consolidated submission state ref
   // Tracks submission-related state that doesn't need to trigger re-renders
   const submissionState = useRef({
@@ -260,25 +260,39 @@ export default function Search() {
       const { job_id } = await startResponse.json();
       setJobId(job_id);
 
-      // Step 2: Connect to SSE progress stream
-      const eventSource = new EventSource(
-        `${API_ENDPOINTS.PROGRESS}/${job_id}`
-      );
-      eventSourceRef.current = eventSource;
-
-      eventSource.onmessage = async (event) => {
+      // Step 2: Poll for progress updates
+      const pollProgress = async () => {
         try {
-          const data = JSON.parse(event.data);
+          const response = await fetch(`${API_ENDPOINTS.PROGRESS}/${job_id}`);
+
+          if (!response.ok) {
+            if (response.status === 404) {
+              setError("Job not found");
+              setIsSubmitting(false);
+              setCurrentPhase(null);
+              setJobId(null);
+              if (pollingIntervalRef.current) {
+                clearInterval(pollingIntervalRef.current);
+                pollingIntervalRef.current = null;
+              }
+              return;
+            }
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+
+          const data = await response.json();
 
           // Handle progress updates
-          if (data.phase) {
-            setCurrentPhase(data.phase);
+          if (data.progress && data.progress.phase) {
+            setCurrentPhase(data.progress.phase);
           }
 
           // Handle completion
           if (data.status === "complete") {
-            eventSource.close();
-            eventSourceRef.current = null;
+            if (pollingIntervalRef.current) {
+              clearInterval(pollingIntervalRef.current);
+              pollingIntervalRef.current = null;
+            }
 
             // Download the document
             await downloadDocument(job_id, data.filename);
@@ -303,50 +317,41 @@ export default function Search() {
           }
           // Handle errors
           else if (data.status === "error") {
-            eventSource.close();
-            eventSourceRef.current = null;
-            setError(data.message || "An error occurred during processing");
+            if (pollingIntervalRef.current) {
+              clearInterval(pollingIntervalRef.current);
+              pollingIntervalRef.current = null;
+            }
+            setError(data.error || "An error occurred during processing");
             setIsSubmitting(false);
             setCurrentPhase(null);
             setJobId(null);
           }
           // Handle cancellation
           else if (data.status === "cancelled") {
-            eventSource.close();
-            eventSourceRef.current = null;
+            if (pollingIntervalRef.current) {
+              clearInterval(pollingIntervalRef.current);
+              pollingIntervalRef.current = null;
+            }
             setError("Pipeline was cancelled");
             setIsSubmitting(false);
             setCurrentPhase(null);
             setJobId(null);
           }
-          // Handle SSE errors
-          else if (data.error) {
-            eventSource.close();
-            eventSourceRef.current = null;
-            setError(data.error);
-            setIsSubmitting(false);
-            setCurrentPhase(null);
-            setJobId(null);
-          }
-        } catch (parseError) {
-          console.error("Error parsing SSE event:", parseError);
+          // Continue polling if still running
+        } catch (error) {
+          console.error("Error polling progress:", error);
+          // Don't stop polling on network errors, just log them
         }
       };
 
-      eventSource.onerror = (error) => {
-        console.error("EventSource error:", error);
-        eventSource.close();
-        eventSourceRef.current = null;
-        setError("Connection lost. Please try again.");
-        setIsSubmitting(false);
-        setCurrentPhase(null);
-        setJobId(null);
-      };
+      // Start polling immediately, then every 2 seconds
+      pollProgress();
+      pollingIntervalRef.current = setInterval(pollProgress, 2000);
     } catch (error) {
-      // Close EventSource if it was opened
-      if (eventSourceRef.current) {
-        eventSourceRef.current.close();
-        eventSourceRef.current = null;
+      // Stop polling if it was started
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
       }
       setError(getErrorMessage(error));
       setSuccess(false);
@@ -407,19 +412,19 @@ export default function Search() {
       if (successTimeoutRef.current) {
         clearTimeout(successTimeoutRef.current);
       }
-      if (eventSourceRef.current) {
-        eventSourceRef.current.close();
-        eventSourceRef.current = null;
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
       }
     };
   }, []);
 
   /**
    * Handles pipeline cancellation
-   * Sends cancel request to backend and closes SSE connection
+   * Sends cancel request to backend and stops polling
    */
   const handleCancel = async () => {
-    if (jobId && eventSourceRef.current) {
+    if (jobId && pollingIntervalRef.current) {
       try {
         await fetch(`${API_ENDPOINTS.CANCEL}/${jobId}`, {
           method: "POST",
@@ -427,8 +432,8 @@ export default function Search() {
       } catch (error) {
         console.error("Error cancelling pipeline:", error);
       }
-      eventSourceRef.current.close();
-      eventSourceRef.current = null;
+      clearInterval(pollingIntervalRef.current);
+      pollingIntervalRef.current = null;
       setIsSubmitting(false);
       setCurrentPhase(null);
       setJobId(null);
