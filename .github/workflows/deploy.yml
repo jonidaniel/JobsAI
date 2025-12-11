@@ -36,9 +36,18 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
+      - name: Check CloudFront Distribution ID
+        id: check-cloudfront
+        run: |
+          if [ -n "${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}" ]; then
+            echo "has_cloudfront=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_cloudfront=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: (Optional) Invalidate CloudFront Cache
         uses: awact/cloudfront-action@v1.6.2
-        if: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}
+        if: steps.check-cloudfront.outputs.has_cloudfront == 'true'
         with:
           aws-region: ${{ secrets.AWS_REGION }}
           distribution-id: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}
