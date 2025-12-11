@@ -62,13 +62,15 @@ FRONTEND_URL = os.environ.get("FRONTEND_URL", "")
 origins = [
     "http://localhost:3000",  # local development
     "http://127.0.0.1:3000",  # local development
+    "https://www.jonimakinen.com",  # production frontend
+    "https://jonimakinen.com",  # production frontend (without www)
 ]
 
-# Add production frontend URL if provided
-if FRONTEND_URL:
+# Add production frontend URL from environment variable if provided
+if FRONTEND_URL and FRONTEND_URL not in origins:
     origins.append(FRONTEND_URL)
 
-# For development, allow all origins (remove in production)
+# For development, allow all origins if no production URL is set
 # In production, set FRONTEND_URL environment variable in Lambda
 if not FRONTEND_URL:
     origins.append("*")
