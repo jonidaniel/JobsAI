@@ -116,11 +116,11 @@ def main(
     cover_letter_num = answers["cover_letter_num"]
     cover_letter_style = answers["cover_letter_style"]
     tech_stack = answers["tech_stack"]
-    print("JOB BOARDS: ", job_boards)
-    print("DEEP MODE: ", deep_mode)
-    print("COVER LETTER NUM: ", cover_letter_num)
-    print("COVER LETTER STYLE: ", cover_letter_style)
-    print("TECH STACK: ", tech_stack)
+    logger.info(f"JOB BOARDS: {job_boards}")
+    logger.info(f"DEEP MODE: {deep_mode}")
+    logger.info(f"COVER LETTER NUM: {cover_letter_num}")
+    logger.info(f"COVER LETTER STYLE: {cover_letter_style}")
+    logger.info(f"TECH STACK: {tech_stack}")
 
     # Generate a timestamp for consistent file naming
     # Used throughout the pipeline to insert the same datetime to all output files
