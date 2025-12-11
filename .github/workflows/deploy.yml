@@ -153,8 +153,10 @@ jobs:
           rm -rf lambda-package
 
       - name: Upload to Lambda
-        uses: aws-actions/aws-lambda-deploy@v1
-        with:
-          function-name: ${{ secrets.LAMBDA_FUNCTION_NAME }}
-          zip-file: lambda.zip
-          aws-region: ${{ secrets.AWS_REGION }}
+        run: |
+          echo "Updating Lambda function: ${{ secrets.LAMBDA_FUNCTION_NAME }}"
+          aws lambda update-function-code \
+            --function-name ${{ secrets.LAMBDA_FUNCTION_NAME }} \
+            --zip-file fileb://lambda.zip \
+            --region ${{ secrets.AWS_REGION }}
+          echo "Lambda function updated successfully"
