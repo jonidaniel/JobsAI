@@ -6,9 +6,9 @@
  * (development, staging, production).
  *
  * Environment Variables:
- *   VITE_API_BASE_URL: Base URL for the backend API.
- *     - Development: http://localhost:8000 (if not set)
- *     - Production: Set in GitHub Actions secrets and injected during build
+ *   VITE_API_BASE_URL: Base URL for the backend API (required in production).
+ *     - Development: Falls back to http://localhost:8000 if not set
+ *     - Production: MUST be set via GitHub Actions secrets during build
  *
  * Usage:
  *   Import endpoints: import { API_ENDPOINTS } from './config/api';
@@ -18,11 +18,30 @@
  */
 
 // Base URL for API requests
-// Falls back to localhost for development if env variable is not set
-const API_BASE_URL =
-  // import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
-  import.meta.env.VITE_API_BASE_URL ||
-  "https://knccck3mck.execute-api.eu-north-1.amazonaws.com/prod";
+// In development: Falls back to localhost if not set
+// In production: Fails fast if VITE_API_BASE_URL is missing
+const getApiBaseUrl = () => {
+  const envUrl = import.meta.env.VITE_API_BASE_URL;
+  const isDevelopment =
+    import.meta.env.DEV || import.meta.env.MODE === "development";
+
+  if (envUrl) {
+    return envUrl;
+  }
+
+  // Development fallback
+  if (isDevelopment) {
+    return "http://localhost:8000";
+  }
+
+  // Production: Fail fast if missing
+  throw new Error(
+    "VITE_API_BASE_URL environment variable is required in production. " +
+      "Please set it in your build environment (e.g., GitHub Actions secrets)."
+  );
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 /**
  * API Endpoints Configuration.
