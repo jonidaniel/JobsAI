@@ -389,12 +389,18 @@ async def download_document(job_id: str) -> Response:
 
     # Try to get document from S3 first
     if s3_key:
-        buffer = get_document_from_s3(s3_key)
-        if buffer:
+        document_bytes = get_document_from_s3(s3_key)
+        if document_bytes:
+            logger.info(
+                f"Serving document from S3: {s3_key}, size: {len(document_bytes)} bytes"
+            )
             return Response(
-                content=buffer.read(),
+                content=document_bytes,
                 media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                headers={"Content-Disposition": f"attachment; filename={filename}"},
+                headers={
+                    "Content-Disposition": f"attachment; filename={filename}",
+                    "Content-Length": str(len(document_bytes)),
+                },
             )
 
     # Fallback: try in-memory document (for backward compatibility)
@@ -404,10 +410,17 @@ async def download_document(job_id: str) -> Response:
             buffer = BytesIO()
             document.save(buffer)
             buffer.seek(0)
+            document_bytes = buffer.getvalue()
+            logger.info(
+                f"Serving document from memory, size: {len(document_bytes)} bytes"
+            )
             return Response(
-                content=buffer.read(),
+                content=document_bytes,
                 media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                headers={"Content-Disposition": f"attachment; filename={filename}"},
+                headers={
+                    "Content-Disposition": f"attachment; filename={filename}",
+                    "Content-Length": str(len(document_bytes)),
+                },
             )
         except Exception as e:
             logger.error(f"Failed to convert in-memory document to bytes: {str(e)}")

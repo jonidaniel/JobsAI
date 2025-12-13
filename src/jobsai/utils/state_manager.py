@@ -237,7 +237,7 @@ def store_document_in_s3(job_id: str, document, filename: str) -> str:
         return None
 
 
-def get_document_from_s3(s3_key: str) -> Optional[BytesIO]:
+def get_document_from_s3(s3_key: str) -> Optional[bytes]:
     """
     Retrieve document from S3.
 
@@ -245,20 +245,25 @@ def get_document_from_s3(s3_key: str) -> Optional[BytesIO]:
         s3_key: S3 key (path) of the document
 
     Returns:
-        BytesIO buffer containing document bytes, or None if not found
+        bytes: Document bytes, or None if not found
     """
     try:
         import boto3
-        from io import BytesIO
 
         if not S3_BUCKET or not s3_key:
+            logger.warning(
+                f"S3_BUCKET or s3_key not set. S3_BUCKET: {S3_BUCKET}, s3_key: {s3_key}"
+            )
             return None
 
         s3_client = boto3.client("s3")
+        logger.info(f"Retrieving document from S3: s3://{S3_BUCKET}/{s3_key}")
         response = s3_client.get_object(Bucket=S3_BUCKET, Key=s3_key)
 
-        buffer = BytesIO(response["Body"].read())
-        return buffer
+        # Read all bytes from the response body
+        document_bytes = response["Body"].read()
+        logger.info(f"Retrieved {len(document_bytes)} bytes from S3")
+        return document_bytes
 
     except Exception as e:
         logger.error(f"Failed to get document from S3: {str(e)}", exc_info=True)
