@@ -14,6 +14,7 @@ import logging
 import uuid
 import json
 import os
+import base64
 from io import BytesIO
 from typing import Dict, Optional
 from datetime import datetime
@@ -22,7 +23,7 @@ from datetime import datetime
 from fastapi import FastAPI, Response, HTTPException, status, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 
 import jobsai.main as backend
 
@@ -387,19 +388,23 @@ async def download_document(job_id: str) -> Response:
     filename = result.get("filename", "cover_letter.docx")
     s3_key = result.get("s3_key")
 
-    # Try to get document from S3 first
+    # Try to get presigned S3 URL first (avoids API Gateway binary encoding issues)
     if s3_key:
-        document_bytes = get_document_from_s3(s3_key)
-        if document_bytes:
-            logger.info(
-                f"Serving document from S3: {s3_key}, size: {len(document_bytes)} bytes"
-            )
-            return Response(
-                content=document_bytes,
-                media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        from jobsai.utils.state_manager import get_presigned_s3_url
+
+        presigned_url = get_presigned_s3_url(s3_key)
+        if presigned_url:
+            logger.info(f"Returning presigned S3 URL for download: {s3_key}")
+            # Return redirect to presigned URL
+            # Frontend will handle the redirect and download directly from S3
+            return JSONResponse(
+                content={
+                    "download_url": presigned_url,
+                    "filename": filename,
+                },
                 headers={
-                    "Content-Disposition": f"attachment; filename={filename}",
-                    "Content-Length": str(len(document_bytes)),
+                    "X-Download-URL": presigned_url,
+                    "X-Filename": filename,
                 },
             )
 
@@ -414,11 +419,13 @@ async def download_document(job_id: str) -> Response:
             logger.info(
                 f"Serving document from memory, size: {len(document_bytes)} bytes"
             )
+            # For API Gateway, we need to return bytes directly
+            # Mangum will handle base64 encoding automatically if needed
             return Response(
                 content=document_bytes,
                 media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                 headers={
-                    "Content-Disposition": f"attachment; filename={filename}",
+                    "Content-Disposition": f'attachment; filename="{filename}"',
                     "Content-Length": str(len(document_bytes)),
                 },
             )

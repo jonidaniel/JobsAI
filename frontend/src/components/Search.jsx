@@ -458,7 +458,21 @@ export default function Search() {
       submissionState.current.savedScrollPosition =
         window.scrollY || window.pageYOffset;
 
-      // Get the response as a blob
+      // Check if response contains a presigned S3 URL (new approach)
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        // Response contains presigned URL
+        const data = await response.json();
+        if (data.download_url) {
+          // Download directly from S3 using presigned URL
+          const s3Response = await fetch(data.download_url);
+          const blob = await s3Response.blob();
+          downloadBlob(blob, s3Response.headers, data.filename || filename);
+          return;
+        }
+      }
+
+      // Fallback: Get the response as a blob (direct download from API Gateway)
       const blob = await response.blob();
 
       // Download the file using response headers (which include Content-Disposition)

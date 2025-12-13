@@ -32,6 +32,8 @@ logger.info("Lambda handler initialized")
 
 # Create Mangum handler to wrap FastAPI app for Lambda
 # This handles API Gateway and Function URL requests
+# Note: For binary content (like .docx files), API Gateway requires base64 encoding
+# Mangum handles this automatically when the response content is bytes
 api_handler = Mangum(
     app,
     lifespan="off",

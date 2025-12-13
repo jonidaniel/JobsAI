@@ -237,6 +237,43 @@ def store_document_in_s3(job_id: str, document, filename: str) -> str:
         return None
 
 
+def get_presigned_s3_url(s3_key: str, expiration: int = 3600) -> Optional[str]:
+    """
+    Generate a presigned URL for downloading a document from S3.
+
+    Args:
+        s3_key: S3 key (path) of the document
+        expiration: URL expiration time in seconds (default: 1 hour)
+
+    Returns:
+        Presigned URL string, or None if error
+    """
+    try:
+        import boto3
+
+        if not S3_BUCKET or not s3_key:
+            logger.warning(
+                f"S3_BUCKET or s3_key not set. S3_BUCKET: {S3_BUCKET}, s3_key: {s3_key}"
+            )
+            return None
+
+        s3_client = boto3.client("s3")
+        logger.info(f"Generating presigned URL for S3: s3://{S3_BUCKET}/{s3_key}")
+
+        url = s3_client.generate_presigned_url(
+            "get_object",
+            Params={"Bucket": S3_BUCKET, "Key": s3_key},
+            ExpiresIn=expiration,
+        )
+
+        logger.info(f"Generated presigned URL (expires in {expiration}s)")
+        return url
+
+    except Exception as e:
+        logger.error(f"Failed to generate presigned S3 URL: {str(e)}", exc_info=True)
+        return None
+
+
 def get_document_from_s3(s3_key: str) -> Optional[bytes]:
     """
     Retrieve document from S3.
