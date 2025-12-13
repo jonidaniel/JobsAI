@@ -302,17 +302,40 @@ def main(
     def _step6_generate():
         if cancellation_check and cancellation_check():
             raise CancellationError("Pipeline cancelled during generation")
-        return generator.generate_letters(job_analysis, profile, cover_letter_style)
+        return generator.generate_letters(
+            job_analysis, profile, cover_letter_style, cover_letter_num
+        )
 
     cover_letters = _step6_generate()
 
-    # Return document and metadata for API response
-    logger.info(" Pipeline completed successfully")
-    return {
-        "document": cover_letters,
-        "timestamp": timestamp,
-        "filename": f"{timestamp}_cover_letter.docx",
-    }
+    # Return documents and metadata for API response
+    # If multiple letters, return list; if single, return single document for backward compatibility
+    logger.info(
+        f" Pipeline completed successfully, generated {len(cover_letters)} cover letter(s)"
+    )
+
+    if len(cover_letters) == 1:
+        # Single document - return in original format for backward compatibility
+        return {
+            "document": cover_letters[0],
+            "timestamp": timestamp,
+            "filename": f"{timestamp}_cover_letter.docx",
+        }
+    else:
+        # Multiple documents - return list with filenames
+        # Filenames match the generator's naming: cover_letter.docx, cover_letter_2.docx, etc.
+        filenames = []
+        for i in range(len(cover_letters)):
+            if i == 0:
+                filenames.append(f"{timestamp}_cover_letter.docx")
+            else:
+                filenames.append(f"{timestamp}_cover_letter_{i + 1}.docx")
+
+        return {
+            "documents": cover_letters,
+            "timestamp": timestamp,
+            "filenames": filenames,
+        }
 
 
 # For running as standalone

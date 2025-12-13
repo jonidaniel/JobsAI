@@ -15,11 +15,11 @@ import uuid
 import json
 import os
 from io import BytesIO
-from typing import Dict
+from typing import Dict, Optional
 from datetime import datetime
 
 # from pydantic import ValidationError
-from fastapi import FastAPI, Response, HTTPException, status, Request
+from fastapi import FastAPI, Response, HTTPException, status, Request, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
@@ -373,7 +373,17 @@ async def get_progress(job_id: str) -> JSONResponse:
     # Add result if complete
     if state["status"] == "complete":
         result = state.get("result", {})
-        response_data["filename"] = result.get("filename", "cover_letter.docx")
+        # Handle both single document (backward compatibility) and multiple documents
+        if "filenames" in result and "s3_keys" in result:
+            # Multiple documents
+            response_data["filenames"] = result.get("filenames", [])
+            response_data["s3_keys"] = result.get("s3_keys", [])
+            response_data["count"] = result.get(
+                "count", len(result.get("filenames", []))
+            )
+        else:
+            # Single document (backward compatibility)
+            response_data["filename"] = result.get("filename", "cover_letter.docx")
 
     # Add error if failed
     if state["status"] == "error":
@@ -436,36 +446,61 @@ async def cancel_pipeline(job_id: str) -> JSONResponse:
 
 
 @app.get("/api/download/{job_id}")
-async def download_document(job_id: str) -> JSONResponse:
-    """Get presigned S3 URL for downloading the generated cover letter document.
+async def download_document(
+    job_id: str,
+    index: Optional[int] = Query(
+        None, description="Document index (1-based) for multiple documents"
+    ),
+) -> JSONResponse:
+    """Get presigned S3 URL(s) for downloading generated cover letter document(s).
 
-    Returns a presigned S3 URL that allows the client to download the document
-    directly from S3. This approach bypasses API Gateway's binary encoding issues
-    and provides better performance for large file downloads.
+    Returns presigned S3 URLs that allow the client to download documents directly
+    from S3. Supports both single document (backward compatibility) and multiple
+    documents. If index is provided, returns URL for that specific document.
 
-    The presigned URL is valid for 1 hour and includes the correct Content-Type
+    The presigned URLs are valid for 1 hour and include the correct Content-Type
     and Content-Disposition headers for proper browser handling.
 
     Args:
         job_id: Unique job identifier (UUID string) of the completed job.
+        index: Optional document index (1-based) if multiple documents exist.
+            If not provided and multiple documents exist, returns all URLs.
 
     Returns:
         JSONResponse with download information:
+            Single document:
             {
                 "download_url": "https://s3...presigned-url...",
                 "filename": "20250115_143022_cover_letter.docx"
             }
 
+            Multiple documents (if index not provided):
+            {
+                "download_urls": [
+                    {"url": "https://s3...", "filename": "20250115_143022_cover_letter.docx"},
+                    {"url": "https://s3...", "filename": "20250115_143022_cover_letter_2.docx"},
+                    ...
+                ],
+                "count": 2
+            }
+
+            Multiple documents (if index provided):
+            {
+                "download_url": "https://s3...presigned-url...",
+                "filename": "20250115_143022_cover_letter_2.docx"
+            }
+
     Raises:
-        HTTPException 404: If job_id is not found.
-        HTTPException 400: If job status is not "complete" (document not ready).
+        HTTPException 404: If job_id is not found or index is out of range.
+        HTTPException 400: If job status is not "complete" (documents not ready).
 
     Note:
-        The client should use the download_url to fetch the document directly
+        The client should use the download_url(s) to fetch documents directly
         from S3. This avoids API Gateway binary encoding issues and provides
-        better download performance. The URL expires after 1 hour.
+        better download performance. URLs expire after 1 hour.
     """
-    from jobsai.utils.state_manager import get_job_state, get_document_from_s3
+    from jobsai.utils.state_manager import get_job_state, get_presigned_s3_url
+    from typing import Optional
 
     # Try to get state from DynamoDB first
     state = get_job_state(job_id)
@@ -492,28 +527,63 @@ async def download_document(job_id: str) -> JSONResponse:
             detail="Document result not available",
         )
 
+    # Handle multiple documents
+    if "filenames" in result and "s3_keys" in result:
+        filenames = result.get("filenames", [])
+        s3_keys = result.get("s3_keys", [])
+
+        if index is not None:
+            # Return specific document by index (1-based)
+            if index < 1 or index > len(s3_keys):
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Document index {index} not found. Available: 1-{len(s3_keys)}",
+                )
+            s3_key = s3_keys[index - 1]
+            filename = filenames[index - 1]
+            presigned_url = get_presigned_s3_url(s3_key)
+            if presigned_url:
+                return JSONResponse(
+                    content={
+                        "download_url": presigned_url,
+                        "filename": filename,
+                    }
+                )
+        else:
+            # Return all documents
+            download_urls = []
+            for s3_key, filename in zip(s3_keys, filenames):
+                presigned_url = get_presigned_s3_url(s3_key)
+                if presigned_url:
+                    download_urls.append({"url": presigned_url, "filename": filename})
+
+            if download_urls:
+                return JSONResponse(
+                    content={
+                        "download_urls": download_urls,
+                        "count": len(download_urls),
+                    }
+                )
+
+    # Handle single document (backward compatibility)
     filename = result.get("filename", "cover_letter.docx")
     s3_key = result.get("s3_key")
 
-    # Try to get presigned S3 URL first (avoids API Gateway binary encoding issues)
     if s3_key:
-        from jobsai.utils.state_manager import get_presigned_s3_url
-
         presigned_url = get_presigned_s3_url(s3_key)
         if presigned_url:
             logger.info(f"Returning presigned S3 URL for download: {s3_key}")
-            # Return redirect to presigned URL
-            # Frontend will handle the redirect and download directly from S3
             return JSONResponse(
                 content={
                     "download_url": presigned_url,
                     "filename": filename,
-                },
-                headers={
-                    "X-Download-URL": presigned_url,
-                    "X-Filename": filename,
-                },
+                }
             )
+
+    raise HTTPException(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        detail="No download URLs available",
+    )
 
     # Fallback: try in-memory document (for backward compatibility)
     document = result.get("document")

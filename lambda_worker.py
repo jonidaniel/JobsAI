@@ -105,26 +105,56 @@ def worker_handler(event, context):
             payload.model_dump(by_alias=True), progress_callback, cancellation_check
         )
 
-        # Store document in S3
-        document = result.get("document")
-        filename = result.get("filename", "cover_letter.docx")
-        s3_key = None
+        # Store documents in S3
+        # Handle both single document (backward compatibility) and multiple documents
+        documents = result.get("documents")
+        document = result.get("document")  # Single document (backward compatibility)
+        filenames = result.get("filenames", [])
+        filename = result.get(
+            "filename", "cover_letter.docx"
+        )  # Single filename (backward compatibility)
 
-        if document:
+        s3_keys = []
+
+        if documents:
+            # Multiple documents - store each one
+            for idx, doc in enumerate(documents):
+                doc_filename = (
+                    filenames[idx]
+                    if idx < len(filenames)
+                    else f"cover_letter_{idx + 1}.docx"
+                )
+                s3_key = store_document_in_s3(job_id, doc, doc_filename)
+                if s3_key:
+                    s3_keys.append(s3_key)
+                else:
+                    logger.warning(
+                        f"Failed to store document {idx + 1} in S3 for job_id: {job_id}"
+                    )
+        elif document:
+            # Single document (backward compatibility)
             s3_key = store_document_in_s3(job_id, document, filename)
-            if not s3_key:
+            if s3_key:
+                s3_keys.append(s3_key)
+            else:
                 logger.warning(f"Failed to store document in S3 for job_id: {job_id}")
 
-        # Store result in DynamoDB (without document object)
-        update_job_status(
-            job_id,
-            "complete",
-            result={
-                "filename": filename,
-                "timestamp": result.get("timestamp"),
-                "s3_key": s3_key,  # Store S3 key for retrieval
-            },
-        )
+        # Store result in DynamoDB (without document objects)
+        result_data = {
+            "timestamp": result.get("timestamp"),
+        }
+
+        if documents and filenames:
+            # Multiple documents
+            result_data["filenames"] = filenames
+            result_data["s3_keys"] = s3_keys
+            result_data["count"] = len(documents)
+        else:
+            # Single document (backward compatibility)
+            result_data["filename"] = filename
+            result_data["s3_key"] = s3_keys[0] if s3_keys else None
+
+        update_job_status(job_id, "complete", result=result_data)
 
         logger.info(f"Pipeline completed successfully for job_id: {job_id}")
         return {"statusCode": 200, "body": "Pipeline completed"}
