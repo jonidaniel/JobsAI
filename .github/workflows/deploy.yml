@@ -20,7 +20,9 @@ jobs:
 
       - name: Install Dependencies
         working-directory: frontend
-        run: npm ci
+        run: |
+          # Update lock file if out of sync, then install
+          npm install
 
       - name: Build Frontend
         working-directory: frontend
