@@ -14,17 +14,14 @@ import logging
 import uuid
 import json
 import os
-from io import BytesIO
 from typing import Dict, Optional
 from datetime import datetime
 
 # from pydantic import ValidationError
-from fastapi import FastAPI, Response, HTTPException, status, Request, Query
+from fastapi import FastAPI, HTTPException, status, Request, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
-
-import jobsai.main as backend
 
 # Frontend payload validation
 from jobsai.config.schemas import FrontendPayload
@@ -341,23 +338,8 @@ async def get_progress(job_id: str) -> JSONResponse:
     print(f"[API] /api/progress/{job_id} called")
     logger.info(f"[API] /api/progress/{job_id} endpoint called")
 
-    # Try to get state from DynamoDB first (persistent across containers)
-    state = get_job_state(job_id)
-
-    # Fallback to in-memory state if DynamoDB fails
-    if not state:
-        logger.info(
-            f"State not found in DynamoDB for job_id: {job_id}, checking in-memory"
-        )
-        state = pipeline_states.get(job_id)
-
-    if not state:
-        logger.warning(
-            f"Job {job_id} not found in DynamoDB or in-memory state. Available in-memory jobs: {list(pipeline_states.keys())}"
-        )
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Job not found"
-        )
+    # Get state from DynamoDB with in-memory fallback
+    state = get_job_state_with_fallback(job_id)
 
     logger.info(f"Retrieved state for job_id: {job_id}, status: {state.get('status')}")
 
@@ -421,16 +403,10 @@ async def cancel_pipeline(job_id: str) -> JSONResponse:
         reads via get_cancellation_flag(). The pipeline checks for cancellation
         at key points: before each major step and during long-running operations.
     """
-    from jobsai.utils.state_manager import get_job_state, update_job_status
+    from jobsai.utils.state_manager import update_job_status
 
-    # Check if job exists in DynamoDB
-    state = get_job_state(job_id)
-    if not state:
-        # Fallback to in-memory check
-        if job_id not in pipeline_states:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Job not found"
-            )
+    # Check if job exists (will raise 404 if not found)
+    get_job_state_with_fallback(job_id)
 
     # Update status in DynamoDB (worker Lambda reads from here)
     try:
@@ -499,20 +475,10 @@ async def download_document(
         from S3. This avoids API Gateway binary encoding issues and provides
         better download performance. URLs expire after 1 hour.
     """
-    from jobsai.utils.state_manager import get_job_state, get_presigned_s3_url
-    from typing import Optional
+    from jobsai.utils.state_manager import get_presigned_s3_url
 
-    # Try to get state from DynamoDB first
-    state = get_job_state(job_id)
-
-    # Fallback to in-memory state
-    if not state:
-        state = pipeline_states.get(job_id)
-
-    if not state:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Job not found"
-        )
+    # Get state from DynamoDB with in-memory fallback
+    state = get_job_state_with_fallback(job_id)
 
     if state["status"] != "complete":
         raise HTTPException(
@@ -585,252 +551,35 @@ async def download_document(
         detail="No download URLs available",
     )
 
-    # Fallback: try in-memory document (for backward compatibility)
-    document = result.get("document")
-    if document:
-        try:
-            buffer = BytesIO()
-            document.save(buffer)
-            buffer.seek(0)
-            document_bytes = buffer.getvalue()
-            logger.info(
-                f"Serving document from memory, size: {len(document_bytes)} bytes"
-            )
-            # For API Gateway, we need to return bytes directly
-            # Mangum will handle base64 encoding automatically if needed
-            return Response(
-                content=document_bytes,
-                media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                headers={
-                    "Content-Disposition": f'attachment; filename="{filename}"',
-                    "Content-Length": str(len(document_bytes)),
-                },
-            )
-        except Exception as e:
-            logger.error(f"Failed to convert in-memory document to bytes: {str(e)}")
-
-    raise HTTPException(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        detail="Document not available in S3 or memory",
-    )
-
 
 # Note: Job cleanup is handled by DynamoDB TTL (auto-delete after 1 hour)
 # In-memory state is ephemeral in Lambda, so cleanup is not needed
 
 
-# ------------- Legacy API Route (kept for backward compatibility) -------------
-# Define the API endpoint
-@app.post("/api/endpoint")
-async def run_pipeline(payload: FrontendPayload) -> Response:
-    """
-    Run the complete JobsAI backend pipeline and return cover letter document.
+# ------------- Helper Functions -------------
+def get_job_state_with_fallback(job_id: str) -> Dict:
+    """Get job state from DynamoDB with in-memory fallback.
 
-    This endpoint receives form data from the frontend (slider values, text fields,
-    multiple choice selections) and triggers the full pipeline:
-    1. ProfilerAgent: Profile creation
-    2. SearcherService: Job searching
-    3. ScorerService: Job scoring
-    4. ReporterAgent: Report generation
-    5. GeneratorAgent: Cover letter generation
-
-    The response is a Word document (.docx) that the browser will download.
+    Attempts to retrieve job state from DynamoDB first (persistent across containers),
+    then falls back to in-memory state for local development.
 
     Args:
-        payload (FrontendPayload): Form data from frontend, grouped by question set.
+        job_id: Unique job identifier (UUID string).
 
-        Structure:
-            {
-                "general": [
-                    {"job-level": ["Expert", "Intermediate"]},
-                    {"job-boards": ["Duunitori", "Jobly"]},
-                    {"deep-mode": "Yes"},
-                    {"cover-letter-num": 5},  # Integer (1-10)
-                    {"cover-letter-style": ["Professional"]}  # Array of 1-2 strings
-                ],
-                "languages": [
-                    {"javascript": 5},
-                    {"python": 3},
-                    {"text-field1": "Additional languages..."}
-                ],
-                "databases": [...],
-                "cloud-development": [...],
-                "web-frameworks": [...],
-                "dev-ides": [...],
-                "llms": [...],
-                "doc-and-collab": [...],
-                "operating-systems": [...]
-                ...
-            }
-
-        Where:
-            - "general": Array of single-key objects with configuration values
-            - Technology sets (languages, databases, etc.): Array of single-key objects
-              where keys are technology names (slider values 0-7) or "text-field{N}" (strings)
-            - "additional-info": Array of single-key objects with additional information
     Returns:
-        Response: HTTP response with:
-            - Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document
-            - Content-Disposition: attachment header for file download
-            - Body: Binary content of the .docx file
+        Dict: Job state dictionary containing status, progress, result, etc.
 
     Raises:
-        HTTPException: With appropriate status code and error message if pipeline fails
+        HTTPException 404: If job not found in DynamoDB or in-memory state.
     """
-
-    # Convert Pydantic model to dictionary for pipeline processing
-    # Use by_alias=True to preserve kebab-case keys from frontend
-    # (e.g., "additional-info" instead of "additional_info")
-    answers = payload.model_dump(by_alias=True)
-
-    logger.info(f" Received API request with {len(answers)} form fields")
-    logger.debug(f" Form data keys: {list(answers.keys())}")
-    # Log structure of first few fields for debugging
-    for key, value in list(answers.items())[:3]:
-        logger.debug(f" {key}: {type(value).__name__} - {str(value)[:200]}")
-
-    try:
-        # Execute the complete JobsAI pipeline
-        # Pipeline execution time varies based on:
-        # - Number of job boards selected (more boards = longer search time)
-        # - Deep mode setting (fetching full descriptions is slower)
-        # - Number of LLM calls required (profile, keywords, analysis, generation)
-        # Typical execution: 2-5 minutes for a complete run
-        cover_letters = backend.main(answers)
-
-        # Validate pipeline result structure
-        if not isinstance(cover_letters, dict):
-            logger.error(
-                " Pipeline returned invalid result type: %s", type(cover_letters)
-            )
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Pipeline returned invalid result format.",
-            )
-
-        # Extract document and filename from pipeline result
-        document = cover_letters.get("document")
-        filename = cover_letters.get("filename")
-
-        # Validate that pipeline returned required fields
-        if document is None:
-            logger.error(" Pipeline did not return a document")
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to generate cover letter document.",
-            )
-
-        if not filename:
-            logger.error(" Pipeline did not return a filename")
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to generate document filename.",
-            )
-
-        # Convert python-docx Document object to bytes for HTTP response
-        # The document is written to an in-memory buffer (BytesIO) to avoid
-        # temporary file creation
-        try:
-            buffer = BytesIO()
-            # Write document to buffer
-            document.save(buffer)
-            # Reset buffer position to beginning for reading
-            buffer.seek(0)
-        except Exception as e:
-            logger.error(" Failed to convert document to bytes: %s", str(e))
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to process document for download.",
-            )
-
-        # Return document as HTTP response with appropriate headers
-        # Content-Disposition header triggers browser download dialog
-        return Response(
-            content=buffer.read(),
-            media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            headers={"Content-Disposition": f"attachment; filename={filename}"},
-        )
-
-    except HTTPException:
-        # Re-raise HTTP exceptions (already properly formatted)
-        raise
-
-    except ValueError as e:
-        # Handle validation errors from profiler (e.g., LLM didn't return parseable JSON)
-        error_msg = str(e)
-        logger.error(" Validation error in pipeline: %s", error_msg)
+    state = get_job_state(job_id)
+    if not state:
+        state = pipeline_states.get(job_id)
+    if not state:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid input data or LLM response: {error_msg}",
+            status_code=status.HTTP_404_NOT_FOUND, detail="Job not found"
         )
-
-    except KeyError as e:
-        # Handle missing keys in result dictionary
-        error_msg = f"Pipeline result missing required field: {str(e)}"
-        logger.error(" KeyError in pipeline result: %s", str(e))
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Pipeline returned incomplete results.",
-        )
-
-    except AttributeError as e:
-        # Handle attribute access errors
-        error_msg = "Pipeline encountered an internal error."
-        logger.error(" AttributeError in pipeline: %s", str(e))
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=error_msg,
-        )
-
-    except FileNotFoundError as e:
-        # Handle missing file errors (e.g., config files, templates)
-        error_msg = "Required file not found. Please check server configuration."
-        logger.error(" FileNotFoundError: %s", str(e))
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=error_msg,
-        )
-
-    except PermissionError as e:
-        # Handle file permission errors
-        error_msg = "File permission error. Please check server configuration."
-        logger.error(" PermissionError: %s", str(e))
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=error_msg,
-        )
-
-    except Exception as e:
-        # Check if this is an OpenAI-related error
-        error_type = type(e).__name__
-        error_module = type(e).__module__
-
-        # Handle OpenAI API errors (connection, timeout, rate limits, etc.)
-        if "openai" in error_module.lower() or "OpenAI" in error_type:
-            # Check for connection/timeout errors
-            if "connection" in error_type.lower() or "timeout" in error_type.lower():
-                error_msg = "Unable to connect to AI service. Please try again later."
-                logger.error(" OpenAI API connection/timeout error: %s", str(e))
-                raise HTTPException(
-                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                    detail=error_msg,
-                )
-            else:
-                # Other OpenAI errors (rate limits, authentication, API errors, etc.)
-                error_msg = "AI service error occurred. Please try again later."
-                logger.error(" OpenAI API error: %s", str(e))
-                raise HTTPException(
-                    status_code=status.HTTP_502_BAD_GATEWAY,
-                    detail=error_msg,
-                )
-
-        # Catch-all for any other unexpected errors
-        error_msg = "An unexpected error occurred while processing your request."
-        logger.exception(" Unexpected error in pipeline: %s", str(e))
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=error_msg,
-        )
+    return state
 
 
 # For running as standalone server

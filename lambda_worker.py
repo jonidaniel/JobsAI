@@ -43,6 +43,71 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+def _store_documents_and_prepare_result(
+    job_id: str, result: dict
+) -> tuple[list[str], dict]:
+    """Store documents in S3 and prepare result data for DynamoDB.
+
+    Handles both single document (backward compatibility) and multiple documents.
+    Stores each document in S3 and returns S3 keys along with result metadata.
+
+    Args:
+        job_id: Unique job identifier (UUID string).
+        result: Pipeline result dictionary containing documents and metadata.
+
+    Returns:
+        Tuple of (s3_keys, result_data):
+            - s3_keys: List of S3 keys for stored documents
+            - result_data: Dictionary with timestamp, filenames/s3_keys, and count
+    """
+    documents = result.get("documents")
+    document = result.get("document")  # Single document (backward compatibility)
+    filenames = result.get("filenames", [])
+    filename = result.get(
+        "filename", "cover_letter.docx"
+    )  # Single filename (backward compatibility)
+
+    s3_keys = []
+
+    if documents:
+        # Multiple documents - store each one
+        for idx, doc in enumerate(documents):
+            doc_filename = (
+                filenames[idx]
+                if idx < len(filenames)
+                else f"cover_letter_{idx + 1}.docx"
+            )
+            s3_key = store_document_in_s3(job_id, doc, doc_filename)
+            if s3_key:
+                s3_keys.append(s3_key)
+            else:
+                logger.warning(
+                    f"Failed to store document {idx + 1} in S3 for job_id: {job_id}"
+                )
+    elif document:
+        # Single document (backward compatibility)
+        s3_key = store_document_in_s3(job_id, document, filename)
+        if s3_key:
+            s3_keys.append(s3_key)
+        else:
+            logger.warning(f"Failed to store document in S3 for job_id: {job_id}")
+
+    # Prepare result data for DynamoDB
+    result_data = {"timestamp": result.get("timestamp")}
+
+    if documents and filenames:
+        # Multiple documents
+        result_data["filenames"] = filenames
+        result_data["s3_keys"] = s3_keys
+        result_data["count"] = len(documents)
+    else:
+        # Single document (backward compatibility)
+        result_data["filename"] = filename
+        result_data["s3_key"] = s3_keys[0] if s3_keys else None
+
+    return s3_keys, result_data
+
+
 def worker_handler(event, context):
     """Lambda worker handler for asynchronous pipeline execution.
 
@@ -105,54 +170,8 @@ def worker_handler(event, context):
             payload.model_dump(by_alias=True), progress_callback, cancellation_check
         )
 
-        # Store documents in S3
-        # Handle both single document (backward compatibility) and multiple documents
-        documents = result.get("documents")
-        document = result.get("document")  # Single document (backward compatibility)
-        filenames = result.get("filenames", [])
-        filename = result.get(
-            "filename", "cover_letter.docx"
-        )  # Single filename (backward compatibility)
-
-        s3_keys = []
-
-        if documents:
-            # Multiple documents - store each one
-            for idx, doc in enumerate(documents):
-                doc_filename = (
-                    filenames[idx]
-                    if idx < len(filenames)
-                    else f"cover_letter_{idx + 1}.docx"
-                )
-                s3_key = store_document_in_s3(job_id, doc, doc_filename)
-                if s3_key:
-                    s3_keys.append(s3_key)
-                else:
-                    logger.warning(
-                        f"Failed to store document {idx + 1} in S3 for job_id: {job_id}"
-                    )
-        elif document:
-            # Single document (backward compatibility)
-            s3_key = store_document_in_s3(job_id, document, filename)
-            if s3_key:
-                s3_keys.append(s3_key)
-            else:
-                logger.warning(f"Failed to store document in S3 for job_id: {job_id}")
-
-        # Store result in DynamoDB (without document objects)
-        result_data = {
-            "timestamp": result.get("timestamp"),
-        }
-
-        if documents and filenames:
-            # Multiple documents
-            result_data["filenames"] = filenames
-            result_data["s3_keys"] = s3_keys
-            result_data["count"] = len(documents)
-        else:
-            # Single document (backward compatibility)
-            result_data["filename"] = filename
-            result_data["s3_key"] = s3_keys[0] if s3_keys else None
+        # Store documents in S3 and prepare result data
+        s3_keys, result_data = _store_documents_and_prepare_result(job_id, result)
 
         update_job_status(job_id, "complete", result=result_data)
 
