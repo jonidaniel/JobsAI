@@ -474,6 +474,7 @@ export default function Search() {
             type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
           });
 
+          // Use filename from JSON response (more reliable than extracting from headers)
           downloadBlob(blob, s3Response.headers, data.filename || filename);
           return;
         }

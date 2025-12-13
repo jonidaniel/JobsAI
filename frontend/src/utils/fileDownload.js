@@ -9,14 +9,27 @@
  * @param {string} defaultFilename - Default filename if not found in headers (default: "document.docx")
  */
 export function downloadBlob(blob, headers, defaultFilename = "document.docx") {
-  // Extract filename from Content-Disposition header if available
-  // Expected format: "attachment; filename=\"document.docx\""
-  const contentDisposition = headers.get("Content-Disposition");
+  // Use the provided defaultFilename (from JSON response) as primary source
+  // Only extract from headers if defaultFilename is not provided
   let filename = defaultFilename;
-  if (contentDisposition) {
-    const match = contentDisposition.match(/filename="?(.+)"?/);
-    if (match && match[1]) {
-      filename = match[1];
+
+  // Extract filename from Content-Disposition header only if defaultFilename is the generic default
+  if (filename === "document.docx" && headers) {
+    const contentDisposition = headers.get("Content-Disposition");
+    if (contentDisposition) {
+      // Handle both quoted and unquoted filenames
+      // Match: filename="file.docx" or filename=file.docx or filename*=UTF-8''file.docx
+      const quotedMatch = contentDisposition.match(
+        /filename\*?=['"]?([^'";]+)['"]?/i
+      );
+      if (quotedMatch && quotedMatch[1]) {
+        // Decode URL-encoded filename if present (RFC 5987 format: filename*=UTF-8''encoded)
+        let extracted = quotedMatch[1];
+        if (extracted.includes("''")) {
+          extracted = decodeURIComponent(extracted.split("''")[1]);
+        }
+        filename = extracted.trim();
+      }
     }
   }
 

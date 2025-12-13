@@ -260,13 +260,17 @@ def get_presigned_s3_url(s3_key: str, expiration: int = 3600) -> Optional[str]:
         s3_client = boto3.client("s3")
         logger.info(f"Generating presigned URL for S3: s3://{S3_BUCKET}/{s3_key}")
 
+        # Extract filename from S3 key (last part after /)
+        filename_from_key = s3_key.split("/")[-1]
+
         url = s3_client.generate_presigned_url(
             "get_object",
             Params={
                 "Bucket": S3_BUCKET,
                 "Key": s3_key,
                 "ResponseContentType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                "ResponseContentDisposition": f'attachment; filename="{s3_key.split("/")[-1]}"',
+                # Use simple filename without quotes to avoid encoding issues
+                "ResponseContentDisposition": f"attachment; filename={filename_from_key}",
             },
             ExpiresIn=expiration,
         )
