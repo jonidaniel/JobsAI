@@ -1,20 +1,23 @@
 """
-AWS Lambda handler for FastAPI application.
+AWS Lambda handler for FastAPI application and worker functions.
 
-This handler uses Mangum to adapt the FastAPI application for AWS Lambda.
-The FastAPI app is imported and wrapped with Mangum's ASGI adapter.
+This handler routes requests to either:
+1. FastAPI app (via Mangum) for API Gateway/Function URL requests
+2. Worker handler for async pipeline execution
 
 Lambda Configuration:
     - Handler: lambda_handler.handler
     - Runtime: Python 3.12
-    - Timeout: Set appropriately for your pipeline (recommended: 15 minutes for long-running jobs)
+    - Timeout: Set appropriately (API: 29s, Worker: 15 minutes)
     - Memory: Adjust based on your needs (recommended: 1024 MB minimum)
-    - Environment Variables: Set OPENAI_API_KEY and other required secrets
+    - Environment Variables: Set OPENAI_API_KEY, DYNAMODB_TABLE_NAME, S3_DOCUMENTS_BUCKET, WORKER_LAMBDA_FUNCTION_NAME
 """
 
 import logging
+import json
 from mangum import Mangum
 from jobsai.api.server import app
+from lambda_worker import worker_handler
 
 # Configure logging for Lambda
 # Lambda automatically captures stdout/stderr, so we configure logging to use them
@@ -28,12 +31,8 @@ logger = logging.getLogger(__name__)
 logger.info("Lambda handler initialized")
 
 # Create Mangum handler to wrap FastAPI app for Lambda
-# This is the entry point that AWS Lambda calls
-#
-# Configuration:
-#   - lifespan="off": Disables lifespan events (startup/shutdown) which Lambda doesn't support
-#   - text_mime_types: Ensures proper handling of text responses including SSE streams
-handler = Mangum(
+# This handles API Gateway and Function URL requests
+api_handler = Mangum(
     app,
     lifespan="off",
     text_mime_types=[
@@ -42,3 +41,21 @@ handler = Mangum(
         "text/plain",
     ],
 )
+
+
+def handler(event, context):
+    """
+    Main Lambda handler that routes requests.
+
+    Routes:
+    - API Gateway/Function URL requests → FastAPI app (via Mangum)
+    - Direct Lambda invocation with job_id → Worker handler
+    """
+    # Check if this is a worker invocation (has job_id in event)
+    if isinstance(event, dict) and "job_id" in event and "httpMethod" not in event:
+        logger.info("Routing to worker handler")
+        return worker_handler(event, context)
+
+    # Otherwise, route to FastAPI app (API Gateway/Function URL)
+    logger.info("Routing to API handler")
+    return api_handler(event, context)

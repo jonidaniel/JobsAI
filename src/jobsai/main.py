@@ -108,9 +108,15 @@ def main(
     Raises:
         CancellationError: If cancellation_check returns True during execution
     """
+    print("[MAIN] main() function called")
+    logger.info("[MAIN] main() function called, starting pipeline")
 
     # Extract and transform form submission data
+    print("[MAIN] About to extract form data")
+    logger.info("[MAIN] About to extract form data")
     answers = extract_form_data(form_submissions)
+    print("[MAIN] Form data extracted")
+    logger.info("[MAIN] Form data extracted")
     job_boards = answers["job_boards"]
     deep_mode = answers["deep_mode"]
     cover_letter_num = answers["cover_letter_num"]
@@ -155,16 +161,36 @@ def main(
     # Step 1: Profile the candidate
     # Uses LLM to extract the candidate's skills and experience from the form submissions
     # Returns a string of the candidate profile (e.g. "John Doe is a software engineer with 5 years of experience in Python and Java.")
+    logger.info("About to call progress_callback for profiling phase")
+    print("[MAIN] About to call progress_callback for profiling phase")
     if progress_callback:
+        print(
+            "[MAIN] Calling progress_callback('profiling', 'Creating your profile...')"
+        )
         progress_callback("profiling", "Creating your profile...")
+        print("[MAIN] progress_callback completed")
+    else:
+        print("[MAIN] progress_callback is None!")
+
+    logger.info("About to start profiling step")
+    print("[MAIN] About to start profiling step")
 
     @pipeline_step("Profiling candidate", 1, 6)
     def _step1_profile():
         if cancellation_check and cancellation_check():
             raise CancellationError("Pipeline cancelled during profiling")
-        return profiler.create_profile(form_submissions)
+        logger.info("Calling profiler.create_profile()")
+        print("[MAIN] Calling profiler.create_profile()")
+        result = profiler.create_profile(form_submissions)
+        logger.info("profiler.create_profile() completed")
+        print(
+            f"[MAIN] profiler.create_profile() completed, result length: {len(result) if result else 0}"
+        )
+        return result
 
     profile = _step1_profile()
+    logger.info(f"Profile created, length: {len(profile) if profile else 0}")
+    print(f"[MAIN] Profile created, length: {len(profile) if profile else 0}")
 
     # Step 2: Create search keywords
     # Uses LLM to create search keywords from the candidate profile

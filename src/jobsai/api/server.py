@@ -14,7 +14,7 @@ import logging
 import uuid
 import asyncio
 import json
-import threading
+import os
 from io import BytesIO
 from typing import Dict, Optional
 from collections import defaultdict
@@ -31,6 +31,12 @@ import jobsai.main as backend
 # Frontend payload validation
 from jobsai.config.schemas import FrontendPayload
 from jobsai.utils.exceptions import CancellationError
+from jobsai.utils.state_manager import (
+    store_job_state,
+    get_job_state,
+    update_job_progress,
+    update_job_status,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -124,77 +130,55 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     )
 
 
-# ------------- Background Task -------------
-def run_pipeline_async(job_id: str, payload: FrontendPayload):
+# ------------- Lambda Async Invocation -------------
+def invoke_worker_lambda(job_id: str, payload: FrontendPayload) -> None:
     """
-    Run pipeline asynchronously and update state.
+    Invoke Lambda worker function asynchronously to run the pipeline.
 
-    This function runs in a background thread.
-    The pipeline itself is synchronous, so this function is also synchronous.
+    This uses Lambda's async invocation to ensure the pipeline runs
+    in a separate Lambda invocation that won't be frozen.
+
+    Args:
+        job_id: Job identifier
+        payload: Frontend payload data
     """
-    # Use print as fallback since logger might not work in threads
-    print(f"[THREAD] Pipeline thread started for job_id: {job_id}")
-    logger.info(f"[THREAD] Pipeline thread started for job_id: {job_id}")
-
     try:
-        answers = payload.model_dump(by_alias=True)
-        print(f"[THREAD] Extracted answers, starting pipeline for job_id: {job_id}")
+        import boto3
 
-        def progress_callback(phase: str, message: str):
-            """Update progress state for polling."""
-            logger.info(f"Progress update for job_id {job_id}: {phase} - {message}")
-            if job_id in pipeline_states:
-                pipeline_states[job_id]["progress"] = {
-                    "phase": phase,
-                    "message": message,
-                }
-                logger.info(
-                    f"Updated progress state for job_id {job_id}, state exists: {job_id in pipeline_states}"
-                )
-            else:
-                logger.warning(
-                    f"Job_id {job_id} not in pipeline_states when updating progress! Available: {list(pipeline_states.keys())}"
-                )
-
-        def cancellation_check() -> bool:
-            """Check if pipeline should be cancelled."""
-            return cancellation_flags.get(job_id, False)
-
-        # Run pipeline with progress callback and cancellation check
-        # This is a blocking call, but it runs in a background thread
-        result = backend.main(answers, progress_callback, cancellation_check)
-
-        # Store result
-        pipeline_states[job_id].update(
-            {
-                "status": "complete",
-                "result": {
-                    "document": result["document"],
-                    "filename": result["filename"],
-                    "timestamp": result["timestamp"],
-                },
-            }
+        lambda_client = boto3.client("lambda")
+        worker_function_name = os.environ.get(
+            "WORKER_LAMBDA_FUNCTION_NAME", os.environ.get("LAMBDA_FUNCTION_NAME")
         )
-        logger.info(f"Pipeline completed successfully for job_id: {job_id}")
 
-    except CancellationError:
-        pipeline_states[job_id]["status"] = "cancelled"
-        logger.info(f"Pipeline {job_id} was cancelled")
+        # Prepare event payload
+        event_payload = {
+            "job_id": job_id,
+            "payload": payload.model_dump(by_alias=True),
+        }
+
+        # Invoke Lambda asynchronously (Event invocation type)
+        logger.info(
+            f"Invoking worker Lambda function: {worker_function_name} for job_id: {job_id}"
+        )
+        response = lambda_client.invoke(
+            FunctionName=worker_function_name,
+            InvocationType="Event",  # Async invocation
+            Payload=json.dumps(event_payload),
+        )
+
+        logger.info(
+            f"Worker Lambda invoked successfully for job_id: {job_id}, StatusCode: {response.get('StatusCode')}"
+        )
+
+    except ImportError:
+        logger.error("boto3 not available, cannot invoke worker Lambda")
+        raise RuntimeError("boto3 not available")
     except Exception as e:
         logger.error(
-            f"Pipeline {job_id} failed with exception: {str(e)}", exc_info=True
+            f"Failed to invoke worker Lambda for job_id: {job_id}: {str(e)}",
+            exc_info=True,
         )
-        if job_id in pipeline_states:
-            pipeline_states[job_id].update(
-                {
-                    "status": "error",
-                    "error": str(e),
-                }
-            )
-        else:
-            logger.error(
-                f"Job_id {job_id} not in pipeline_states when handling error! Cannot update state."
-            )
+        raise
 
 
 # ------------- New API Routes -------------
@@ -220,9 +204,9 @@ async def start_pipeline(payload: FrontendPayload) -> JSONResponse:
     job_id = str(uuid.uuid4())
     print(f"[API] Generated job_id: {job_id}")
 
-    # Initialize state IMMEDIATELY and synchronously before starting thread
-    # This ensures state exists even if thread hasn't started yet
-    pipeline_states[job_id] = {
+    # Initialize state in DynamoDB IMMEDIATELY
+    # This ensures state exists before async invocation
+    initial_state = {
         "status": "running",
         "progress": None,
         "result": None,
@@ -230,24 +214,30 @@ async def start_pipeline(payload: FrontendPayload) -> JSONResponse:
         "created_at": datetime.now(),
     }
 
-    logger.info(
-        f"Initialized state for job_id: {job_id}, state exists: {job_id in pipeline_states}"
-    )
+    # Store in both in-memory (for backward compatibility) and DynamoDB
+    pipeline_states[job_id] = initial_state
+    try:
+        store_job_state(job_id, initial_state)
+        logger.info(f"Stored initial state for job_id: {job_id} in DynamoDB")
+    except Exception as e:
+        logger.warning(
+            f"Failed to store state in DynamoDB, using in-memory only: {str(e)}"
+        )
 
-    # Run pipeline in a separate thread (works better in Lambda than BackgroundTasks)
-    # This ensures the response is returned immediately
-    # Note: In Lambda, the thread will continue running even after the response is sent
-    # Lambda keeps the execution context warm for a period after the response
-    thread = threading.Thread(
-        target=run_pipeline_async,
-        args=(job_id, payload),
-        daemon=False,  # Keep thread alive even if main thread exits (Lambda will keep context warm)
-    )
-    thread.start()
+    # Invoke worker Lambda asynchronously
+    # This ensures the pipeline runs in a separate Lambda invocation
+    try:
+        invoke_worker_lambda(job_id, payload)
+        logger.info(f"Invoked worker Lambda for job_id: {job_id}")
+    except Exception as e:
+        logger.error(f"Failed to invoke worker Lambda: {str(e)}", exc_info=True)
+        # Update state to error
+        update_job_status(job_id, "error", error=f"Failed to start pipeline: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to start pipeline",
+        )
 
-    logger.info(
-        f"Started pipeline thread for job_id: {job_id}, total jobs: {len(pipeline_states)}"
-    )
     return JSONResponse({"job_id": job_id})
 
 
@@ -279,19 +269,25 @@ async def get_progress(job_id: str) -> JSONResponse:
     # Cleanup old jobs periodically (only occasionally to avoid overhead)
     cleanup_old_jobs()
 
-    logger.info(
-        f"Progress check for job_id: {job_id}, available jobs: {list(pipeline_states.keys())}"
-    )
-    print(f"[API] Available jobs: {list(pipeline_states.keys())}")
-    state = pipeline_states.get(job_id)
+    # Try to get state from DynamoDB first (persistent across containers)
+    state = get_job_state(job_id)
+
+    # Fallback to in-memory state if DynamoDB fails
+    if not state:
+        logger.info(
+            f"State not found in DynamoDB for job_id: {job_id}, checking in-memory"
+        )
+        state = pipeline_states.get(job_id)
 
     if not state:
         logger.warning(
-            f"Job {job_id} not found in pipeline_states. Available jobs: {list(pipeline_states.keys())}"
+            f"Job {job_id} not found in DynamoDB or in-memory state. Available in-memory jobs: {list(pipeline_states.keys())}"
         )
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Job not found"
         )
+
+    logger.info(f"Retrieved state for job_id: {job_id}, status: {state.get('status')}")
 
     # Build response based on current state
     response_data = {
@@ -354,7 +350,14 @@ async def download_document(job_id: str) -> Response:
     Raises:
         HTTPException: 404 if job not found or not complete
     """
-    state = pipeline_states.get(job_id)
+    from jobsai.utils.state_manager import get_job_state, get_document_from_s3
+
+    # Try to get state from DynamoDB first
+    state = get_job_state(job_id)
+
+    # Fallback to in-memory state
+    if not state:
+        state = pipeline_states.get(job_id)
 
     if not state:
         raise HTTPException(
@@ -374,31 +377,37 @@ async def download_document(job_id: str) -> Response:
             detail="Document result not available",
         )
 
-    document = result.get("document")
     filename = result.get("filename", "cover_letter.docx")
+    s3_key = result.get("s3_key")
 
-    if not document:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Document not available",
-        )
+    # Try to get document from S3 first
+    if s3_key:
+        buffer = get_document_from_s3(s3_key)
+        if buffer:
+            return Response(
+                content=buffer.read(),
+                media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                headers={"Content-Disposition": f"attachment; filename={filename}"},
+            )
 
-    # Convert document to bytes
-    try:
-        buffer = BytesIO()
-        document.save(buffer)
-        buffer.seek(0)
-    except Exception as e:
-        logger.error(f" Failed to convert document to bytes: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to process document for download.",
-        )
+    # Fallback: try in-memory document (for backward compatibility)
+    document = result.get("document")
+    if document:
+        try:
+            buffer = BytesIO()
+            document.save(buffer)
+            buffer.seek(0)
+            return Response(
+                content=buffer.read(),
+                media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                headers={"Content-Disposition": f"attachment; filename={filename}"},
+            )
+        except Exception as e:
+            logger.error(f"Failed to convert in-memory document to bytes: {str(e)}")
 
-    return Response(
-        content=buffer.read(),
-        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    raise HTTPException(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        detail="Document not available in S3 or memory",
     )
 
 
