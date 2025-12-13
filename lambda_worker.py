@@ -13,6 +13,7 @@ from jobsai.utils.state_manager import (
     update_job_status,
     store_job_state,
     store_document_in_s3,
+    get_cancellation_flag,
 )
 from jobsai.config.schemas import FrontendPayload
 from jobsai.utils.exceptions import CancellationError
@@ -68,10 +69,9 @@ def worker_handler(event, context):
             logger.info(f"Progress update - {phase}: {message}")
             update_job_progress(job_id, {"phase": phase, "message": message})
 
-        # Define cancellation check (for future use)
+        # Define cancellation check that reads from DynamoDB
         def cancellation_check() -> bool:
-            # TODO: Check DynamoDB for cancellation flag
-            return False
+            return get_cancellation_flag(job_id)
 
         # Run the pipeline
         logger.info(f"Starting pipeline execution for job_id: {job_id}")

@@ -265,6 +265,36 @@ def get_document_from_s3(s3_key: str) -> Optional[BytesIO]:
         return None
 
 
+def get_cancellation_flag(job_id: str) -> bool:
+    """
+    Check if a job has been cancelled.
+
+    Args:
+        job_id: Job identifier
+
+    Returns:
+        True if job is cancelled, False otherwise
+    """
+    try:
+        dynamodb = get_dynamodb_resource()
+        if dynamodb is None:
+            return False
+
+        table = dynamodb.Table(TABLE_NAME)
+        response = table.get_item(Key={"job_id": job_id})
+
+        if "Item" not in response:
+            return False
+
+        item = response["Item"]
+        status = item.get("status", "")
+        return status == "cancelling" or status == "cancelled"
+
+    except Exception as e:
+        logger.error(f"Failed to check cancellation flag: {str(e)}", exc_info=True)
+        return False
+
+
 def update_job_status(
     job_id: str, status: str, result: Optional[Dict] = None, error: Optional[str] = None
 ) -> None:

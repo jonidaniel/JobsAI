@@ -12,19 +12,17 @@ To run the server:
 
 import logging
 import uuid
-import asyncio
 import json
 import os
 from io import BytesIO
 from typing import Dict, Optional
-from collections import defaultdict
-from datetime import datetime, timedelta
+from datetime import datetime
 
 # from pydantic import ValidationError
-from fastapi import FastAPI, Response, HTTPException, status, Request, BackgroundTasks
+from fastapi import FastAPI, Response, HTTPException, status, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import JSONResponse
 
 import jobsai.main as backend
 
@@ -41,15 +39,16 @@ from jobsai.utils.state_manager import (
 logger = logging.getLogger(__name__)
 
 # ------------- State Management -------------
-# In-memory storage for pipeline state
-# In production, consider using Redis or a database for persistence
+# In-memory storage for pipeline state (fallback for local development)
+# In Lambda, DynamoDB is used for persistent state across containers
+# In-memory state only works within the same container, so it's a fallback only
 pipeline_states: Dict[str, Dict] = (
     {}
 )  # {job_id: {status, progress, result, error, created_at}}
-cancellation_flags: Dict[str, bool] = defaultdict(bool)  # {job_id: bool}
 
-# Cleanup old completed jobs (older than 1 hour)
-JOB_RETENTION_HOURS = 1
+# Note: Job cleanup is handled by DynamoDB TTL (auto-delete after 1 hour)
+# In-memory state cleanup is not needed in Lambda (containers are ephemeral)
+# Cancellation is handled via DynamoDB status updates, not in-memory flags
 
 # ------------- FastAPI Setup -------------
 
@@ -61,8 +60,6 @@ app = FastAPI(
 )
 # Define the allowed origins for CORS
 # Update this with your production frontend URL (S3/CloudFront domain)
-import os
-
 # Get frontend URL from environment variable, or use defaults
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "")
 
@@ -214,8 +211,7 @@ async def start_pipeline(payload: FrontendPayload) -> JSONResponse:
         "created_at": datetime.now(),
     }
 
-    # Store in both in-memory (for backward compatibility) and DynamoDB
-    pipeline_states[job_id] = initial_state
+    # Store in DynamoDB (primary) and in-memory (fallback for local dev)
     try:
         store_job_state(job_id, initial_state)
         logger.info(f"Stored initial state for job_id: {job_id} in DynamoDB")
@@ -223,6 +219,8 @@ async def start_pipeline(payload: FrontendPayload) -> JSONResponse:
         logger.warning(
             f"Failed to store state in DynamoDB, using in-memory only: {str(e)}"
         )
+    # Keep in-memory copy for local development fallback
+    pipeline_states[job_id] = initial_state
 
     # Invoke worker Lambda asynchronously
     # This ensures the pipeline runs in a separate Lambda invocation
@@ -265,9 +263,6 @@ async def get_progress(job_id: str) -> JSONResponse:
     # Explicit logging to verify endpoint is being called
     print(f"[API] /api/progress/{job_id} called")
     logger.info(f"[API] /api/progress/{job_id} endpoint called")
-
-    # Cleanup old jobs periodically (only occasionally to avoid overhead)
-    cleanup_old_jobs()
 
     # Try to get state from DynamoDB first (persistent across containers)
     state = get_job_state(job_id)
@@ -315,7 +310,7 @@ async def cancel_pipeline(job_id: str) -> JSONResponse:
     """
     Cancel a running pipeline.
 
-    Sets a cancellation flag that the pipeline checks during execution.
+    Sets a cancellation flag in DynamoDB that the worker Lambda checks during execution.
     The pipeline will stop gracefully at the next cancellation check point.
 
     Args:
@@ -324,14 +319,26 @@ async def cancel_pipeline(job_id: str) -> JSONResponse:
     Returns:
         JSONResponse: Confirmation of cancellation request
     """
-    if job_id not in pipeline_states:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Job not found"
-        )
+    from jobsai.utils.state_manager import get_job_state, update_job_status
 
-    cancellation_flags[job_id] = True
-    pipeline_states[job_id]["status"] = "cancelling"
-    logger.info(f" Cancellation requested for job_id: {job_id}")
+    # Check if job exists in DynamoDB
+    state = get_job_state(job_id)
+    if not state:
+        # Fallback to in-memory check
+        if job_id not in pipeline_states:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Job not found"
+            )
+
+    # Update status in DynamoDB (worker Lambda reads from here)
+    try:
+        update_job_status(job_id, "cancelling")
+        logger.info(f"Cancellation requested for job_id: {job_id}")
+    except Exception as e:
+        logger.warning(f"Failed to update cancellation in DynamoDB: {str(e)}")
+        # Fallback: update in-memory state for local dev
+        if job_id in pipeline_states:
+            pipeline_states[job_id]["status"] = "cancelling"
 
     return JSONResponse({"status": "cancellation_requested"})
 
@@ -411,20 +418,8 @@ async def download_document(job_id: str) -> Response:
     )
 
 
-def cleanup_old_jobs():
-    """Remove completed jobs older than retention period."""
-    cutoff = datetime.now() - timedelta(hours=JOB_RETENTION_HOURS)
-    jobs_to_remove = [
-        job_id
-        for job_id, state in pipeline_states.items()
-        if state.get("created_at")
-        and state["created_at"] < cutoff
-        and state["status"] in ("complete", "error", "cancelled")
-    ]
-
-    for job_id in jobs_to_remove:
-        pipeline_states.pop(job_id, None)
-        cancellation_flags.pop(job_id, None)
+# Note: Job cleanup is handled by DynamoDB TTL (auto-delete after 1 hour)
+# In-memory state is ephemeral in Lambda, so cleanup is not needed
 
 
 # ------------- Legacy API Route (kept for backward compatibility) -------------
