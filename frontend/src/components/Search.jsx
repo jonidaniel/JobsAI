@@ -29,18 +29,39 @@ import {
 import "../styles/search.css";
 
 /**
- * Search Component
+ * Search Component - Main Questionnaire and Pipeline Interface.
  *
- * Main component for the search/questionnaire section.
+ * This is the primary component for the JobsAI application. It manages the complete
+ * user flow from questionnaire completion through pipeline execution to document download.
+ *
  * Responsibilities:
- * - Renders QuestionSets component
- * - Manages form submission to backend API
- * - Handles file download from server response
- * - Displays error and success messages
+ * - Renders QuestionSetList component for form input
+ * - Validates form data before submission
+ * - Manages asynchronous pipeline execution via API
+ * - Polls for progress updates during pipeline execution
+ * - Handles document download from S3 using presigned URLs
+ * - Displays error and success messages with auto-dismiss
  * - Manages submission state to prevent double-submission
+ * - Handles cancellation of running pipelines
  *
- * Form data flow:
- * QuestionSets -> onFormDataChange callback -> formData state -> handleSubmit -> API
+ * Form Data Flow:
+ *   QuestionSetList -> onFormDataChange -> formData state -> handleSubmit -> API
+ *
+ * Pipeline Flow:
+ *   1. POST /api/start -> Receive job_id
+ *   2. Poll GET /api/progress/{job_id} every 2 seconds
+ *   3. When complete: GET /api/download/{job_id} -> Receive presigned S3 URL
+ *   4. Download document directly from S3
+ *
+ * State Management:
+ *   - formData: Complete form state from all question sets
+ *   - isSubmitting: Prevents double-submission and shows loading state
+ *   - jobId: Current pipeline job identifier for progress tracking
+ *   - currentPhase: Current pipeline phase for progress display
+ *   - error/success: User feedback messages
+ *
+ * @component
+ * @returns {JSX.Element} The Search component with questionnaire and pipeline interface
  */
 export default function Search() {
   // Submission state management

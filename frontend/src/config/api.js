@@ -1,15 +1,20 @@
 /**
- * API Configuration
+ * API Configuration Module.
  *
- * Centralized API endpoint configuration.
- * Supports environment variables via Vite's import.meta.env for different environments.
+ * Centralized configuration for all API endpoints. Supports environment-based
+ * configuration via Vite's import.meta.env for different deployment environments
+ * (development, staging, production).
  *
- * Environment Variable:
- * - VITE_API_BASE_URL: Base URL for the backend API (defaults to localhost:8000)
+ * Environment Variables:
+ *   VITE_API_BASE_URL: Base URL for the backend API.
+ *     - Development: http://localhost:8000 (if not set)
+ *     - Production: Set in GitHub Actions secrets and injected during build
  *
  * Usage:
- * Set VITE_API_BASE_URL in .env file:
- *   VITE_API_BASE_URL=https://api.production.com
+ *   Import endpoints: import { API_ENDPOINTS } from './config/api';
+ *   Use in fetch: fetch(API_ENDPOINTS.START, { method: 'POST', ... });
+ *
+ * @module config/api
  */
 
 // Base URL for API requests
@@ -20,19 +25,33 @@ const API_BASE_URL =
   "https://knccck3mck.execute-api.eu-north-1.amazonaws.com/prod";
 
 /**
- * API Endpoints
+ * API Endpoints Configuration.
  *
- * All available API endpoints for the application.
+ * Complete list of all API endpoints used by the application. All endpoints
+ * are constructed using the API_BASE_URL, ensuring consistent configuration
+ * across environments.
+ *
+ * @constant {Object<string, string>}
+ * @property {string} SUBMIT_FORM - Legacy synchronous endpoint (POST /api/endpoint).
+ *   Kept for backward compatibility. Returns document directly.
+ * @property {string} START - Start pipeline asynchronously (POST /api/start).
+ *   Returns job_id for progress tracking.
+ * @property {string} PROGRESS - Get pipeline progress (GET /api/progress/{job_id}).
+ *   Poll this endpoint every 1-2 seconds for progress updates.
+ * @property {string} CANCEL - Cancel running pipeline (POST /api/cancel/{job_id}).
+ *   Sets cancellation flag in DynamoDB.
+ * @property {string} DOWNLOAD - Get download URL (GET /api/download/{job_id}).
+ *   Returns presigned S3 URL for document download.
  */
 export const API_ENDPOINTS = {
-  /** Legacy endpoint for submitting form data (kept for backward compatibility) */
+  /** @type {string} Legacy endpoint for submitting form data (kept for backward compatibility) */
   SUBMIT_FORM: `${API_BASE_URL}/api/endpoint`,
-  /** Start pipeline asynchronously and get job_id */
+  /** @type {string} Start pipeline asynchronously and get job_id */
   START: `${API_BASE_URL}/api/start`,
-  /** Get current progress (poll this endpoint periodically) */
+  /** @type {string} Get current progress (poll this endpoint periodically) */
   PROGRESS: `${API_BASE_URL}/api/progress`,
-  /** Cancel a running pipeline */
+  /** @type {string} Cancel a running pipeline */
   CANCEL: `${API_BASE_URL}/api/cancel`,
-  /** Download the generated document */
+  /** @type {string} Download the generated document */
   DOWNLOAD: `${API_BASE_URL}/api/download`,
 };

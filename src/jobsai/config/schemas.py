@@ -1,4 +1,28 @@
-# ---------- SCHEMAS ----------
+"""
+Pydantic Schemas for Frontend Payload Validation and Data Transformation.
+
+This module defines Pydantic models for validating and transforming frontend form data.
+It handles the conversion between frontend kebab-case keys and backend snake_case,
+validates data types and constraints, and provides alias mappings for technology names.
+
+Key Models:
+    - FrontendPayload: Main model for validating complete form submissions
+    - GeneralQuestionItem: Validates general questions (job level, boards, etc.)
+    - TechnologySetItem: Validates technology experience levels (sliders)
+    - AdditionalInfoItem: Validates personal description field
+    - ExperienceLevels: Maps numeric experience values to descriptive strings
+    - SkillProfile: Structure for candidate skill profiles
+
+Alias Mappings:
+    - EXPERIENCE_ALIAS_MAP: Maps numeric values (1-7) to experience descriptions
+    - SKILL_ALIAS_MAP: Normalizes technology name variations (e.g., "py" -> "Python")
+    - SUBMIT_ALIAS_MAP: Maps frontend kebab-case keys to proper display names
+
+Note:
+    All models use Pydantic's Field validation and model_validator for complex
+    validation logic. The ConfigDict enables alias generation for kebab-case keys
+    to match frontend naming conventions.
+"""
 
 from typing import List, Dict, Any
 
@@ -605,20 +629,57 @@ class AdditionalInfoItem(BaseModel):
 
 
 class FrontendPayload(BaseModel):
-    """
-    Validates the complete frontend payload structure.
+    """Validates the complete frontend payload structure.
 
+    Main Pydantic model for validating form submissions from the frontend.
     The payload is grouped by question set, where each question set contains
     an array of single-key objects representing individual form fields.
 
+    Required Fields:
+        - general: Exactly 5 items (job-level, job-boards, deep-mode, cover-letter-num, cover-letter-style)
+        - additional-info: Exactly 1 item (personal description, max 3000 characters)
+
+    Optional Fields (technology experience sets):
+        - languages: Programming languages (max 42 items)
+        - databases: Database technologies (max 30 items)
+        - cloud-development: Cloud platforms and tools (max 42 items)
+        - web-frameworks: Web frameworks (max 28 items)
+        - dev-ides: Development IDEs (max 27 items)
+        - llms: Large language models (max 17 items)
+        - doc-and-collab: Documentation and collaboration tools (max 25 items)
+        - operating-systems: Operating systems (max 12 items)
+
     Structure:
         {
-            "general": [GeneralQuestionItem, ...],  # 5 required items
-            "languages": [TechnologySetItem, ...],  # Optional
-            "databases": [TechnologySetItem, ...],  # Optional
+            "general": [
+                {"job-level": ["Expert", "Intermediate"]},
+                {"job-boards": ["Duunitori", "Jobly"]},
+                {"deep-mode": "Yes"},
+                {"cover-letter-num": 5},
+                {"cover-letter-style": ["Professional"]}
+            ],
+            "languages": [
+                {"javascript": 5},
+                {"python": 3},
+                {"text-field1": "TypeScript"}
+            ],
             ...
-            "additional-info": [AdditionalInfoItem]  # 1 required item
+            "additional-info": [
+                {"additional-info": "I am a software engineer with 5 years..."}
+            ]
         }
+
+    Validation:
+        - All general questions are required and validated
+        - Technology sets are optional but validated if present
+        - Experience values must be integers 0-7
+        - Custom text fields are validated for length and content
+        - Additional info must be non-empty string (max 3000 chars)
+
+    Note:
+        Uses Pydantic aliases to handle kebab-case keys from frontend while
+        maintaining snake_case in Python code. The model_validator ensures
+        the structure matches expected format.
     """
 
     general: List[GeneralQuestionItem] = Field(

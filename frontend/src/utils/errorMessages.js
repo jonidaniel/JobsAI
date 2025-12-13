@@ -1,12 +1,30 @@
 /**
- * Converts technical error objects into user-friendly error messages
+ * Converts technical error objects into user-friendly error messages.
  *
- * Provides centralized error message handling for the application.
- * Maps various error types (network errors, HTTP status codes) to
- * user-friendly messages.
+ * Provides centralized error message handling for the application. Maps various
+ * error types (network errors, HTTP status codes, validation errors) to
+ * user-friendly messages that can be displayed to end users.
  *
- * @param {Error} error - The error object from fetch or other operations
- * @returns {string} User-friendly error message
+ * Error Type Mapping:
+ * - Network/TypeError (fetch failures): Connection error message
+ * - HTTP 404: Endpoint not found message
+ * - HTTP 500: Server error message
+ * - HTTP 400: Invalid request message
+ * - Other server errors: Generic server error with details
+ * - Unknown errors: Generic unexpected error message
+ *
+ * @param {Error} error - The error object from fetch, validation, or other operations.
+ *   Should have a message property that may contain status codes or error types.
+ *
+ * @returns {string} User-friendly error message suitable for display in UI.
+ *
+ * @example
+ * try {
+ *   await fetch(url);
+ * } catch (error) {
+ *   const message = getErrorMessage(error);
+ *   setError(message); // Display to user
+ * }
  */
 export function getErrorMessage(error) {
   if (error instanceof TypeError && error.message.includes("fetch")) {

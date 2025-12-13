@@ -40,13 +40,28 @@ logger = logging.getLogger(__name__)
 
 
 def pipeline_step(step_name: str, step_number: int, total_steps: int):
-    """
-    Decorator for pipeline steps that provides consistent error handling and logging.
+    """Decorator for pipeline steps that provides consistent error handling and logging.
+
+    Wraps pipeline step functions to provide uniform logging and error handling
+    across all pipeline stages. Logs step start and completion, and converts
+    any exceptions into RuntimeError with descriptive messages.
 
     Args:
-        step_name: Human-readable name of the step
-        step_number: Step number (1-indexed)
-        total_steps: Total number of steps in pipeline
+        step_name: Human-readable name of the pipeline step (e.g., "Profiling candidate").
+        step_number: Step number in the pipeline (1-indexed, e.g., 1, 2, 3...).
+        total_steps: Total number of steps in the complete pipeline (typically 6).
+
+    Returns:
+        Decorated function that wraps the original with logging and error handling.
+
+    Raises:
+        RuntimeError: If the wrapped function raises any exception. The error message
+            includes the step name and number for easier debugging.
+
+    Example:
+        @pipeline_step("Profiling candidate", 1, 6)
+        def _step1_profile():
+            return profiler.create_profile(form_submissions)
     """
 
     def decorator(func: Callable) -> Callable:

@@ -1,8 +1,23 @@
 """
-Lambda worker handler for pipeline execution.
+Lambda Worker Handler for Asynchronous Pipeline Execution.
 
-This handler is invoked asynchronously to run the pipeline.
-It reads job data from the event, executes the pipeline, and stores results in DynamoDB.
+This module provides the worker Lambda handler that executes the JobsAI pipeline
+asynchronously. It is invoked by the main Lambda function using async invocation
+to ensure long-running pipelines don't block API requests.
+
+The worker:
+1. Receives job data from the Lambda event
+2. Executes the complete pipeline (profiling, searching, scoring, analyzing, generating)
+3. Stores the generated document in S3
+4. Updates job state in DynamoDB with progress and results
+
+This separation allows the API to respond immediately while the pipeline runs
+in a separate Lambda invocation that can run for up to 15 minutes.
+
+Note:
+    This handler is invoked asynchronously (InvocationType="Event"), so it does
+    not return a response to the caller. All communication happens through DynamoDB
+    state updates that the API polls via /api/progress endpoint.
 """
 
 import json
@@ -29,20 +44,31 @@ logger = logging.getLogger(__name__)
 
 
 def worker_handler(event, context):
-    """
-    Lambda worker handler for pipeline execution.
+    """Lambda worker handler for asynchronous pipeline execution.
 
-    This function is invoked asynchronously by the main Lambda function.
-    It runs the pipeline and updates state in DynamoDB.
+    Executes the complete JobsAI pipeline for a given job, updating progress in
+    DynamoDB throughout execution. Stores the final document in S3 and updates
+    the job status to "complete", "error", or "cancelled".
 
     Args:
-        event: Lambda event containing:
-            - job_id: Job identifier
-            - payload: FrontendPayload data (as dict)
-        context: Lambda context
+        event: Lambda event dictionary containing:
+            - job_id (str): Unique job identifier (UUID)
+            - payload (dict): FrontendPayload data as dictionary (will be validated)
+        context: Lambda context object (unused but required by Lambda interface).
 
     Returns:
-        dict: Result status
+        dict: Response dictionary with statusCode and body:
+            - statusCode 200: Pipeline completed or cancelled successfully
+            - statusCode 400: Missing required fields (job_id or payload)
+            - statusCode 500: Pipeline execution failed
+
+    Raises:
+        CancellationError: If pipeline is cancelled during execution (handled internally).
+
+    Note:
+        This function is called asynchronously, so the return value is not used by
+        the caller. All state updates happen through DynamoDB, which the API polls.
+        Progress updates are written to DynamoDB via the progress_callback function.
     """
     try:
         logger.info(f"Worker handler invoked with event: {json.dumps(event)}")

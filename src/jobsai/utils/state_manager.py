@@ -1,9 +1,23 @@
 """
-State management for pipeline jobs using DynamoDB and S3.
+State Management for Pipeline Jobs using DynamoDB and S3.
 
-This module provides functions to store and retrieve pipeline job state
-from DynamoDB, ensuring state persists across Lambda invocations and containers.
-Documents are stored in S3 since they cannot be stored in DynamoDB.
+This module provides functions to store and retrieve pipeline job state from DynamoDB,
+ensuring state persists across Lambda invocations and containers. Documents are stored
+in S3 since they cannot be stored in DynamoDB.
+
+The module handles:
+- Job state persistence (status, progress, results, errors)
+- Document storage and retrieval from S3
+- Presigned URL generation for secure document downloads
+- Cancellation flag management
+
+Environment Variables:
+    DYNAMODB_TABLE_NAME: Name of the DynamoDB table (default: "jobsai-pipeline-states")
+    S3_DOCUMENTS_BUCKET: Name of the S3 bucket for document storage
+
+Note:
+    All functions use lazy initialization for AWS clients to avoid import-time
+    dependencies and support local development without AWS credentials.
 """
 
 import json
@@ -11,7 +25,6 @@ import logging
 import os
 from datetime import datetime, timedelta
 from typing import Dict, Optional
-from io import BytesIO
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +40,15 @@ _dynamodb_resource = None
 
 
 def get_dynamodb_client():
-    """Get or create DynamoDB client (lazy initialization)."""
+    """Get or create DynamoDB client using lazy initialization.
+
+    Returns:
+        boto3.client: DynamoDB client instance, or None if boto3 is not available.
+
+    Note:
+        Uses global variable to cache the client instance across function calls.
+        This avoids creating multiple clients and improves performance.
+    """
     global _dynamodb_client
     if _dynamodb_client is None:
         try:
@@ -41,7 +62,15 @@ def get_dynamodb_client():
 
 
 def get_dynamodb_resource():
-    """Get or create DynamoDB resource (lazy initialization)."""
+    """Get or create DynamoDB resource using lazy initialization.
+
+    Returns:
+        boto3.resource: DynamoDB resource instance, or None if boto3 is not available.
+
+    Note:
+        Uses global variable to cache the resource instance across function calls.
+        The resource interface is preferred for simpler table operations.
+    """
     global _dynamodb_resource
     if _dynamodb_resource is None:
         try:
@@ -55,12 +84,26 @@ def get_dynamodb_resource():
 
 
 def store_job_state(job_id: str, state: Dict) -> None:
-    """
-    Store job state in DynamoDB.
+    """Store job state in DynamoDB.
+
+    Creates or updates a job state record in DynamoDB with the provided state information.
+    Automatically sets TTL (Time To Live) to 1 hour from creation time for automatic cleanup.
 
     Args:
-        job_id: Job identifier
-        state: State dictionary containing status, progress, result, error, created_at
+        job_id: Unique job identifier (UUID string).
+        state: State dictionary containing:
+            - status (str): Current job status (e.g., "running", "complete", "error")
+            - progress (dict, optional): Progress information with "phase" and "message"
+            - result (dict, optional): Result data (document metadata, not the document itself)
+            - error (str, optional): Error message if job failed
+            - created_at (datetime): Timestamp when job was created
+
+    Raises:
+        Exception: If DynamoDB operation fails or boto3 is not available.
+
+    Note:
+        Document objects cannot be stored in DynamoDB. They must be stored separately
+        in S3 using store_document_in_s3().
     """
     try:
         dynamodb = get_dynamodb_resource()
@@ -110,14 +153,26 @@ def store_job_state(job_id: str, state: Dict) -> None:
 
 
 def get_job_state(job_id: str) -> Optional[Dict]:
-    """
-    Retrieve job state from DynamoDB.
+    """Retrieve job state from DynamoDB.
+
+    Fetches the current state of a pipeline job from DynamoDB and reconstructs
+    the state dictionary with proper data types.
 
     Args:
-        job_id: Job identifier
+        job_id: Unique job identifier (UUID string).
 
     Returns:
-        State dictionary or None if not found
+        Dictionary containing job state with keys:
+            - status (str): Current job status
+            - created_at (datetime): Job creation timestamp
+            - progress (dict, optional): Current progress information
+            - result (dict, optional): Result metadata (includes S3 key for document)
+            - error (str, optional): Error message if job failed
+        Returns None if job not found or if DynamoDB operation fails.
+
+    Note:
+        Progress and result fields are JSON-encoded in DynamoDB and are automatically
+        decoded when retrieved.
     """
     try:
         dynamodb = get_dynamodb_resource()
@@ -163,12 +218,20 @@ def get_job_state(job_id: str) -> Optional[Dict]:
 
 
 def update_job_progress(job_id: str, progress: Dict) -> None:
-    """
-    Update job progress in DynamoDB.
+    """Update job progress in DynamoDB.
+
+    Updates only the progress field of a job state record without affecting
+    other fields. Used during pipeline execution to provide real-time progress updates.
 
     Args:
-        job_id: Job identifier
-        progress: Progress dictionary with phase and message
+        job_id: Unique job identifier (UUID string).
+        progress: Progress dictionary containing:
+            - phase (str): Current pipeline phase (e.g., "profiling", "searching", "scoring")
+            - message (str): Human-readable progress message
+
+    Note:
+        This function uses DynamoDB's UpdateItem operation to update only the progress
+        field, making it efficient for frequent progress updates during pipeline execution.
     """
     try:
         dynamodb = get_dynamodb_resource()
@@ -193,17 +256,27 @@ def update_job_progress(job_id: str, progress: Dict) -> None:
         )
 
 
-def store_document_in_s3(job_id: str, document, filename: str) -> str:
-    """
-    Store document in S3 and return the S3 key.
+def store_document_in_s3(job_id: str, document, filename: str) -> Optional[str]:
+    """Store document in S3 and return the S3 key.
+
+    Converts a python-docx Document object to bytes and uploads it to S3.
+    The document is stored in a structured path: documents/{job_id}/{filename}
 
     Args:
-        job_id: Job identifier
-        document: python-docx Document object
-        filename: Filename for the document
+        job_id: Unique job identifier (UUID string).
+        document: python-docx Document object to store.
+        filename: Filename for the document (e.g., "20250115_143022_cover_letter.docx").
 
     Returns:
-        S3 key (path) where document is stored
+        S3 key (string path) where document is stored, or None if storage fails.
+        Format: "documents/{job_id}/{filename}"
+
+    Raises:
+        Exception: If S3 upload fails or boto3 is not available.
+
+    Note:
+        The document is stored with the correct Content-Type header for Word documents.
+        This ensures proper handling when downloading from S3.
     """
     try:
         import boto3
@@ -238,15 +311,24 @@ def store_document_in_s3(job_id: str, document, filename: str) -> str:
 
 
 def get_presigned_s3_url(s3_key: str, expiration: int = 3600) -> Optional[str]:
-    """
-    Generate a presigned URL for downloading a document from S3.
+    """Generate a presigned URL for downloading a document from S3.
+
+    Creates a time-limited, signed URL that allows direct download from S3 without
+    requiring AWS credentials. This bypasses API Gateway binary encoding issues.
 
     Args:
-        s3_key: S3 key (path) of the document
-        expiration: URL expiration time in seconds (default: 1 hour)
+        s3_key: S3 key (path) of the document (e.g., "documents/{job_id}/{filename}").
+        expiration: URL expiration time in seconds. Default is 3600 (1 hour).
+            Maximum is 604800 (7 days) for presigned URLs.
 
     Returns:
-        Presigned URL string, or None if error
+        Presigned URL string that can be used to download the document directly
+        from S3, or None if URL generation fails.
+
+    Note:
+        The presigned URL includes ResponseContentType and ResponseContentDisposition
+        headers to ensure the browser handles the download correctly. The URL is
+        cryptographically signed and cannot be modified without invalidating it.
     """
     try:
         import boto3
@@ -284,14 +366,21 @@ def get_presigned_s3_url(s3_key: str, expiration: int = 3600) -> Optional[str]:
 
 
 def get_document_from_s3(s3_key: str) -> Optional[bytes]:
-    """
-    Retrieve document from S3.
+    """Retrieve document bytes from S3.
+
+    Downloads a document from S3 and returns its raw bytes. This is used as a
+    fallback when presigned URLs are not available (e.g., for legacy endpoints).
 
     Args:
-        s3_key: S3 key (path) of the document
+        s3_key: S3 key (path) of the document (e.g., "documents/{job_id}/{filename}").
 
     Returns:
-        bytes: Document bytes, or None if not found
+        Raw document bytes as a bytes object, or None if retrieval fails.
+        The bytes can be used directly in HTTP responses or converted to a Blob.
+
+    Note:
+        This function reads the entire document into memory. For large documents,
+        consider using presigned URLs instead to allow direct browser downloads.
     """
     try:
         import boto3
@@ -317,14 +406,22 @@ def get_document_from_s3(s3_key: str) -> Optional[bytes]:
 
 
 def get_cancellation_flag(job_id: str) -> bool:
-    """
-    Check if a job has been cancelled.
+    """Check if a job has been cancelled.
+
+    Queries DynamoDB to determine if a job's status has been set to "cancelling"
+    or "cancelled". Used by the pipeline to check for cancellation requests
+    during long-running operations.
 
     Args:
-        job_id: Job identifier
+        job_id: Unique job identifier (UUID string).
 
     Returns:
-        True if job is cancelled, False otherwise
+        True if job status is "cancelling" or "cancelled", False otherwise.
+        Returns False if job not found or if DynamoDB operation fails.
+
+    Note:
+        This function is called frequently during pipeline execution to enable
+        responsive cancellation. It uses a simple status check for efficiency.
     """
     try:
         dynamodb = get_dynamodb_resource()
@@ -349,14 +446,27 @@ def get_cancellation_flag(job_id: str) -> bool:
 def update_job_status(
     job_id: str, status: str, result: Optional[Dict] = None, error: Optional[str] = None
 ) -> None:
-    """
-    Update job status in DynamoDB.
+    """Update job status in DynamoDB.
+
+    Updates the status and optionally the result or error fields of a job state record.
+    Used to mark jobs as complete, failed, or cancelled.
 
     Args:
-        job_id: Job identifier
-        status: New status (running, complete, error, cancelled)
-        result: Optional result dictionary
-        error: Optional error message
+        job_id: Unique job identifier (UUID string).
+        status: New job status. Valid values:
+            - "running": Pipeline is currently executing
+            - "complete": Pipeline finished successfully
+            - "error": Pipeline encountered an error
+            - "cancelled": Pipeline was cancelled by user
+        result: Optional dictionary containing result metadata:
+            - filename (str): Generated document filename
+            - timestamp (str): Job timestamp
+            - s3_key (str): S3 key where document is stored
+        error: Optional error message string if job failed.
+
+    Note:
+        The result dictionary should not contain Document objects as they cannot
+        be serialized to JSON. Only metadata should be included.
     """
     try:
         dynamodb = get_dynamodb_resource()

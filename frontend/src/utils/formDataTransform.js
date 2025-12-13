@@ -6,16 +6,40 @@ import {
 import { SLIDER_DATA } from "../config/sliders";
 
 /**
- * Transforms flat form data into grouped structure for backend API
+ * Transforms flat form data into grouped structure for backend API.
+ *
+ * Converts the flat key-value form data structure from the QuestionSets component
+ * into the nested structure expected by the backend API. Filters out empty values
+ * for optional fields while ensuring required fields are always included.
  *
  * Process:
- * 1. Filters out empty values (empty strings, 0 numbers, empty arrays)
- * 2. Groups data by question set
- * 3. Returns structured object matching backend expectations
+ * 1. Filters out empty values (empty strings, 0 numbers, empty arrays) for optional fields
+ * 2. Groups data by question set name (general, languages, databases, etc.)
+ * 3. Converts each field to single-key object format: [{key: value}, ...]
+ * 4. Handles special cases (cover-letter-num conversion, required fields)
  *
- * @param {Object} formData - Flat form data object from QuestionSets component
- * @returns {Object} Grouped data structure by question set
- *                   Format: { "general": [{key: value}, ...], "languages": [...], ... }
+ * @param {Object} formData - Flat form data object from QuestionSets component.
+ *   Keys are question field names (e.g., "job-level", "javascript", "text-field1").
+ *   Values can be strings, numbers, or arrays depending on question type.
+ *
+ * @returns {Object} Grouped data structure by question set:
+ *   {
+ *     "general": [{key: value}, ...],  // Always 5 items (required)
+ *     "languages": [{key: value}, ...],  // Only if has data
+ *     "databases": [{key: value}, ...], // Only if has data
+ *     ...
+ *     "additional-info": [{key: value}] // Always 1 item (required)
+ *   }
+ *
+ * @example
+ * // Input
+ * { "job-level": ["Expert"], "javascript": 5, "text-field1": "TypeScript" }
+ *
+ * // Output
+ * {
+ *   "general": [{"job-level": ["Expert"]}, ...],
+ *   "languages": [{"javascript": 5}, {"text-field1": "TypeScript"}]
+ * }
  */
 export function transformFormData(formData) {
   /**

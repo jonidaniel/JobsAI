@@ -14,26 +14,24 @@ import logging
 import uuid
 import json
 import os
-import base64
 from io import BytesIO
-from typing import Dict, Optional
+from typing import Dict
 from datetime import datetime
 
 # from pydantic import ValidationError
 from fastapi import FastAPI, Response, HTTPException, status, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import JSONResponse
 
 import jobsai.main as backend
 
 # Frontend payload validation
 from jobsai.config.schemas import FrontendPayload
-from jobsai.utils.exceptions import CancellationError
+
 from jobsai.utils.state_manager import (
     store_job_state,
     get_job_state,
-    update_job_progress,
     update_job_status,
 )
 
@@ -93,7 +91,19 @@ app.add_middleware(
 # Add request logging middleware to debug
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
-    """Log all incoming requests for debugging."""
+    """Log all incoming HTTP requests for debugging and monitoring.
+
+    Middleware function that logs every incoming request method and path,
+    as well as the response status code. Useful for debugging API issues
+    and monitoring request patterns in CloudWatch logs.
+
+    Args:
+        request: FastAPI Request object containing request details.
+        call_next: Callable that processes the request and returns the response.
+
+    Returns:
+        Response: The response from the next middleware/handler.
+    """
     print(f"[MIDDLEWARE] {request.method} {request.url.path}")
     logger.info(f"Request: {request.method} {request.url.path}")
     response = await call_next(request)
@@ -103,8 +113,24 @@ async def log_requests(request: Request, call_next):
 
 # Exception handler for Pydantic validation errors
 @app.exception_handler(RequestValidationError)
-async def validation_exception_handler(request: Request, exc: RequestValidationError):
-    """Handle Pydantic validation errors and return detailed error messages."""
+async def validation_exception_handler(
+    request: Request, exc: RequestValidationError
+) -> JSONResponse:
+    """Handle Pydantic validation errors and return detailed error messages.
+
+    Custom exception handler for request validation errors. Provides detailed
+    information about which fields failed validation and why, making it easier
+    for frontend developers to debug form submission issues.
+
+    Args:
+        request: FastAPI Request object (unused but required by handler signature).
+        exc: RequestValidationError containing validation error details.
+
+    Returns:
+        JSONResponse with status 422 (Unprocessable Entity) containing:
+            - detail: List of validation errors with field paths and messages
+            - message: User-friendly error message
+    """
     errors = exc.errors()
     error_details = []
     for error in errors:
@@ -130,15 +156,28 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 
 # ------------- Lambda Async Invocation -------------
 def invoke_worker_lambda(job_id: str, payload: FrontendPayload) -> None:
-    """
-    Invoke Lambda worker function asynchronously to run the pipeline.
+    """Invoke Lambda worker function asynchronously to run the pipeline.
 
-    This uses Lambda's async invocation to ensure the pipeline runs
-    in a separate Lambda invocation that won't be frozen.
+    Uses AWS Lambda's asynchronous invocation (InvocationType="Event") to start
+    the pipeline in a separate Lambda invocation. This ensures the pipeline can
+    run for up to 15 minutes without blocking the API response.
+
+    The worker Lambda receives the job_id and payload, executes the pipeline,
+    and updates progress in DynamoDB throughout execution.
 
     Args:
-        job_id: Job identifier
-        payload: Frontend payload data
+        job_id: Unique job identifier (UUID string) for this pipeline run.
+        payload: FrontendPayload object containing validated form data.
+
+    Raises:
+        RuntimeError: If boto3 is not available (should not happen in Lambda).
+        Exception: If Lambda invocation fails (permissions, function not found, etc.).
+
+    Note:
+        The function name is determined by the WORKER_LAMBDA_FUNCTION_NAME environment
+        variable, with fallback to LAMBDA_FUNCTION_NAME (same function, different handler).
+        The invocation is asynchronous, so this function returns immediately after
+        queuing the invocation request.
     """
     try:
         import boto3
@@ -182,18 +221,35 @@ def invoke_worker_lambda(job_id: str, payload: FrontendPayload) -> None:
 # ------------- New API Routes -------------
 @app.post("/api/start")
 async def start_pipeline(payload: FrontendPayload) -> JSONResponse:
-    """
-    Start pipeline asynchronously and return job_id for progress tracking.
+    """Start pipeline asynchronously and return job_id for progress tracking.
 
-    This endpoint initiates the pipeline in the background and immediately
-    returns a job_id that can be used to track progress via SSE.
+    Initiates the JobsAI pipeline in the background by invoking a worker Lambda
+    function asynchronously. Immediately returns a job_id that the client can use
+    to poll for progress updates via the /api/progress endpoint.
+
+    The pipeline runs in a separate Lambda invocation, allowing this endpoint to
+    return quickly while the long-running pipeline executes independently.
 
     Args:
-        payload (FrontendPayload): Form data from frontend
+        payload: FrontendPayload object containing validated form data:
+            - General questions (job level, job boards, deep mode, etc.)
+            - Technology experience levels (slider values 0-7)
+            - Multiple choice selections
+            - Cover letter preferences
 
     Returns:
-        JSONResponse: Contains job_id for progress tracking
-            {"job_id": "uuid-string"}
+        JSONResponse with job_id:
+            {
+                "job_id": "uuid-string"  # Use this to poll /api/progress/{job_id}
+            }
+
+    Raises:
+        HTTPException 500: If worker Lambda invocation fails or state storage fails.
+
+    Note:
+        The job state is immediately stored in DynamoDB before invoking the worker
+        to ensure the job_id is available for progress polling even if the worker
+        hasn't started yet.
     """
     # Explicit logging to verify endpoint is being called
     print(f"[API] /api/start called")
@@ -242,24 +298,44 @@ async def start_pipeline(payload: FrontendPayload) -> JSONResponse:
 
 @app.get("/api/progress/{job_id}")
 async def get_progress(job_id: str) -> JSONResponse:
-    """
-    Get current progress for a pipeline job.
+    """Get current progress for a pipeline job.
 
-    This endpoint returns the current status and progress of a pipeline job.
-    The client should poll this endpoint periodically (e.g., every 1-2 seconds)
-    to get progress updates.
+    Returns the current status and progress information for a pipeline job.
+    The client should poll this endpoint periodically (recommended: every 1-2 seconds)
+    to receive real-time progress updates during pipeline execution.
 
-    Response format:
-        - {"status": "running", "progress": {"phase": "...", "message": "..."}}
-        - {"status": "complete", "filename": "..."}
-        - {"status": "error", "error": "..."}
-        - {"status": "cancelled"}
+    The endpoint reads state from DynamoDB (primary) with fallback to in-memory
+    state for local development. This ensures progress is visible across different
+    Lambda containers.
 
     Args:
-        job_id (str): Job identifier returned from /api/start
+        job_id: Unique job identifier (UUID string) returned from /api/start.
 
     Returns:
-        JSONResponse: Current job status and progress
+        JSONResponse with job status and progress:
+            - Running: {
+                "status": "running",
+                "progress": {"phase": "profiling|searching|scoring|analyzing|generating", "message": "..."}
+              }
+            - Complete: {
+                "status": "complete",
+                "filename": "20250115_143022_cover_letter.docx"
+              }
+            - Error: {
+                "status": "error",
+                "error": "Error message describing what went wrong"
+              }
+            - Cancelled: {
+                "status": "cancelled"
+              }
+
+    Raises:
+        HTTPException 404: If job_id is not found in DynamoDB or in-memory state.
+
+    Note:
+        Progress updates are written to DynamoDB by the worker Lambda during
+        pipeline execution. The polling interval should balance responsiveness
+        with API rate limits (typically 1-2 seconds is optimal).
     """
     # Explicit logging to verify endpoint is being called
     print(f"[API] /api/progress/{job_id} called")
@@ -308,17 +384,32 @@ async def get_progress(job_id: str) -> JSONResponse:
 
 @app.post("/api/cancel/{job_id}")
 async def cancel_pipeline(job_id: str) -> JSONResponse:
-    """
-    Cancel a running pipeline.
+    """Cancel a running pipeline.
 
-    Sets a cancellation flag in DynamoDB that the worker Lambda checks during execution.
-    The pipeline will stop gracefully at the next cancellation check point.
+    Requests cancellation of a pipeline job by updating its status to "cancelling"
+    in DynamoDB. The worker Lambda checks this status during execution and will
+    stop gracefully at the next cancellation check point.
+
+    Cancellation is not immediate - the pipeline will complete its current step
+    before checking for cancellation. This ensures data consistency and prevents
+    partial state corruption.
 
     Args:
-        job_id (str): Job identifier to cancel
+        job_id: Unique job identifier (UUID string) of the job to cancel.
 
     Returns:
-        JSONResponse: Confirmation of cancellation request
+        JSONResponse with cancellation confirmation:
+            {
+                "status": "cancellation_requested"
+            }
+
+    Raises:
+        HTTPException 404: If job_id is not found in DynamoDB or in-memory state.
+
+    Note:
+        The cancellation status is stored in DynamoDB, which the worker Lambda
+        reads via get_cancellation_flag(). The pipeline checks for cancellation
+        at key points: before each major step and during long-running operations.
     """
     from jobsai.utils.state_manager import get_job_state, update_job_status
 
@@ -345,18 +436,34 @@ async def cancel_pipeline(job_id: str) -> JSONResponse:
 
 
 @app.get("/api/download/{job_id}")
-async def download_document(job_id: str) -> Response:
-    """
-    Download the generated cover letter document.
+async def download_document(job_id: str) -> JSONResponse:
+    """Get presigned S3 URL for downloading the generated cover letter document.
+
+    Returns a presigned S3 URL that allows the client to download the document
+    directly from S3. This approach bypasses API Gateway's binary encoding issues
+    and provides better performance for large file downloads.
+
+    The presigned URL is valid for 1 hour and includes the correct Content-Type
+    and Content-Disposition headers for proper browser handling.
 
     Args:
-        job_id (str): Job identifier
+        job_id: Unique job identifier (UUID string) of the completed job.
 
     Returns:
-        Response: Word document (.docx) file download
+        JSONResponse with download information:
+            {
+                "download_url": "https://s3...presigned-url...",
+                "filename": "20250115_143022_cover_letter.docx"
+            }
 
     Raises:
-        HTTPException: 404 if job not found or not complete
+        HTTPException 404: If job_id is not found.
+        HTTPException 400: If job status is not "complete" (document not ready).
+
+    Note:
+        The client should use the download_url to fetch the document directly
+        from S3. This avoids API Gateway binary encoding issues and provides
+        better download performance. The URL expires after 1 hour.
     """
     from jobsai.utils.state_manager import get_job_state, get_document_from_s3
 

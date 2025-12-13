@@ -4,16 +4,32 @@ import {
 } from "../config/generalQuestions";
 
 /**
- * Validates that all mandatory questions are answered
+ * Validates that all mandatory questions are answered.
  *
- * Validates:
- * - All 5 general questions (questions 1-5)
- * - Personal description question (question 10)
+ * Performs client-side validation of required form fields before submission.
+ * Validates all 5 general questions and the personal description field.
  *
- * @param {Object} formData - The form data object
- * @returns {Object} Validation result with:
- *   - isValid: boolean indicating if all mandatory questions are answered
- *   - errors: object mapping question keys to error messages
+ * Validation Rules:
+ * - Question 1 (job-level): At least one option, max 2, must be adjacent if 2
+ * - Question 2 (job-boards): At least one job board selected
+ * - Question 3 (deep-mode): Must select Yes or No
+ * - Question 4 (cover-letter-num): Must select a number (1-10)
+ * - Question 5 (cover-letter-style): At least one style, max 2 styles
+ * - Question 10 (additional-info): Personal description cannot be empty
+ *
+ * @param {Object} formData - The form data object containing all question responses.
+ *   Keys match GENERAL_QUESTION_KEYS and "additional-info".
+ *
+ * @returns {Object} Validation result object:
+ *   - isValid {boolean}: True if all mandatory questions are valid
+ *   - errors {Object<string, string>}: Map of field keys to error messages.
+ *     Empty object if validation passes.
+ *
+ * @example
+ * const result = validateGeneralQuestions(formData);
+ * if (!result.isValid) {
+ *   // Display errors: result.errors
+ * }
  */
 export function validateGeneralQuestions(formData) {
   const errors = {};

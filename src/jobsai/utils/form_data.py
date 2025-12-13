@@ -5,48 +5,78 @@ This module provides utilities for extracting and transforming frontend form
 submission data into a structured format suitable for the JobsAI pipeline.
 
 The main function, extract_form_data(), processes the complex nested structure
-from the frontend and extracts:
-- The selected job boards
-- The deep mode setting
-- The number of cover letters to generate
-- The style of the cover letters
-- The technology stack organized by category
+from the frontend (grouped by question set) and extracts key configuration values
+and technology experience data into a flat, pipeline-friendly format.
+
+Extraction Process:
+    1. Extracts general questions (job boards, deep mode, cover letter settings)
+    2. Flattens technology experience sets into a single tech_stack array
+    3. Validates and normalizes data types (strings to integers where needed)
+    4. Returns structured dictionary ready for pipeline consumption
+
+The extracted data is used by:
+    - ProfilerAgent: To understand candidate preferences and experience
+    - SearcherService: To determine which job boards to search
+    - ScorerService: To match jobs against technology stack
+    - GeneratorAgent: To determine cover letter count and style
 """
 
 from typing import Dict
 
 
 def extract_form_data(form_submissions: Dict) -> Dict:
-    """
-    Extract and transform form submission data into structured format.
+    """Extract and transform form submission data into structured format.
 
-    Processes the frontend payload to extract:
-    - The selected job boards
-    - The deep mode setting
-    - The number of cover letters to generate
-    - The style of the cover letters
-    - The technology stack
+    Processes the frontend payload (validated FrontendPayload structure) to extract
+    key configuration values and flatten technology experience data. Converts the
+    nested question-set structure into a flat dictionary suitable for pipeline agents.
+
+    Extraction Details:
+        - General questions: Extracts from "general" array (5 required items)
+        - Technology stack: Flattens all technology sets into single array of arrays
+        - Data types: Converts cover-letter-num from string to integer
+        - Normalization: Handles both array and string formats for cover-letter-style
 
     Args:
-        form_submissions (Dict): Form data from frontend containing:
-            - "general": Array of 5 single-key objects with general questions (job level, job boards, deep mode, cover letter num, cover letter style)
-            - "languages": Array of technology set items with programming, scripting, and markup languages
-            - "databases": Array of technology set items with databases
-            - "cloud-development": Array of technology set items with cloud development tools
-            - "web-frameworks": Array of technology set items with web frameworks and technologies
-            - "dev-ides": Array of technology set items with development IDEs
-            - "llms": Array of technology set items with LLMs
-            - "doc-and-collab": Array of technology set items with document and collaboration tools
-            - "operating-systems": Array of technology set items with computer operating systems
-            - "additional-info": Array with personal description
+        form_submissions: Form data dictionary from frontend (validated FrontendPayload).
+            Structure:
+            {
+                "general": [
+                    {"job-level": ["Expert"]},
+                    {"job-boards": ["Duunitori", "Jobly"]},
+                    {"deep-mode": "Yes"},
+                    {"cover-letter-num": "5"},
+                    {"cover-letter-style": ["Professional"]}
+                ],
+                "languages": [{"javascript": 5}, {"python": 3}],
+                "databases": [{"postgresql": 4}],
+                ...
+                "additional-info": [{"additional-info": "Personal description..."}]
+            }
 
     Returns:
-        Dict: Structured dictionary with keys:
-            - "job_boards": Array of strings, contains one or more strings
-            - "deep_mode": String, either "Yes" or "No"
-            - "cover_letter_num": Integer, between 1 and 10
-            - "cover_letter_style": Array of strings, contains one or more strings
-            - "tech_stack": Array of arrays, contains one or more arrays of technology set items
+        Dictionary with extracted and transformed data:
+        {
+            "job_boards": List[str] - Selected job boards (e.g., ["Duunitori", "Jobly"])
+            "deep_mode": str - "Yes" or "No" for full description fetching
+            "cover_letter_num": int - Number of cover letters to generate (1-10)
+            "cover_letter_style": List[str] - Writing styles (e.g., ["Professional", "Friendly"])
+            "tech_stack": List[List[Dict]] - Technology experience grouped by category:
+                [
+                    [{"javascript": 5}, {"python": 3}],  # languages
+                    [{"postgresql": 4}, {"mysql": 3}],  # databases
+                    ...
+                ]
+        }
+
+    Raises:
+        KeyError: If required general question keys are missing.
+        ValueError: If cover-letter-num cannot be converted to integer or is out of range.
+
+    Note:
+        The tech_stack is a list of lists, where each inner list represents one
+        technology category (languages, databases, etc.). This structure allows
+        the ScorerService to process each category separately for better matching.
     """
 
     # The selected job boards, deep mode setting, number of cover letters to generate, and style of the cover letters

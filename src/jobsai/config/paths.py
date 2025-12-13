@@ -1,8 +1,32 @@
 """
-JobsAI Path and URL Configuration
+JobsAI Path and URL Configuration.
 
 This module defines all file system paths and URL templates used throughout the system.
-All directories are automatically created if they don't exist.
+It handles environment-specific path configuration (Lambda vs local development) and
+automatically creates required directories on first import.
+
+Path Configuration:
+    - Lambda: Uses /tmp/jobsai for writable storage (Lambda's only writable location)
+    - Local: Uses src/jobsai for development (relative to project root)
+
+Detection:
+    - Checks for LAMBDA_TASK_ROOT environment variable to detect Lambda environment
+    - Falls back to local paths if not in Lambda
+
+Directory Structure:
+    - memory/vector_db/: Skill profiles (JSON files)
+    - data/job_listings/raw/: Raw job listings from scrapers (JSON files)
+    - data/job_listings/scored/: Scored job listings (JSON files)
+    - data/job_analyses/: Job analyses (text files)
+    - data/cover_letters/: Generated cover letter documents (DOCX files)
+
+URL Templates:
+    - Duunitori: Search URL template with query slug and page number
+    - Jobly: Search URL template with encoded query and page number
+
+Note:
+    All directories are created automatically on module import. In Lambda, directory
+    creation may fail silently if /tmp is full, but this is logged as a warning.
 """
 
 # ---------- PATHS ----------

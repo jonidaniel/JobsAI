@@ -1,12 +1,26 @@
 /**
- * Downloads a blob file to the user's device
+ * Downloads a blob file to the user's device.
  *
- * Extracts filename from Content-Disposition header if available,
- * creates a temporary download link, triggers the download, and cleans up.
+ * Creates a temporary download link, triggers the browser download, and cleans up
+ * resources. Handles filename extraction from Content-Disposition headers with support
+ * for RFC 5987 encoding. Preserves scroll position during download to prevent page jumps.
  *
- * @param {Blob} blob - The blob data to download
- * @param {Headers} headers - Response headers to extract filename from
- * @param {string} defaultFilename - Default filename if not found in headers (default: "document.docx")
+ * @param {Blob} blob - The blob data to download (typically a Word document).
+ * @param {Headers} headers - Response headers object to extract filename from.
+ *   Expected header: Content-Disposition with filename parameter.
+ * @param {string} [defaultFilename="document.docx"] - Default filename to use if not
+ *   found in headers. This is typically provided from the API JSON response.
+ *
+ * @example
+ * // Download a document from API response
+ * const response = await fetch(downloadUrl);
+ * const blob = await response.blob();
+ * downloadBlob(blob, response.headers, "cover_letter.docx");
+ *
+ * @note
+ * The function prioritizes the defaultFilename parameter over header extraction.
+ * Filename extraction from headers only occurs if defaultFilename is the generic
+ * "document.docx" value, ensuring API-provided filenames are always used.
  */
 export function downloadBlob(blob, headers, defaultFilename = "document.docx") {
   // Use the provided defaultFilename (from JSON response) as primary source
