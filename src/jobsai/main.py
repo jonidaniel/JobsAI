@@ -19,7 +19,8 @@ For overall project description, see README.md or docs/README.md.
 
 import logging
 from datetime import datetime
-from typing import Dict, Callable, Any, Optional
+from typing import Dict, Callable, Any, Optional, List, Union
+from docx import Document
 from functools import wraps
 
 from jobsai.agents import (
@@ -87,10 +88,10 @@ def pipeline_step(step_name: str, step_number: int, total_steps: int):
 
 
 def main(
-    form_submissions: Dict,
+    form_submissions: Dict[str, Any],
     progress_callback: Optional[Callable[[str, str], None]] = None,
     cancellation_check: Optional[Callable[[], bool]] = None,
-) -> Dict:
+) -> Dict[str, Union[Document, List[Document], str, List[str]]]:
     """
     Launch the complete JobsAI agent pipeline.
 
@@ -177,7 +178,7 @@ def main(
         progress_callback("profiling", "Creating your profile...")
 
     @pipeline_step("Profiling candidate", 1, 6)
-    def _step1_profile():
+    def _step1_profile() -> str:
         if cancellation_check and cancellation_check():
             raise CancellationError("Pipeline cancelled during profiling")
         return profiler.create_profile(form_submissions)
@@ -192,7 +193,7 @@ def main(
         raise CancellationError("Pipeline cancelled before keyword creation")
 
     @pipeline_step("Creating keywords", 2, 6)
-    def _step2_keywords():
+    def _step2_keywords() -> List[str]:
         if cancellation_check and cancellation_check():
             raise CancellationError("Pipeline cancelled during keyword creation")
         return query_builder.create_keywords(profile)
@@ -211,7 +212,7 @@ def main(
         raise CancellationError("Pipeline cancelled before job search")
 
     @pipeline_step("Searching jobs", 3, 6)
-    def _step3_search():
+    def _step3_search() -> List[Dict[str, Any]]:
         if cancellation_check and cancellation_check():
             raise CancellationError("Pipeline cancelled during job search")
         # Pass cancellation_check to searcher for checking during long operations
@@ -231,7 +232,7 @@ def main(
         raise CancellationError("Pipeline cancelled before scoring")
 
     @pipeline_step("Scoring jobs", 4, 6)
-    def _step4_score():
+    def _step4_score() -> List[Dict[str, Any]]:
         if cancellation_check and cancellation_check():
             raise CancellationError("Pipeline cancelled during scoring")
         # Pass cancellation_check to scorer for checking during job processing loop
@@ -256,7 +257,7 @@ def main(
         raise CancellationError("Pipeline cancelled before analysis")
 
     @pipeline_step("Analyzing jobs", 5, 6)
-    def _step5_analyze():
+    def _step5_analyze() -> str:
         if cancellation_check and cancellation_check():
             raise CancellationError("Pipeline cancelled during analysis")
         # Pass cancellation_check to analyzer for checking during LLM calls in loop
@@ -277,7 +278,7 @@ def main(
         raise CancellationError("Pipeline cancelled before generation")
 
     @pipeline_step("Generating cover letters", 6, 6)
-    def _step6_generate():
+    def _step6_generate() -> List[Document]:
         if cancellation_check and cancellation_check():
             raise CancellationError("Pipeline cancelled during generation")
         return generator.generate_letters(

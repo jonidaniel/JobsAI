@@ -16,7 +16,7 @@ The service:
 import os
 import logging
 import json
-from typing import List, Dict, Optional, Callable
+from typing import List, Dict, Optional, Callable, Any
 
 from jobsai.config.paths import RAW_JOB_LISTING_PATH
 from jobsai.utils.exceptions import CancellationError
@@ -45,11 +45,8 @@ class SearcherService:
             Format: YYYYMMDD_HHMMSS (e.g., "20250115_143022")
     """
 
-    def __init__(
-        self,
-        timestamp: str,
-    ):
-        self.timestamp = timestamp
+    def __init__(self, timestamp: str) -> None:
+        self.timestamp: str = timestamp
 
     # ------------------------------
     # Public interface
@@ -145,7 +142,9 @@ class SearcherService:
     # Internal functions
     # ------------------------------
 
-    def _save_raw_jobs(self, jobs: List[Dict], board: str, query: str) -> None:
+    def _save_raw_jobs(
+        self, jobs: List[Dict[str, Any]], board: str, query: str
+    ) -> None:
         """Save raw job listings to disk for debugging and record-keeping.
 
         Persists job listings to JSON files with a structured filename that
@@ -180,7 +179,7 @@ class SearcherService:
 
         logger.info(" Saved %d raw jobs to %s", len(jobs), path)
 
-    def _deduplicate_jobs(self, jobs: List[Dict]) -> List[Dict]:
+    def _deduplicate_jobs(self, jobs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Remove duplicate job listings based on URL.
 
         Since the same job may appear in multiple search results (different

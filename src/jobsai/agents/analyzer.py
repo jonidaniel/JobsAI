@@ -14,7 +14,7 @@ The analysis includes:
 
 import os
 import logging
-from typing import List, Dict, Optional, Callable
+from typing import List, Dict, Optional, Callable, Any
 
 from jobsai.config.paths import JOB_ANALYSIS_PATH
 from jobsai.config.prompts import (
@@ -44,15 +44,15 @@ class AnalyzerAgent:
             Format: YYYYMMDD_HHMMSS (e.g., "20250115_143022")
     """
 
-    def __init__(self, timestamp: str):
-        self.timestamp = timestamp
+    def __init__(self, timestamp: str) -> None:
+        self.timestamp: str = timestamp
 
     # ------------------------------
     # Public interface
     # ------------------------------
     def write_analysis(
         self,
-        jobs: List[Dict],
+        jobs: List[Dict[str, Any]],
         profile: str,
         analysis_size: int,
         cancellation_check: Optional[Callable[[], bool]] = None,

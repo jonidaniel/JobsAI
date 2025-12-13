@@ -16,7 +16,7 @@ Functions:
 """
 
 import re
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Union
 
 from jobsai.config.schemas import SKILL_ALIAS_MAP
 

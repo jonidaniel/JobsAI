@@ -33,7 +33,7 @@ import time
 import logging
 import requests
 import re
-from typing import List, Dict, Optional, Callable
+from typing import List, Dict, Optional, Callable, Any
 from urllib.parse import urljoin, quote_plus
 
 from bs4 import BeautifulSoup
@@ -58,7 +58,7 @@ def scrape_jobly(
     session: Optional[requests.Session] = None,
     per_page_limit: Optional[int] = None,
     cancellation_check: Optional[Callable[[], bool]] = None,
-) -> List[Dict]:
+) -> List[Dict[str, Any]]:
     """
     Fetch job listings from Jobly.
 
@@ -233,7 +233,7 @@ def _fetch_page(
     return None
 
 
-def _parse_job_card(job_card: BeautifulSoup) -> Dict:
+def _parse_job_card(job_card: BeautifulSoup) -> Dict[str, Any]:
     """
     Parse a search-result job card into a partial job dict
 

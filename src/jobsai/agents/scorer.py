@@ -16,7 +16,7 @@ The scoring process:
 import os
 import logging
 import json
-from typing import List, Dict, Optional, Callable
+from typing import List, Dict, Optional, Callable, Any, Union
 
 from jobsai.config.paths import SCORED_JOB_LISTING_PATH
 from jobsai.utils.exceptions import CancellationError
@@ -44,18 +44,18 @@ class ScorerService:
             Format: YYYYMMDD_HHMMSS (e.g., "20250115_143022")
     """
 
-    def __init__(self, timestamp: str):
-        self.timestamp = timestamp
+    def __init__(self, timestamp: str) -> None:
+        self.timestamp: str = timestamp
 
     # ------------------------------
     # Public interface
     # ------------------------------
     def score_jobs(
         self,
-        raw_jobs: List[Dict],
-        tech_stack: List,
+        raw_jobs: List[Dict[str, Any]],
+        tech_stack: List[List[Dict[str, Union[int, str]]]],
         cancellation_check: Optional[Callable[[], bool]] = None,
-    ) -> List[Dict]:
+    ) -> List[Dict[str, Any]]:
         """Score the raw job listings based on the candidate profile.
 
         Saves the scored jobs to /data/job_listings/scored/{timestamp}_scored_jobs.json.
@@ -103,7 +103,9 @@ class ScorerService:
     # Internal functions
     # ------------------------------
 
-    def _score_job_against_tech_stack(self, job: Dict, tech_stack: List[str]) -> Dict:
+    def _score_job_against_tech_stack(
+        self, job: Dict[str, Any], tech_stack: List[str]
+    ) -> Dict[str, Any]:
         """
         Score a single job against a tech stack.
 
@@ -157,10 +159,10 @@ class ScorerService:
 
     def _compute_scores(
         self,
-        raw_jobs: List[Dict],
-        tech_stack: List,
+        raw_jobs: List[Dict[str, Any]],
+        tech_stack: List[List[Dict[str, Union[int, str]]]],
         cancellation_check: Optional[Callable[[], bool]] = None,
-    ) -> List[Dict]:
+    ) -> List[Dict[str, Any]]:
         """
         Compute a relevancy score for each job based on the candidate tech stack.
 
@@ -224,7 +226,7 @@ class ScorerService:
 
         return scored_jobs
 
-    def _save_scored_jobs(self, jobs: List[Dict]):
+    def _save_scored_jobs(self, jobs: List[Dict[str, Any]]) -> None:
         """Save the scored jobs.
 
         Saves to /data/job_listings/scored/{timestamp}_scored_jobs.json.

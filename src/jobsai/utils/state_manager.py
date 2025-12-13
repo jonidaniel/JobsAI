@@ -24,7 +24,7 @@ import json
 import logging
 import os
 from datetime import datetime, timedelta
-from typing import Dict, Optional
+from typing import Dict, Optional, Any, Union
 
 logger = logging.getLogger(__name__)
 
@@ -35,11 +35,11 @@ TABLE_NAME = os.environ.get("DYNAMODB_TABLE_NAME", "jobsai-pipeline-states")
 S3_BUCKET = os.environ.get("S3_DOCUMENTS_BUCKET", None)
 
 # Initialize DynamoDB client (lazy initialization)
-_dynamodb_client = None
-_dynamodb_resource = None
+_dynamodb_client: Optional[Any] = None
+_dynamodb_resource: Optional[Any] = None
 
 
-def get_dynamodb_client():
+def get_dynamodb_client() -> Optional[Any]:
     """Get or create DynamoDB client using lazy initialization.
 
     Returns:
@@ -61,7 +61,7 @@ def get_dynamodb_client():
     return _dynamodb_client
 
 
-def get_dynamodb_resource():
+def get_dynamodb_resource() -> Optional[Any]:
     """Get or create DynamoDB resource using lazy initialization.
 
     Returns:
@@ -152,7 +152,7 @@ def store_job_state(job_id: str, state: Dict) -> None:
         raise
 
 
-def get_job_state(job_id: str) -> Optional[Dict]:
+def get_job_state(job_id: str) -> Optional[Dict[str, Any]]:
     """Retrieve job state from DynamoDB.
 
     Fetches the current state of a pipeline job from DynamoDB and reconstructs
@@ -256,7 +256,7 @@ def update_job_progress(job_id: str, progress: Dict) -> None:
         )
 
 
-def store_document_in_s3(job_id: str, document, filename: str) -> Optional[str]:
+def store_document_in_s3(job_id: str, document: Any, filename: str) -> Optional[str]:
     """Store document in S3 and return the S3 key.
 
     Converts a python-docx Document object to bytes and uploads it to S3.
@@ -444,7 +444,10 @@ def get_cancellation_flag(job_id: str) -> bool:
 
 
 def update_job_status(
-    job_id: str, status: str, result: Optional[Dict] = None, error: Optional[str] = None
+    job_id: str,
+    status: str,
+    result: Optional[Dict[str, Any]] = None,
+    error: Optional[str] = None,
 ) -> None:
     """Update job status in DynamoDB.
 

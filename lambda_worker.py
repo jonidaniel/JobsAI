@@ -22,6 +22,7 @@ Note:
 
 import json
 import logging
+from typing import Any, Dict, Tuple, List
 from jobsai.main import main
 from jobsai.utils.state_manager import (
     update_job_progress,
@@ -108,7 +109,7 @@ def _store_documents_and_prepare_result(
     return s3_keys, result_data
 
 
-def worker_handler(event, context):
+def worker_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """Lambda worker handler for asynchronous pipeline execution.
 
     Executes the complete JobsAI pipeline for a given job, updating progress in

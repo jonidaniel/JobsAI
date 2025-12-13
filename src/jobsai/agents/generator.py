@@ -16,7 +16,7 @@ The generated documents include:
 import os
 import logging
 from datetime import datetime
-from typing import Union, List
+from typing import Union, List, Any
 
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -49,8 +49,8 @@ class GeneratorAgent:
             Format: YYYYMMDD_HHMMSS (e.g., "20250115_143022")
     """
 
-    def __init__(self, timestamp: str):
-        self.timestamp = timestamp
+    def __init__(self, timestamp: str) -> None:
+        self.timestamp: str = timestamp
 
     # ------------------------------
     # Public interface

@@ -12,7 +12,7 @@ The generated keywords are typically two-word phrases (e.g., "ai engineer",
 
 import logging
 import json
-from typing import List
+from typing import List, Dict, Any
 
 from jobsai.config.prompts import (
     QUERY_BUILDER_SYSTEM_PROMPT as SYSTEM_PROMPT,
@@ -94,7 +94,7 @@ class QueryBuilderAgent:
 
                 # Parse the JSON dictionary
                 try:
-                    keywords_dict = json.loads(json_text)
+                    keywords_dict: Dict[str, str] = json.loads(json_text)
                 except json.JSONDecodeError as e:
                     if attempt < max_retries:
                         logger.warning(

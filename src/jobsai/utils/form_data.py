@@ -21,10 +21,12 @@ The extracted data is used by:
     - GeneratorAgent: To determine cover letter count and style
 """
 
-from typing import Dict
+from typing import Dict, Any, List, Union
 
 
-def extract_form_data(form_submissions: Dict) -> Dict:
+def extract_form_data(
+    form_submissions: Dict[str, Any],
+) -> Dict[str, Union[List[str], str, int, List[List[Dict[str, Union[int, str]]]]]]:
     """Extract and transform form submission data into structured format.
 
     Processes the frontend payload (validated FrontendPayload structure) to extract

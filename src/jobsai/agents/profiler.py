@@ -12,7 +12,7 @@ The profile is used throughout the pipeline for:
 - Writing personalized cover letters
 """
 
-from typing import Dict
+from typing import Dict, Any
 
 from jobsai.utils.llms import call_llm
 
@@ -43,7 +43,7 @@ class ProfilerAgent:
     # ------------------------------
     # Public interface
     # ------------------------------
-    def create_profile(self, form_submissions: Dict) -> str:
+    def create_profile(self, form_submissions: Dict[str, Any]) -> str:
         """Create a comprehensive candidate profile from form submissions.
 
         Processes the form data (technology experience levels, job preferences,

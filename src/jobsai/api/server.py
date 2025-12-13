@@ -87,7 +87,9 @@ app.add_middleware(
 
 # Add request logging middleware to debug
 @app.middleware("http")
-async def log_requests(request: Request, call_next):
+async def log_requests(
+    request: Request, call_next: Any
+) -> Any:  # Response type from FastAPI
     """Log all incoming HTTP requests for debugging and monitoring.
 
     Middleware function that logs every incoming request method and path,
@@ -557,7 +559,7 @@ async def download_document(
 
 
 # ------------- Helper Functions -------------
-def get_job_state_with_fallback(job_id: str) -> Dict:
+def get_job_state_with_fallback(job_id: str) -> Dict[str, Any]:
     """Get job state from DynamoDB with in-memory fallback.
 
     Attempts to retrieve job state from DynamoDB first (persistent across containers),

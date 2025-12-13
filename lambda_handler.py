@@ -26,6 +26,7 @@ Environment Variables:
 """
 
 import logging
+from typing import Any, Dict
 from mangum import Mangum
 from jobsai.api.server import app
 from lambda_worker import worker_handler
@@ -56,7 +57,7 @@ api_handler = Mangum(
 )
 
 
-def handler(event, context):
+def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """Main Lambda handler that routes incoming requests to appropriate handlers.
 
     This function serves as the entry point for all Lambda invocations. It examines
