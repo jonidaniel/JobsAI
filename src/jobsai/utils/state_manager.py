@@ -262,7 +262,12 @@ def get_presigned_s3_url(s3_key: str, expiration: int = 3600) -> Optional[str]:
 
         url = s3_client.generate_presigned_url(
             "get_object",
-            Params={"Bucket": S3_BUCKET, "Key": s3_key},
+            Params={
+                "Bucket": S3_BUCKET,
+                "Key": s3_key,
+                "ResponseContentType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                "ResponseContentDisposition": f'attachment; filename="{s3_key.split("/")[-1]}"',
+            },
             ExpiresIn=expiration,
         )
 

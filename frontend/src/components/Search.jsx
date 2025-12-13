@@ -466,7 +466,14 @@ export default function Search() {
         if (data.download_url) {
           // Download directly from S3 using presigned URL
           const s3Response = await fetch(data.download_url);
-          const blob = await s3Response.blob();
+
+          // Ensure we get the binary data correctly
+          // Use arrayBuffer first to preserve binary integrity, then create blob with correct MIME type
+          const arrayBuffer = await s3Response.arrayBuffer();
+          const blob = new Blob([arrayBuffer], {
+            type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          });
+
           downloadBlob(blob, s3Response.headers, data.filename || filename);
           return;
         }
