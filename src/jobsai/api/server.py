@@ -86,6 +86,17 @@ app.add_middleware(
 )
 
 
+# Add request logging middleware to debug
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    """Log all incoming requests for debugging."""
+    print(f"[MIDDLEWARE] {request.method} {request.url.path}")
+    logger.info(f"Request: {request.method} {request.url.path}")
+    response = await call_next(request)
+    print(f"[MIDDLEWARE] Response status: {response.status_code}")
+    return response
+
+
 # Exception handler for Pydantic validation errors
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
@@ -121,17 +132,29 @@ def run_pipeline_async(job_id: str, payload: FrontendPayload):
     This function runs in a background thread.
     The pipeline itself is synchronous, so this function is also synchronous.
     """
+    # Use print as fallback since logger might not work in threads
+    print(f"[THREAD] Pipeline thread started for job_id: {job_id}")
+    logger.info(f"[THREAD] Pipeline thread started for job_id: {job_id}")
+
     try:
-        logger.info(f"Pipeline thread started for job_id: {job_id}")
         answers = payload.model_dump(by_alias=True)
+        print(f"[THREAD] Extracted answers, starting pipeline for job_id: {job_id}")
 
         def progress_callback(phase: str, message: str):
-            """Update progress state for SSE streaming."""
+            """Update progress state for polling."""
+            logger.info(f"Progress update for job_id {job_id}: {phase} - {message}")
             if job_id in pipeline_states:
                 pipeline_states[job_id]["progress"] = {
                     "phase": phase,
                     "message": message,
                 }
+                logger.info(
+                    f"Updated progress state for job_id {job_id}, state exists: {job_id in pipeline_states}"
+                )
+            else:
+                logger.warning(
+                    f"Job_id {job_id} not in pipeline_states when updating progress! Available: {list(pipeline_states.keys())}"
+                )
 
         def cancellation_check() -> bool:
             """Check if pipeline should be cancelled."""
@@ -158,13 +181,20 @@ def run_pipeline_async(job_id: str, payload: FrontendPayload):
         pipeline_states[job_id]["status"] = "cancelled"
         logger.info(f"Pipeline {job_id} was cancelled")
     except Exception as e:
-        pipeline_states[job_id].update(
-            {
-                "status": "error",
-                "error": str(e),
-            }
+        logger.error(
+            f"Pipeline {job_id} failed with exception: {str(e)}", exc_info=True
         )
-        logger.error(f"Pipeline {job_id} failed: {str(e)}", exc_info=True)
+        if job_id in pipeline_states:
+            pipeline_states[job_id].update(
+                {
+                    "status": "error",
+                    "error": str(e),
+                }
+            )
+        else:
+            logger.error(
+                f"Job_id {job_id} not in pipeline_states when handling error! Cannot update state."
+            )
 
 
 # ------------- New API Routes -------------
@@ -183,7 +213,12 @@ async def start_pipeline(payload: FrontendPayload) -> JSONResponse:
         JSONResponse: Contains job_id for progress tracking
             {"job_id": "uuid-string"}
     """
+    # Explicit logging to verify endpoint is being called
+    print(f"[API] /api/start called")
+    logger.info("[API] /api/start endpoint called")
+
     job_id = str(uuid.uuid4())
+    print(f"[API] Generated job_id: {job_id}")
 
     # Initialize state IMMEDIATELY and synchronously before starting thread
     # This ensures state exists even if thread hasn't started yet
@@ -237,12 +272,17 @@ async def get_progress(job_id: str) -> JSONResponse:
     Returns:
         JSONResponse: Current job status and progress
     """
+    # Explicit logging to verify endpoint is being called
+    print(f"[API] /api/progress/{job_id} called")
+    logger.info(f"[API] /api/progress/{job_id} endpoint called")
+
     # Cleanup old jobs periodically (only occasionally to avoid overhead)
     cleanup_old_jobs()
 
     logger.info(
         f"Progress check for job_id: {job_id}, available jobs: {list(pipeline_states.keys())}"
     )
+    print(f"[API] Available jobs: {list(pipeline_states.keys())}")
     state = pipeline_states.get(job_id)
 
     if not state:
