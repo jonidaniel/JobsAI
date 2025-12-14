@@ -63,6 +63,9 @@ export default function Search() {
   const [currentPhase, setCurrentPhase] = useState(null);
   const [jobId, setJobId] = useState(null);
   const pollingIntervalRef = useRef(null);
+  // Download prompt state
+  const [showDownloadPrompt, setShowDownloadPrompt] = useState(false);
+  const [downloadInfo, setDownloadInfo] = useState(null); // { jobId, filenames }
   // Consolidated submission state ref
   // Tracks submission-related state that doesn't need to trigger re-renders
   const submissionState = useRef({
@@ -306,20 +309,19 @@ export default function Search() {
               pollingIntervalRef.current = null;
             }
 
-            // Download the document(s)
-            // Handle both single document (backward compatibility) and multiple documents
-            if (data.filenames && Array.isArray(data.filenames)) {
-              // Multiple documents - download all
-              await downloadDocument(job_id, data.filenames);
-            } else {
-              // Single document (backward compatibility)
-              await downloadDocument(
-                job_id,
-                data.filename || "cover_letter.docx"
-              );
-            }
+            // Store download info and show prompt instead of auto-downloading
+            const filenames =
+              data.filenames && Array.isArray(data.filenames)
+                ? data.filenames
+                : [data.filename || "cover_letter.docx"];
 
-            // Show success message
+            setDownloadInfo({
+              jobId: job_id,
+              filenames: filenames,
+            });
+            setShowDownloadPrompt(true);
+
+            // Update submission state
             setSuccess(true);
             setError(null);
             submissionState.current.justCompleted = true;
@@ -327,15 +329,6 @@ export default function Search() {
             setIsSubmitting(false);
             setCurrentPhase(null);
             setJobId(null);
-
-            // Auto-dismiss success message after timeout
-            if (successTimeoutRef.current) {
-              clearTimeout(successTimeoutRef.current);
-            }
-            successTimeoutRef.current = setTimeout(() => {
-              setSuccess(false);
-              successTimeoutRef.current = null;
-            }, SUCCESS_MESSAGE_TIMEOUT);
           }
           // Handle errors
           else if (data.status === "error") {
@@ -553,6 +546,65 @@ export default function Search() {
     downloadBlob(blob, s3Response.headers, filename);
   };
 
+  /**
+   * Handles the "Yes" button click in the download prompt.
+   * Triggers the download and closes the prompt.
+   */
+  const handleDownloadYes = async () => {
+    if (!downloadInfo) return;
+
+    try {
+      // Save scroll position before download
+      submissionState.current.savedScrollPosition =
+        window.scrollY || window.pageYOffset;
+
+      // Download the document(s)
+      if (downloadInfo.filenames.length > 1) {
+        // Multiple documents
+        await downloadDocument(downloadInfo.jobId, downloadInfo.filenames);
+      } else {
+        // Single document
+        await downloadDocument(downloadInfo.jobId, downloadInfo.filenames[0]);
+      }
+
+      // Close the prompt
+      setShowDownloadPrompt(false);
+      setDownloadInfo(null);
+
+      // Auto-dismiss success message after timeout
+      if (successTimeoutRef.current) {
+        clearTimeout(successTimeoutRef.current);
+      }
+      successTimeoutRef.current = setTimeout(() => {
+        setSuccess(false);
+        successTimeoutRef.current = null;
+      }, SUCCESS_MESSAGE_TIMEOUT);
+    } catch (error) {
+      console.error("Error downloading document:", error);
+      setError("Failed to download documents. Please try again.");
+      setShowDownloadPrompt(false);
+      setDownloadInfo(null);
+    }
+  };
+
+  /**
+   * Handles the "No" button click in the download prompt.
+   * Closes the prompt without downloading.
+   */
+  const handleDownloadNo = () => {
+    setShowDownloadPrompt(false);
+    setDownloadInfo(null);
+
+    // Auto-dismiss success message after timeout
+    if (successTimeoutRef.current) {
+      clearTimeout(successTimeoutRef.current);
+    }
+    successTimeoutRef.current = setTimeout(() => {
+      setSuccess(false);
+      successTimeoutRef.current = null;
+    }, SUCCESS_MESSAGE_TIMEOUT);
+  };
+
   return (
     <section id="search">
       <h2>Search</h2>
@@ -618,6 +670,36 @@ export default function Search() {
             skipInitialScroll={submissionState.current.justCompleted}
           />
         )}
+      {/* Download prompt - shown when documents are ready */}
+      {showDownloadPrompt && downloadInfo && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 sm:p-8 md:p-10 max-w-md mx-4 shadow-xl">
+            <h3 className="text-xl sm:text-2xl md:text-3xl font-semibold text-gray-800 mb-4 text-center">
+              Generated {downloadInfo.filenames.length} cover letter
+              {downloadInfo.filenames.length !== 1 ? "s" : ""}
+            </h3>
+            <p className="text-base sm:text-lg md:text-xl text-gray-600 mb-6 text-center">
+              Would you like to download the files?
+            </p>
+            <div className="flex justify-center gap-4">
+              <button
+                onClick={handleDownloadYes}
+                className="px-6 sm:px-8 py-2 sm:py-3 bg-blue-600 text-white font-semibold rounded-lg shadow hover:bg-blue-700 transition-colors text-base sm:text-lg md:text-xl"
+                aria-label="Download the cover letters"
+              >
+                Yes
+              </button>
+              <button
+                onClick={handleDownloadNo}
+                className="px-6 sm:px-8 py-2 sm:py-3 bg-gray-300 text-gray-800 font-semibold rounded-lg shadow hover:bg-gray-400 transition-colors text-base sm:text-lg md:text-xl"
+                aria-label="Skip downloading"
+              >
+                No
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Success message - displayed when document is successfully downloaded */}
       {success && <SuccessMessage />}
       {/* Error message - displayed when submission fails */}
