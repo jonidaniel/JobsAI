@@ -1,12 +1,3 @@
-// jobsai-api HTTP API Gateway URL:
-// https://7ustmwu4wh.execute-api.eu-north-1.amazonaws.com/api/<yourEndpoint>
-//
-// Example:
-// https://7ustmwu4wh.execute-api.eu-north-1.amazonaws.com/api/start
-// https://7ustmwu4wh.execute-api.eu-north-1.amazonaws.com/api/progress
-// https://7ustmwu4wh.execute-api.eu-north-1.amazonaws.com/api/cancel
-// https://7ustmwu4wh.execute-api.eu-north-1.amazonaws.com/api/download
-
 import { useState, useEffect, useRef, useCallback } from "react";
 
 import QuestionSetList from "./QuestionSetList";
