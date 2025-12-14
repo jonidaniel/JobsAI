@@ -716,25 +716,27 @@ export default function Search() {
       {/* Submit button and cancel button */}
       <div className="flex justify-center items-center gap-4 mt-6">
         {/* Only show submit button when NOT submitting */}
-        {/* Show "Find Again" only after user has responded to download prompt (Yes or No) */}
-        {!isSubmitting && (
-          <button
-            id="submit-btn"
-            onClick={handleSubmit}
-            className="text-lg sm:text-xl md:text-2xl lg:text-3xl px-4 sm:px-6 py-2 sm:py-3 border border-white bg-transparent text-white font-semibold rounded-lg shadow disabled:opacity-50 disabled:cursor-not-allowed"
-            aria-label={
-              submissionState.current.hasSuccessfulSubmission &&
+        {/* Hide button entirely if there's a successful submission but user hasn't responded to download prompt yet */}
+        {!isSubmitting &&
+          (!submissionState.current.hasSuccessfulSubmission ||
+            hasRespondedToPrompt) && (
+            <button
+              id="submit-btn"
+              onClick={handleSubmit}
+              className="text-lg sm:text-xl md:text-2xl lg:text-3xl px-4 sm:px-6 py-2 sm:py-3 border border-white bg-transparent text-white font-semibold rounded-lg shadow disabled:opacity-50 disabled:cursor-not-allowed"
+              aria-label={
+                submissionState.current.hasSuccessfulSubmission &&
+                hasRespondedToPrompt
+                  ? "Start a new job search"
+                  : "Submit form and generate job search document"
+              }
+            >
+              {submissionState.current.hasSuccessfulSubmission &&
               hasRespondedToPrompt
-                ? "Start a new job search"
-                : "Submit form and generate job search document"
-            }
-          >
-            {submissionState.current.hasSuccessfulSubmission &&
-            hasRespondedToPrompt
-              ? "Find Again"
-              : "Find Jobs"}
-          </button>
-        )}
+                ? "Find Again"
+                : "Find Jobs"}
+            </button>
+          )}
         {/* Cancel button - show immediately when submitting */}
         {isSubmitting && (
           <button
