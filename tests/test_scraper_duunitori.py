@@ -47,9 +47,8 @@ def test_parse_job_card_basic():
     html = """
     <div class="job-box">
         <h3 class="job-box__title">
-            <a href="/tyopaikat/123" class="job-box__hover gtm-search-result">Junior AI Engineer</a>
+            <a href="/tyopaikat/123" class="job-box__hover gtm-search-result" data-company="ACME Corp">Junior AI Engineer</a>
         </h3>
-        <div class="job-box__hover gtm-search-result" data-company="ACME Corp" href="/tyopaikat/123"></div>
         <div class="job-box__job-location">Helsinki</div>
         <div class="job-box__job-posted">2025-02-10</div>
     </div>
@@ -124,12 +123,17 @@ def test_fetch_page_retry_on_failure():
 def test_fetch_page_handles_429():
     """Test that 429 (rate limit) triggers retry."""
     mock_session = MagicMock()
+    # Return 429 on all attempts to test retry logic
     mock_session.get.return_value = MockResponse(text="", status_code=429)
 
-    response = _fetch_page(mock_session, "https://example.com", retries=1, backoff=0.01)
+    response = _fetch_page(mock_session, "https://example.com", retries=2, backoff=0.01)
 
-    # Should retry and eventually return the 429 response
-    assert mock_session.get.call_count > 1
+    # Should retry multiple times
+    # With retries=2, the loop runs from 1 to 2 (inclusive) = 2 iterations
+    assert mock_session.get.call_count == 2
+    # Should return the 429 response after retries (not None)
+    assert response is not None
+    assert response.status_code == 429
 
 
 # ------------------------------------------------------------

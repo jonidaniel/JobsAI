@@ -96,9 +96,7 @@ def searcher():
 # ----------------------------
 # Tests
 # ----------------------------
-@patch(
-    "jobsai.utils.scrapers.duunitori.scrape_duunitori", return_value=mock_jobs_duunitori
-)
+@patch("jobsai.agents.searcher.scrape_duunitori", return_value=mock_jobs_duunitori)
 def test_deduplication(mock_scraper, searcher):
     """Test that duplicate jobs (same URL) are removed."""
     results = searcher.search_jobs(
@@ -115,9 +113,7 @@ def test_deduplication(mock_scraper, searcher):
     assert len(urls) == len(set(urls))
 
 
-@patch(
-    "jobsai.utils.scrapers.duunitori.scrape_duunitori", return_value=mock_jobs_duunitori
-)
+@patch("jobsai.agents.searcher.scrape_duunitori", return_value=mock_jobs_duunitori)
 def test_raw_json_saved(mock_scraper, searcher):
     """Test that raw job listings are saved to JSON files."""
     from jobsai.config.paths import RAW_JOB_LISTING_PATH
@@ -137,7 +133,7 @@ def test_raw_json_saved(mock_scraper, searcher):
             assert isinstance(data, list)
 
 
-@patch("jobsai.utils.scrapers.duunitori.scrape_duunitori", return_value=[])
+@patch("jobsai.agents.searcher.scrape_duunitori", return_value=[])
 def test_empty_results(mock_scraper, searcher):
     """Test that empty scraper results return empty list."""
     results = searcher.search_jobs(
@@ -148,10 +144,8 @@ def test_empty_results(mock_scraper, searcher):
     assert results == []
 
 
-@patch("jobsai.utils.scrapers.jobly.scrape_jobly", return_value=mock_jobs_jobly)
-@patch(
-    "jobsai.utils.scrapers.duunitori.scrape_duunitori", return_value=mock_jobs_duunitori
-)
+@patch("jobsai.agents.searcher.scrape_jobly", return_value=mock_jobs_jobly)
+@patch("jobsai.agents.searcher.scrape_duunitori", return_value=mock_jobs_duunitori)
 def test_multiple_job_boards(mock_duunitori, mock_jobly, searcher):
     """Test searching multiple job boards."""
     results = searcher.search_jobs(
@@ -166,9 +160,7 @@ def test_multiple_job_boards(mock_duunitori, mock_jobly, searcher):
     assert mock_jobly.called
 
 
-@patch(
-    "jobsai.utils.scrapers.duunitori.scrape_duunitori", return_value=mock_jobs_duunitori
-)
+@patch("jobsai.agents.searcher.scrape_duunitori", return_value=mock_jobs_duunitori)
 def test_deep_mode_passed_to_scraper(mock_scraper, searcher):
     """Test that deep_mode parameter is passed to scrapers."""
     searcher.search_jobs(
@@ -182,9 +174,7 @@ def test_deep_mode_passed_to_scraper(mock_scraper, searcher):
     assert call_args.kwargs.get("deep_mode") is True
 
 
-@patch(
-    "jobsai.utils.scrapers.duunitori.scrape_duunitori", return_value=mock_jobs_duunitori
-)
+@patch("jobsai.agents.searcher.scrape_duunitori", return_value=mock_jobs_duunitori)
 def test_cancellation_check(mock_scraper, searcher):
     """Test that cancellation check works during search."""
     cancellation_called = False
@@ -204,9 +194,7 @@ def test_cancellation_check(mock_scraper, searcher):
     assert cancellation_called
 
 
-@patch(
-    "jobsai.utils.scrapers.duunitori.scrape_duunitori", return_value=mock_jobs_duunitori
-)
+@patch("jobsai.agents.searcher.scrape_duunitori", return_value=mock_jobs_duunitori)
 def test_unknown_job_board_skipped(mock_scraper, searcher):
     """Test that unknown job boards are skipped gracefully."""
     results = searcher.search_jobs(

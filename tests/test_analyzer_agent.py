@@ -72,7 +72,7 @@ def clean_job_analyses_folder():
                 os.remove(file_path)
 
 
-@patch("jobsai.utils.llms.call_llm", return_value=mock_llm_instructions)
+@patch("jobsai.agents.analyzer.call_llm", return_value=mock_llm_instructions)
 def test_write_analysis_basic(mock_call_llm, analyzer):
     """Test that analysis is written for jobs."""
     analysis = analyzer.write_analysis(mock_jobs, mock_profile, analysis_size=2)
@@ -83,7 +83,7 @@ def test_write_analysis_basic(mock_call_llm, analyzer):
     assert mock_call_llm.called
 
 
-@patch("jobsai.utils.llms.call_llm", return_value=mock_llm_instructions)
+@patch("jobsai.agents.analyzer.call_llm", return_value=mock_llm_instructions)
 def test_write_analysis_includes_job_details(mock_call_llm, analyzer):
     """Test that analysis includes job details."""
     analysis = analyzer.write_analysis(mock_jobs, mock_profile, analysis_size=2)
@@ -95,7 +95,7 @@ def test_write_analysis_includes_job_details(mock_call_llm, analyzer):
     assert "https://example.com/job1" in analysis
 
 
-@patch("jobsai.utils.llms.call_llm", return_value=mock_llm_instructions)
+@patch("jobsai.agents.analyzer.call_llm", return_value=mock_llm_instructions)
 def test_write_analysis_includes_skills(mock_call_llm, analyzer):
     """Test that analysis includes matched and missing skills."""
     analysis = analyzer.write_analysis(mock_jobs, mock_profile, analysis_size=2)
@@ -104,7 +104,7 @@ def test_write_analysis_includes_skills(mock_call_llm, analyzer):
     assert "Python" in analysis or "Docker" in analysis
 
 
-@patch("jobsai.utils.llms.call_llm", return_value=mock_llm_instructions)
+@patch("jobsai.agents.analyzer.call_llm", return_value=mock_llm_instructions)
 def test_write_analysis_limits_to_analysis_size(mock_call_llm, analyzer):
     """Test that analysis is limited to analysis_size jobs."""
     analysis = analyzer.write_analysis(mock_jobs, mock_profile, analysis_size=1)
@@ -115,7 +115,7 @@ def test_write_analysis_limits_to_analysis_size(mock_call_llm, analyzer):
     assert mock_call_llm.call_count == 1
 
 
-@patch("jobsai.utils.llms.call_llm", return_value=mock_llm_instructions)
+@patch("jobsai.agents.analyzer.call_llm", return_value=mock_llm_instructions)
 def test_write_analysis_saves_to_disk(mock_call_llm, analyzer):
     """Test that analysis is saved to disk."""
     from jobsai.config.paths import JOB_ANALYSIS_PATH
@@ -134,14 +134,14 @@ def test_write_analysis_saves_to_disk(mock_call_llm, analyzer):
         assert "Job Analysis" in file_content
 
 
-@patch("jobsai.utils.llms.call_llm", return_value=mock_llm_instructions)
+@patch("jobsai.agents.analyzer.call_llm", return_value=mock_llm_instructions)
 def test_write_analysis_handles_empty_jobs(mock_call_llm, analyzer):
     """Test that empty jobs list raises ValueError."""
     with pytest.raises(ValueError, match="No scored jobs found"):
         analyzer.write_analysis([], mock_profile, analysis_size=1)
 
 
-@patch("jobsai.utils.llms.call_llm", return_value=mock_llm_instructions)
+@patch("jobsai.agents.analyzer.call_llm", return_value=mock_llm_instructions)
 def test_write_analysis_uses_full_description_when_available(mock_call_llm, analyzer):
     """Test that full_description is used when available."""
     analyzer.write_analysis(mock_jobs, mock_profile, analysis_size=1)
@@ -153,7 +153,7 @@ def test_write_analysis_uses_full_description_when_available(mock_call_llm, anal
     )
 
 
-@patch("jobsai.utils.llms.call_llm", return_value=mock_llm_instructions)
+@patch("jobsai.agents.analyzer.call_llm", return_value=mock_llm_instructions)
 def test_write_analysis_falls_back_to_snippet(mock_call_llm, analyzer):
     """Test that description_snippet is used when full_description is missing."""
     jobs_no_full = [
@@ -173,7 +173,7 @@ def test_write_analysis_falls_back_to_snippet(mock_call_llm, analyzer):
     assert mock_call_llm.called
 
 
-@patch("jobsai.utils.llms.call_llm", return_value=mock_llm_instructions)
+@patch("jobsai.agents.analyzer.call_llm", return_value=mock_llm_instructions)
 def test_write_analysis_cancellation_check(mock_call_llm, analyzer):
     """Test that cancellation check works during analysis."""
     cancellation_called = False
@@ -193,7 +193,7 @@ def test_write_analysis_cancellation_check(mock_call_llm, analyzer):
     assert cancellation_called
 
 
-@patch("jobsai.utils.llms.call_llm", return_value=mock_llm_instructions)
+@patch("jobsai.agents.analyzer.call_llm", return_value=mock_llm_instructions)
 def test_write_analysis_handles_missing_fields(mock_call_llm, analyzer):
     """Test that analysis handles jobs with missing optional fields."""
     jobs_minimal = [

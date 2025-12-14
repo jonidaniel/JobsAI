@@ -129,8 +129,8 @@ def scrape_duunitori(
         )
 
         # Break if less than 20 job cards on page (there's no next page)
-        if len(job_cards) < 20:
-            break
+        # if len(job_cards) < 20:
+        #     break
 
         # Break if no results on current page
         if not job_cards:
@@ -179,8 +179,8 @@ def scrape_duunitori(
         # Add delay to avoid hammering the website
         time.sleep(0.8)
 
-        # Break if less than 20 job cards on page
-        # (there's no next page)
+        # Break if less than 20 job cards on page (there's no next page)
+        # This check happens after processing cards, so we process all available cards first
         if len(job_cards) < 20:
             break
 
@@ -216,10 +216,12 @@ def _fetch_page(
     """
 
     # Iterate 3 times (by default)
+    last_response = None
     for attempt in range(1, retries + 1):
         try:
             # Get response
             response = session.get(url, timeout=timeout)
+            last_response = response
             # If OK, return response
             if response.status_code == 200:
                 return response
@@ -230,7 +232,8 @@ def _fetch_page(
                     response.status_code,
                     url,
                 )
-                time.sleep(backoff * attempt)
+                if attempt < retries:  # Only sleep if not last attempt
+                    time.sleep(backoff * attempt)
             # If error, return response
             else:
                 logger.debug(" Non-200 status %s for %s", response.status_code, url)
@@ -239,8 +242,10 @@ def _fetch_page(
             logger.warning(
                 " Request failed (attempt %s/%s) for %s: %s", attempt, retries, url, e
             )
-            time.sleep(backoff * attempt)
-    return None
+            if attempt < retries:  # Only sleep if not last attempt
+                time.sleep(backoff * attempt)
+    # Return last response if we have one (e.g., 429 after retries), otherwise None
+    return last_response
 
 
 def _parse_job_card(job_card: BeautifulSoup) -> Dict:
@@ -339,5 +344,4 @@ def _fetch_full_job_description(
     # Find the full job description
     description_tag = soup.select_one(".description, .description--jobentry")
     description = description_tag.get_text(strip=True) if description_tag else ""
-    if description:
-        return description
+    return description

@@ -14,7 +14,7 @@ import logging
 import uuid
 import json
 import os
-from typing import Dict, Optional
+from typing import Dict, Optional, Any
 from datetime import datetime
 
 # from pydantic import ValidationError
@@ -145,7 +145,7 @@ async def validation_exception_handler(
     logger.debug(" Request body: %s", await request.body())
 
     return JSONResponse(
-        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
         content={
             "detail": error_details,
             "message": "Validation error: Please check your input data",

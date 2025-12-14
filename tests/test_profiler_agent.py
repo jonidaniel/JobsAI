@@ -19,7 +19,7 @@ def profiler():
     return ProfilerAgent()
 
 
-@patch("jobsai.utils.llms.call_llm", return_value=mock_profile_response)
+@patch("jobsai.agents.profiler.call_llm", return_value=mock_profile_response)
 def test_create_profile_basic(mock_call_llm, profiler):
     """Test that profile is created from form submissions."""
     form_submissions = {
@@ -39,7 +39,7 @@ def test_create_profile_basic(mock_call_llm, profiler):
     assert mock_call_llm.called
 
 
-@patch("jobsai.utils.llms.call_llm", return_value=mock_profile_response)
+@patch("jobsai.agents.profiler.call_llm", return_value=mock_profile_response)
 def test_create_profile_returns_string(mock_call_llm, profiler):
     """Test that create_profile returns a string."""
     form_submissions = {
@@ -57,7 +57,7 @@ def test_create_profile_returns_string(mock_call_llm, profiler):
     assert isinstance(profile, str)
 
 
-@patch("jobsai.utils.llms.call_llm", return_value=mock_profile_response)
+@patch("jobsai.agents.profiler.call_llm", return_value=mock_profile_response)
 def test_create_profile_calls_llm_with_form_data(mock_call_llm, profiler):
     """Test that LLM is called with form submission data."""
     form_submissions = {
@@ -81,7 +81,7 @@ def test_create_profile_calls_llm_with_form_data(mock_call_llm, profiler):
     assert "form_submissions" in user_prompt or str(form_submissions) in user_prompt
 
 
-@patch("jobsai.utils.llms.call_llm", return_value="Short profile")
+@patch("jobsai.agents.profiler.call_llm", return_value="Short profile")
 def test_create_profile_handles_short_responses(mock_call_llm, profiler):
     """Test that short LLM responses are handled correctly."""
     form_submissions = {
@@ -99,7 +99,7 @@ def test_create_profile_handles_short_responses(mock_call_llm, profiler):
     assert profile == "Short profile"
 
 
-@patch("jobsai.utils.llms.call_llm", side_effect=Exception("LLM API error"))
+@patch("jobsai.agents.profiler.call_llm", side_effect=Exception("LLM API error"))
 def test_create_profile_handles_llm_errors(mock_call_llm, profiler):
     """Test that LLM errors are propagated."""
     form_submissions = {
@@ -116,7 +116,7 @@ def test_create_profile_handles_llm_errors(mock_call_llm, profiler):
         profiler.create_profile(form_submissions)
 
 
-@patch("jobsai.utils.llms.call_llm", return_value=mock_profile_response)
+@patch("jobsai.agents.profiler.call_llm", return_value=mock_profile_response)
 def test_create_profile_with_empty_tech_stack(mock_call_llm, profiler):
     """Test profile creation with minimal form data."""
     form_submissions = {

@@ -39,8 +39,8 @@ def query_builder():
     return QueryBuilderAgent()
 
 
-@patch("jobsai.utils.llms.call_llm", return_value=mock_llm_response_json)
-@patch("jobsai.utils.llms.extract_json", return_value=mock_llm_response_json)
+@patch("jobsai.agents.query_builder.call_llm", return_value=mock_llm_response_json)
+@patch("jobsai.agents.query_builder.extract_json", return_value=mock_llm_response_json)
 def test_create_keywords_basic(mock_extract_json, mock_call_llm, query_builder):
     """Test that keywords are created from a profile."""
     profile = "Experienced Python developer with AI/ML background"
@@ -50,8 +50,8 @@ def test_create_keywords_basic(mock_extract_json, mock_call_llm, query_builder):
     assert all(isinstance(kw, str) for kw in keywords)
 
 
-@patch("jobsai.utils.llms.call_llm", return_value=mock_llm_response_json)
-@patch("jobsai.utils.llms.extract_json", return_value=mock_llm_response_json)
+@patch("jobsai.agents.query_builder.call_llm", return_value=mock_llm_response_json)
+@patch("jobsai.agents.query_builder.extract_json", return_value=mock_llm_response_json)
 def test_keywords_contain_python(mock_extract_json, mock_call_llm, query_builder):
     """Test that Python-related keywords are generated for Python profiles."""
     profile = "Python developer with 5 years of experience"
@@ -61,8 +61,8 @@ def test_keywords_contain_python(mock_extract_json, mock_call_llm, query_builder
     assert len(python_keywords) > 0
 
 
-@patch("jobsai.utils.llms.call_llm", return_value=mock_llm_response_json)
-@patch("jobsai.utils.llms.extract_json", return_value=mock_llm_response_json)
+@patch("jobsai.agents.query_builder.call_llm", return_value=mock_llm_response_json)
+@patch("jobsai.agents.query_builder.extract_json", return_value=mock_llm_response_json)
 def test_keywords_contain_ai(mock_extract_json, mock_call_llm, query_builder):
     """Test that AI-related keywords are generated for AI profiles."""
     profile = "AI engineer with experience in LangChain and TensorFlow"
@@ -76,8 +76,8 @@ def test_keywords_contain_ai(mock_extract_json, mock_call_llm, query_builder):
     assert len(ai_keywords) > 0
 
 
-@patch("jobsai.utils.llms.call_llm", return_value=mock_llm_response_json)
-@patch("jobsai.utils.llms.extract_json", return_value=mock_llm_response_json)
+@patch("jobsai.agents.query_builder.call_llm", return_value=mock_llm_response_json)
+@patch("jobsai.agents.query_builder.extract_json", return_value=mock_llm_response_json)
 def test_keywords_always_present(mock_extract_json, mock_call_llm, query_builder):
     """Test that fallback keywords are always present."""
     profile = "Generic developer profile"
@@ -86,8 +86,8 @@ def test_keywords_always_present(mock_extract_json, mock_call_llm, query_builder
     assert len(keywords) >= 5  # Typically 10 keywords, but at least 5
 
 
-@patch("jobsai.utils.llms.call_llm", return_value=mock_llm_response_json)
-@patch("jobsai.utils.llms.extract_json", return_value=mock_llm_response_json)
+@patch("jobsai.agents.query_builder.call_llm", return_value=mock_llm_response_json)
+@patch("jobsai.agents.query_builder.extract_json", return_value=mock_llm_response_json)
 def test_deterministic_ordering(mock_extract_json, mock_call_llm, query_builder):
     """Test that same profile produces same keywords (when LLM response is same)."""
     profile = "Python developer"
@@ -108,8 +108,8 @@ def test_extracts_json_from_markdown(mock_extract_json, mock_call_llm, query_bui
     assert len(keywords) > 0
 
 
-@patch("jobsai.utils.llms.call_llm", return_value="invalid json response")
-@patch("jobsai.utils.llms.extract_json", return_value=None)
+@patch("jobsai.agents.query_builder.call_llm", return_value="invalid json response")
+@patch("jobsai.agents.query_builder.extract_json", return_value=None)
 def test_retry_on_invalid_json(mock_extract_json, mock_call_llm, query_builder):
     """Test that invalid JSON triggers retry logic."""
     profile = "Test profile"

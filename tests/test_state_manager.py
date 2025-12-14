@@ -138,14 +138,16 @@ def test_update_job_progress(
     # Verify update_item was called
     assert mock_dynamodb_table.update_item.called
     call_args = mock_dynamodb_table.update_item.call_args
-    assert call_args[0][0]["job_id"] == job_id
+    # update_item is called with Key as keyword argument
+    assert call_args.kwargs["Key"]["job_id"] == job_id
 
 
-@patch("jobsai.utils.state_manager.boto3")
-@patch.dict("os.environ", {"S3_DOCUMENTS_BUCKET": "test-bucket"})
-def test_store_document_in_s3(mock_boto3, mock_s3_client):
+@patch("boto3.client")
+@patch("jobsai.utils.state_manager.S3_BUCKET", "test-bucket")
+def test_store_document_in_s3(mock_boto3_client, mock_s3_client):
     """Test storing document in S3."""
-    mock_boto3.client.return_value = mock_s3_client
+    # Mock boto3.client() to return our mock S3 client
+    mock_boto3_client.return_value = mock_s3_client
 
     job_id = "test-job-123"
     document = Document()
@@ -161,11 +163,12 @@ def test_store_document_in_s3(mock_boto3, mock_s3_client):
     assert mock_s3_client.put_object.called
 
 
-@patch("jobsai.utils.state_manager.boto3")
-@patch.dict("os.environ", {"S3_DOCUMENTS_BUCKET": "test-bucket"})
-def test_get_presigned_s3_url(mock_boto3, mock_s3_client):
+@patch("boto3.client")
+@patch("jobsai.utils.state_manager.S3_BUCKET", "test-bucket")
+def test_get_presigned_s3_url(mock_boto3_client, mock_s3_client):
     """Test generating presigned S3 URL."""
-    mock_boto3.client.return_value = mock_s3_client
+    # Mock boto3.client() to return our mock S3 client
+    mock_boto3_client.return_value = mock_s3_client
 
     s3_key = "documents/test-job-123/cover_letter.docx"
     url = get_presigned_s3_url(s3_key)
@@ -176,11 +179,12 @@ def test_get_presigned_s3_url(mock_boto3, mock_s3_client):
     assert mock_s3_client.generate_presigned_url.called
 
 
-@patch("jobsai.utils.state_manager.boto3")
-@patch.dict("os.environ", {"S3_DOCUMENTS_BUCKET": "test-bucket"})
-def test_get_document_from_s3(mock_boto3, mock_s3_client):
+@patch("boto3.client")
+@patch("jobsai.utils.state_manager.S3_BUCKET", "test-bucket")
+def test_get_document_from_s3(mock_boto3_client, mock_s3_client):
     """Test retrieving document from S3."""
-    mock_boto3.client.return_value = mock_s3_client
+    # Mock boto3.client() to return our mock S3 client
+    mock_boto3_client.return_value = mock_s3_client
 
     s3_key = "documents/test-job-123/cover_letter.docx"
     document_bytes = get_document_from_s3(s3_key)
@@ -242,7 +246,8 @@ def test_update_job_status(
     # Verify update_item was called
     assert mock_dynamodb_table.update_item.called
     call_args = mock_dynamodb_table.update_item.call_args
-    assert call_args[0][0]["job_id"] == job_id
+    # update_item is called with Key as keyword argument
+    assert call_args.kwargs["Key"]["job_id"] == job_id
 
 
 @patch("jobsai.utils.state_manager.get_dynamodb_resource")
@@ -262,7 +267,7 @@ def test_update_job_status_with_error(
     assert mock_dynamodb_table.update_item.called
     call_args = mock_dynamodb_table.update_item.call_args
     # Check that error is in the update expression values
-    expr_values = call_args[1]["ExpressionAttributeValues"]
+    expr_values = call_args.kwargs["ExpressionAttributeValues"]
     assert ":error" in expr_values
     assert expr_values[":error"] == error
 

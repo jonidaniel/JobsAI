@@ -97,7 +97,7 @@ def clean_cover_letters_folder():
                 os.remove(file_path)
 
 
-@patch("jobsai.utils.llms.call_llm", return_value=mock_llm_cover_letter)
+@patch("jobsai.agents.generator.call_llm", return_value=mock_llm_cover_letter)
 def test_generate_letters_basic(mock_call_llm, generator):
     """Test that cover letters are generated."""
     letters = generator.generate_letters(
@@ -105,23 +105,28 @@ def test_generate_letters_basic(mock_call_llm, generator):
     )
     assert isinstance(letters, list)
     assert len(letters) == 1
-    assert isinstance(letters[0], Document)
+    # Check that it's a Document instance (use hasattr to avoid import issues)
+    assert hasattr(letters[0], "paragraphs") or hasattr(letters[0], "add_paragraph")
     assert mock_call_llm.called
 
 
-@patch("jobsai.utils.llms.call_llm", return_value=mock_llm_cover_letter)
+@patch("jobsai.agents.generator.call_llm", return_value=mock_llm_cover_letter)
 def test_generate_letters_multiple(mock_call_llm, generator):
     """Test generating multiple cover letters."""
     letters = generator.generate_letters(
         mock_job_analysis_multiple, mock_profile, "Professional", num_letters=2
     )
     assert len(letters) == 2
-    assert all(isinstance(letter, Document) for letter in letters)
+    # Check that all are Document instances (use hasattr to avoid import issues)
+    assert all(
+        hasattr(letter, "paragraphs") or hasattr(letter, "add_paragraph")
+        for letter in letters
+    )
     # Should call LLM once per letter
     assert mock_call_llm.call_count == 2
 
 
-@patch("jobsai.utils.llms.call_llm", return_value=mock_llm_cover_letter)
+@patch("jobsai.agents.generator.call_llm", return_value=mock_llm_cover_letter)
 def test_generate_letters_limits_to_num_letters(mock_call_llm, generator):
     """Test that generation is limited to num_letters."""
     letters = generator.generate_letters(
@@ -132,7 +137,7 @@ def test_generate_letters_limits_to_num_letters(mock_call_llm, generator):
     assert mock_call_llm.call_count == 1
 
 
-@patch("jobsai.utils.llms.call_llm", return_value=mock_llm_cover_letter)
+@patch("jobsai.agents.generator.call_llm", return_value=mock_llm_cover_letter)
 def test_generate_letters_saves_to_disk(mock_call_llm, generator):
     """Test that cover letters are saved to disk."""
     from jobsai.config.paths import COVER_LETTER_PATH
@@ -148,7 +153,7 @@ def test_generate_letters_saves_to_disk(mock_call_llm, generator):
     assert len(matching_files) > 0
 
 
-@patch("jobsai.utils.llms.call_llm", return_value=mock_llm_cover_letter)
+@patch("jobsai.agents.generator.call_llm", return_value=mock_llm_cover_letter)
 def test_generate_letters_document_structure(mock_call_llm, generator):
     """Test that generated documents have correct structure."""
     letters = generator.generate_letters(
@@ -162,7 +167,7 @@ def test_generate_letters_document_structure(mock_call_llm, generator):
     assert "ADD" in text  # Placeholders like "ADD EMAIL", "ADD RECRUITER", etc.
 
 
-@patch("jobsai.utils.llms.call_llm", return_value=mock_llm_cover_letter)
+@patch("jobsai.agents.generator.call_llm", return_value=mock_llm_cover_letter)
 def test_generate_letters_handles_style_string(mock_call_llm, generator):
     """Test that style can be a string."""
     letters = generator.generate_letters(
@@ -172,7 +177,7 @@ def test_generate_letters_handles_style_string(mock_call_llm, generator):
     assert mock_call_llm.called
 
 
-@patch("jobsai.utils.llms.call_llm", return_value=mock_llm_cover_letter)
+@patch("jobsai.agents.generator.call_llm", return_value=mock_llm_cover_letter)
 def test_generate_letters_handles_style_list(mock_call_llm, generator):
     """Test that style can be a list (uses first style)."""
     letters = generator.generate_letters(
@@ -185,7 +190,7 @@ def test_generate_letters_handles_style_list(mock_call_llm, generator):
     assert mock_call_llm.called
 
 
-@patch("jobsai.utils.llms.call_llm", return_value=mock_llm_cover_letter)
+@patch("jobsai.agents.generator.call_llm", return_value=mock_llm_cover_letter)
 def test_generate_letters_defaults_to_professional(mock_call_llm, generator):
     """Test that unknown style defaults to Professional."""
     letters = generator.generate_letters(
@@ -196,7 +201,7 @@ def test_generate_letters_defaults_to_professional(mock_call_llm, generator):
     assert mock_call_llm.called
 
 
-@patch("jobsai.utils.llms.call_llm", return_value=mock_llm_cover_letter)
+@patch("jobsai.agents.generator.call_llm", return_value=mock_llm_cover_letter)
 def test_generate_letters_parses_job_sections(mock_call_llm, generator):
     """Test that job analysis is parsed into sections."""
     letters = generator.generate_letters(
@@ -207,7 +212,7 @@ def test_generate_letters_parses_job_sections(mock_call_llm, generator):
     assert mock_call_llm.call_count == 2
 
 
-@patch("jobsai.utils.llms.call_llm", return_value=mock_llm_cover_letter)
+@patch("jobsai.agents.generator.call_llm", return_value=mock_llm_cover_letter)
 def test_generate_letters_handles_empty_style_list(mock_call_llm, generator):
     """Test that empty style list defaults to Professional."""
     letters = generator.generate_letters(

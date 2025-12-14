@@ -79,18 +79,14 @@ class ExperienceLevels(BaseModel):
     Agentic_Ai: int = Field(0, alias="Agentic AI")
     AI_ML: int = Field(0, alias="AI/ML")
 
-    class Config:
-        """
-        Pydantic model configuration.
-
-        validate_by_name: Allows access by both field name and alias
-        json_schema_extra: Example values for API documentation
-        """
-
-        validate_by_name = True
-        json_schema_extra = {
+    model_config = ConfigDict(
+        # Allows access by both field name and alias
+        populate_by_name=True,
+        # Example values for API documentation
+        json_schema_extra={
             "example": {"Python": 7, "JavaScript": 6, "Agentic AI": 5, "AI/ML": 4}
-        }
+        },
+    )
 
 
 class SkillProfile(BaseModel):
@@ -122,14 +118,10 @@ class SkillProfile(BaseModel):
     )  # Experience ratings
     job_search_keywords: List[str] = []  # Additional keywords for job searching
 
-    class Config:
-        """
-        Pydantic model configuration.
-
-        validate_by_name: Allows access by both field name and alias
-        """
-
-        validate_by_name = True
+    model_config = ConfigDict(
+        # Allows access by both field name and alias
+        populate_by_name=True,
+    )
 
 
 # ----- FRONTEND PAYLOAD VALIDATION -----

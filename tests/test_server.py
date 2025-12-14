@@ -2,6 +2,7 @@
 
 import pytest
 from unittest.mock import patch, MagicMock
+from typing import Any
 from fastapi.testclient import TestClient
 import json
 
@@ -164,7 +165,7 @@ def test_get_progress_not_found(mock_get_state):
 
 
 @patch("jobsai.api.server.get_job_state")
-@patch("jobsai.api.server.update_job_status")
+@patch("jobsai.utils.state_manager.update_job_status")
 def test_cancel_pipeline(mock_update_status, mock_get_state):
     """Test cancelling a pipeline."""
     mock_get_state.return_value = {
@@ -181,7 +182,7 @@ def test_cancel_pipeline(mock_update_status, mock_get_state):
 
 
 @patch("jobsai.api.server.get_job_state")
-@patch("jobsai.api.server.get_presigned_s3_url")
+@patch("jobsai.utils.state_manager.get_presigned_s3_url")
 def test_download_document_single(mock_get_url, mock_get_state):
     """Test downloading single document."""
     mock_get_state.return_value = {
@@ -202,7 +203,7 @@ def test_download_document_single(mock_get_url, mock_get_state):
 
 
 @patch("jobsai.api.server.get_job_state")
-@patch("jobsai.api.server.get_presigned_s3_url")
+@patch("jobsai.utils.state_manager.get_presigned_s3_url")
 def test_download_document_multiple(mock_get_url, mock_get_state):
     """Test downloading multiple documents."""
     mock_get_state.return_value = {
@@ -230,7 +231,7 @@ def test_download_document_multiple(mock_get_url, mock_get_state):
 
 
 @patch("jobsai.api.server.get_job_state")
-@patch("jobsai.api.server.get_presigned_s3_url")
+@patch("jobsai.utils.state_manager.get_presigned_s3_url")
 def test_download_document_by_index(mock_get_url, mock_get_state):
     """Test downloading specific document by index."""
     mock_get_state.return_value = {
