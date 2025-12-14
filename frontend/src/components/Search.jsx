@@ -66,6 +66,7 @@ export default function Search() {
   // Download prompt state
   const [showDownloadPrompt, setShowDownloadPrompt] = useState(false);
   const [downloadInfo, setDownloadInfo] = useState(null); // { jobId, filenames }
+  const [hasDownloaded, setHasDownloaded] = useState(false); // Track if user has clicked "Yes"
   // Consolidated submission state ref
   // Tracks submission-related state that doesn't need to trigger re-renders
   const submissionState = useRef({
@@ -155,6 +156,9 @@ export default function Search() {
       setSuccess(false);
       submissionState.current.justCompleted = false;
       submissionState.current.hasSuccessfulSubmission = false;
+      setShowDownloadPrompt(false);
+      setDownloadInfo(null);
+      setHasDownloaded(false);
       // Navigate to question set 1 (index 0)
       setActiveQuestionSetIndex(0);
       // Scroll to question set 1 after a brief delay to ensure DOM is ready
@@ -183,6 +187,9 @@ export default function Search() {
     submissionState.current.justCompleted = false;
     // Reset successful submission flag when starting a new submission
     submissionState.current.hasSuccessfulSubmission = false;
+    setShowDownloadPrompt(false);
+    setDownloadInfo(null);
+    setHasDownloaded(false);
 
     // Validate general questions before submission
     const validation = validateGeneralQuestions(formData);
@@ -567,9 +574,10 @@ export default function Search() {
         await downloadDocument(downloadInfo.jobId, downloadInfo.filenames[0]);
       }
 
-      // Close the prompt
+      // Close the prompt and mark as downloaded
       setShowDownloadPrompt(false);
       setDownloadInfo(null);
+      setHasDownloaded(true);
 
       // Auto-dismiss success message after timeout
       if (successTimeoutRef.current) {
@@ -620,8 +628,35 @@ export default function Search() {
             This might take a minute
           </h3>
         </>
-      ) : submissionState.current.hasSuccessfulSubmission ? (
-        // Success state: show completion message (stays visible even after success message disappears)
+      ) : showDownloadPrompt && downloadInfo ? (
+        // Download prompt state: show download prompt text
+        <>
+          <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
+            Generated {downloadInfo.filenames.length} cover letter
+            {downloadInfo.filenames.length !== 1 ? "s" : ""}
+          </h3>
+          <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
+            Would you like to download the files?
+          </h3>
+          <div className="flex justify-center items-center gap-4 mt-6">
+            <button
+              onClick={handleDownloadYes}
+              className="text-base sm:text-lg md:text-xl lg:text-2xl px-3 sm:px-4 py-1.5 sm:py-2 border border-white bg-transparent text-white font-semibold rounded-lg shadow hover:bg-white hover:text-gray-800 transition-colors"
+              aria-label="Download the cover letters"
+            >
+              Yes
+            </button>
+            <button
+              onClick={handleDownloadNo}
+              className="text-base sm:text-lg md:text-xl lg:text-2xl px-3 sm:px-4 py-1.5 sm:py-2 border border-white bg-transparent text-white font-semibold rounded-lg shadow hover:bg-white hover:text-gray-800 transition-colors"
+              aria-label="Skip downloading"
+            >
+              No
+            </button>
+          </div>
+        </>
+      ) : submissionState.current.hasSuccessfulSubmission && hasDownloaded ? (
+        // Success state: show completion message (only after user has downloaded)
         <>
           <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
             Here are your cover letters. Thank you very much.
@@ -670,36 +705,6 @@ export default function Search() {
             skipInitialScroll={submissionState.current.justCompleted}
           />
         )}
-      {/* Download prompt - shown when documents are ready */}
-      {showDownloadPrompt && downloadInfo && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 sm:p-8 md:p-10 max-w-md mx-4 shadow-xl">
-            <h3 className="text-xl sm:text-2xl md:text-3xl font-semibold text-gray-800 mb-4 text-center">
-              Generated {downloadInfo.filenames.length} cover letter
-              {downloadInfo.filenames.length !== 1 ? "s" : ""}
-            </h3>
-            <p className="text-base sm:text-lg md:text-xl text-gray-600 mb-6 text-center">
-              Would you like to download the files?
-            </p>
-            <div className="flex justify-center gap-4">
-              <button
-                onClick={handleDownloadYes}
-                className="px-6 sm:px-8 py-2 sm:py-3 bg-blue-600 text-white font-semibold rounded-lg shadow hover:bg-blue-700 transition-colors text-base sm:text-lg md:text-xl"
-                aria-label="Download the cover letters"
-              >
-                Yes
-              </button>
-              <button
-                onClick={handleDownloadNo}
-                className="px-6 sm:px-8 py-2 sm:py-3 bg-gray-300 text-gray-800 font-semibold rounded-lg shadow hover:bg-gray-400 transition-colors text-base sm:text-lg md:text-xl"
-                aria-label="Skip downloading"
-              >
-                No
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
       {/* Success message - displayed when document is successfully downloaded */}
       {success && <SuccessMessage />}
       {/* Error message - displayed when submission fails */}
