@@ -74,17 +74,17 @@ export default function QuestionSetList({
     initial[GENERAL_QUESTION_KEYS[0]] = ["Expert-level"]; // job-level
     initial[GENERAL_QUESTION_KEYS[1]] = ["Duunitori"]; // job-boards
     initial[GENERAL_QUESTION_KEYS[2]] = "Yes"; // deep-mode
-    initial[GENERAL_QUESTION_KEYS[3]] = "2"; // cover-letter-num
+    initial[GENERAL_QUESTION_KEYS[3]] = "1"; // cover-letter-num
     initial[GENERAL_QUESTION_KEYS[4]] = ["Professional"]; // cover-letter-style
 
     // Set default values for the first 3 sliders in each technology set (question sets 1-8)
     // SLIDER_DATA[0] = languages, SLIDER_DATA[1] = databases, etc.
-    // Each set's first 3 sliders default to 3 (less than 1.5 years experience)
-    SLIDER_DATA.forEach((sliderSet, setIndex) => {
+    // Each set's first 3 sliders default to 0 (0 yrs)
+    SLIDER_DATA.forEach((sliderSet) => {
       // Get first 3 technology keys from each set
       const technologyKeys = Object.keys(sliderSet).slice(0, 3);
       technologyKeys.forEach((key) => {
-        initial[key] = 3; // Default slider value is 3 (less than 1.5 years)
+        initial[key] = 0; // Default slider value is 0 (0 yrs)
       });
     });
 
@@ -94,8 +94,8 @@ export default function QuestionSetList({
     }
 
     // Set default value for text-only question set (index 9)
-    initial["additional-info"] =
-      "I am a software developer looking for new opportunities. I have experience with various technologies and am eager to contribute to innovative projects.";
+    // No default value - user must provide their own description
+    initial["additional-info"] = "";
 
     return initial;
   });
