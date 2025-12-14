@@ -67,6 +67,7 @@ export default function Search() {
   const [showDownloadPrompt, setShowDownloadPrompt] = useState(false);
   const [downloadInfo, setDownloadInfo] = useState(null); // { jobId, filenames }
   const [hasDownloaded, setHasDownloaded] = useState(false); // Track if user has clicked "Yes"
+  const [hasRespondedToPrompt, setHasRespondedToPrompt] = useState(false); // Track if user has responded (Yes or No)
   // Consolidated submission state ref
   // Tracks submission-related state that doesn't need to trigger re-renders
   const submissionState = useRef({
@@ -159,6 +160,7 @@ export default function Search() {
       setShowDownloadPrompt(false);
       setDownloadInfo(null);
       setHasDownloaded(false);
+      setHasRespondedToPrompt(false);
       // Navigate to question set 1 (index 0)
       setActiveQuestionSetIndex(0);
       // Scroll to question set 1 after a brief delay to ensure DOM is ready
@@ -578,6 +580,7 @@ export default function Search() {
       setShowDownloadPrompt(false);
       setDownloadInfo(null);
       setHasDownloaded(true);
+      setHasRespondedToPrompt(true);
 
       // Auto-dismiss success message after timeout
       if (successTimeoutRef.current) {
@@ -602,6 +605,7 @@ export default function Search() {
   const handleDownloadNo = () => {
     setShowDownloadPrompt(false);
     setDownloadInfo(null);
+    setHasRespondedToPrompt(true);
 
     // Auto-dismiss success message after timeout
     if (successTimeoutRef.current) {
@@ -711,19 +715,22 @@ export default function Search() {
       {error && <ErrorMessage message={error} />}
       {/* Submit button and cancel button */}
       <div className="flex justify-center items-center gap-4 mt-6">
-        {/* Only show submit button when NOT submitting (but show "Find Again" after success) */}
+        {/* Only show submit button when NOT submitting */}
+        {/* Show "Find Again" only after user has responded to download prompt (Yes or No) */}
         {!isSubmitting && (
           <button
             id="submit-btn"
             onClick={handleSubmit}
             className="text-lg sm:text-xl md:text-2xl lg:text-3xl px-4 sm:px-6 py-2 sm:py-3 border border-white bg-transparent text-white font-semibold rounded-lg shadow disabled:opacity-50 disabled:cursor-not-allowed"
             aria-label={
-              submissionState.current.hasSuccessfulSubmission
+              submissionState.current.hasSuccessfulSubmission &&
+              hasRespondedToPrompt
                 ? "Start a new job search"
                 : "Submit form and generate job search document"
             }
           >
-            {submissionState.current.hasSuccessfulSubmission
+            {submissionState.current.hasSuccessfulSubmission &&
+            hasRespondedToPrompt
               ? "Find Again"
               : "Find Jobs"}
           </button>
