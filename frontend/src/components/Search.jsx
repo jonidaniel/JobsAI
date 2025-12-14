@@ -66,6 +66,8 @@ export default function Search() {
   // Delivery method selection state
   const [showDeliveryMethodPrompt, setShowDeliveryMethodPrompt] =
     useState(false);
+  // Cancellation state
+  const [isCancelled, setIsCancelled] = useState(false);
   // Download prompt state
   const [showDownloadPrompt, setShowDownloadPrompt] = useState(false);
   const [downloadInfo, setDownloadInfo] = useState(null); // { jobId, filenames }
@@ -153,8 +155,8 @@ export default function Search() {
     e.preventDefault();
     e.stopPropagation();
 
-    // If this is a "Find Again" click, navigate to question set 1 and reset
-    if (submissionState.current.hasSuccessfulSubmission) {
+    // If this is a "Find Again" click (from successful submission or cancellation), navigate to question set 1 and reset
+    if (submissionState.current.hasSuccessfulSubmission || isCancelled) {
       // Reset states
       setError(null);
       setSuccess(false);
@@ -165,6 +167,7 @@ export default function Search() {
       setHasDownloaded(false);
       setHasRespondedToPrompt(false);
       setShowDeliveryMethodPrompt(false);
+      setIsCancelled(false);
       // Navigate to question set 1 (index 0)
       setActiveQuestionSetIndex(0);
       // Scroll to question set 1 after a brief delay to ensure DOM is ready
@@ -196,6 +199,7 @@ export default function Search() {
     setShowDownloadPrompt(false);
     setDownloadInfo(null);
     setHasDownloaded(false);
+    setIsCancelled(false);
 
     // Validate general questions before submission
     const validation = validateGeneralQuestions(formData);
@@ -505,7 +509,9 @@ export default function Search() {
     setIsSubmitting(false);
     setCurrentPhase(null);
     setJobId(null);
-    setError("Pipeline was cancelled");
+    setShowDeliveryMethodPrompt(false);
+    setIsCancelled(true);
+    setError(null);
   };
 
   /**
@@ -717,6 +723,13 @@ export default function Search() {
             </button>
           </div>
         </>
+      ) : isCancelled ? (
+        // Cancellation state: show cancellation message
+        <>
+          <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
+            You cancelled the job search
+          </h3>
+        </>
       ) : submissionState.current.hasSuccessfulSubmission && hasDownloaded ? (
         // Success state: show completion message (only after user has downloaded)
         <>
@@ -754,9 +767,10 @@ export default function Search() {
         </>
       )}
       {/* Question sets component with blue/gray background - contains all question sets and manages all form inputs */}
-      {/* Only show question sets if not submitting AND not showing delivery method prompt AND not successfully completed */}
+      {/* Only show question sets if not submitting AND not showing delivery method prompt AND not cancelled AND not successfully completed */}
       {!isSubmitting &&
         !showDeliveryMethodPrompt &&
+        !isCancelled &&
         !success &&
         !submissionState.current.hasSuccessfulSubmission && (
           <QuestionSetList
@@ -774,10 +788,22 @@ export default function Search() {
       {error && <ErrorMessage message={error} />}
       {/* Submit button and cancel button */}
       <div className="flex justify-center items-center gap-4 mt-6">
-        {/* Only show submit button when NOT submitting and NOT showing delivery method prompt */}
+        {/* Show "Find Again" button when cancelled */}
+        {isCancelled && (
+          <button
+            id="submit-btn"
+            onClick={handleSubmit}
+            className="text-lg sm:text-xl md:text-2xl lg:text-3xl px-4 sm:px-6 py-2 sm:py-3 border border-white bg-transparent text-white font-semibold rounded-lg shadow disabled:opacity-50 disabled:cursor-not-allowed"
+            aria-label="Start a new job search"
+          >
+            Find Again
+          </button>
+        )}
+        {/* Only show submit button when NOT submitting and NOT showing delivery method prompt and NOT cancelled */}
         {/* Hide button entirely if there's a successful submission but user hasn't responded to download prompt yet */}
         {!isSubmitting &&
           !showDeliveryMethodPrompt &&
+          !isCancelled &&
           (!submissionState.current.hasSuccessfulSubmission ||
             hasRespondedToPrompt) && (
             <button
