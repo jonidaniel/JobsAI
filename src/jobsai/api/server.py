@@ -415,6 +415,11 @@ async def start_pipeline(payload: FrontendPayload) -> JSONResponse:
     # Keep in-memory copy for local development fallback
     pipeline_states[job_id] = initial_state
 
+    # Get worker function name for logging
+    worker_function_name = os.environ.get(
+        "WORKER_LAMBDA_FUNCTION_NAME", os.environ.get("LAMBDA_FUNCTION_NAME")
+    )
+
     # Invoke worker Lambda asynchronously
     # This ensures the pipeline runs in a separate Lambda invocation
     try:
