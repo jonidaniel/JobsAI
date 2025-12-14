@@ -215,6 +215,12 @@ The project includes automated deployment via GitHub Actions. See the deployment
 - `VITE_API_BASE_URL` (API Gateway/Function URL)
 - `CLOUDFRONT_DISTRIBUTION_ID` (optional, for CDN)
 
+**Lambda Environment Variables (for rate limiting):**
+
+- `RATE_LIMIT_REQUESTS` (optional, default: 5) - Max requests per window
+- `RATE_LIMIT_WINDOW_SECONDS` (optional, default: 3600) - Time window in seconds
+- `RATE_LIMIT_ENABLED` (optional, default: true) - Enable/disable rate limiting
+
 For detailed deployment instructions, see the documentation in `docs/`.
 
 ## Usage
@@ -261,6 +267,7 @@ Comprehensive documentation is available in the `docs/` directory:
 - **Architecture**: `docs/architecture.md` - System architecture overview
 - **Frontend**: `docs/frontend.md` - Frontend architecture and components
 - **Configuration**: `docs/configuration.md` - Environment variables and settings
+- **Rate Limiting**: `docs/rate-limiting.md` - Rate limiting configuration and usage
 - **User Guide**: `docs/user-guide.md` - End-user instructions
 - **How-To**: `docs/how-to.md` - Development and setup guides
 - **Project Structure**: `docs/project-structure.md` - Detailed file organization

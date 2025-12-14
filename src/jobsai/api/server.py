@@ -14,6 +14,7 @@ import logging
 import uuid
 import json
 import os
+import time
 from typing import Dict, Optional, Any
 from datetime import datetime
 
@@ -31,6 +32,7 @@ from jobsai.utils.state_manager import (
     get_job_state,
     update_job_status,
 )
+from jobsai.utils.rate_limiter import check_rate_limit, get_client_ip
 
 logger = logging.getLogger(__name__)
 
@@ -108,6 +110,65 @@ async def log_requests(
     response = await call_next(request)
     print(f"[MIDDLEWARE] Response status: {response.status_code}")
     return response
+
+
+# Add rate limiting middleware for /api/start endpoint
+@app.middleware("http")
+async def rate_limit_middleware(
+    request: Request, call_next: Any
+) -> Any:  # Response type from FastAPI
+    """Rate limiting middleware for /api/start endpoint.
+
+    Checks rate limits for the /api/start endpoint to prevent abuse and control costs.
+    Uses IP-based rate limiting with configurable limits per time window.
+
+    Args:
+        request: FastAPI Request object containing request details.
+        call_next: Callable that processes the request and returns the response.
+
+    Returns:
+        Response: The response from the next middleware/handler, or HTTP 429 if rate limited.
+    """
+    # Only apply rate limiting to /api/start endpoint
+    if request.url.path == "/api/start" and request.method == "POST":
+        client_ip = get_client_ip(request)
+        allowed, remaining, reset_at = check_rate_limit(client_ip)
+
+        if not allowed:
+            logger.warning(
+                f"Rate limit exceeded for IP {client_ip} on {request.url.path}"
+            )
+            return JSONResponse(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                content={
+                    "detail": "Rate limit exceeded. Please try again later.",
+                    "error": "too_many_requests",
+                    "reset_at": reset_at,
+                },
+                headers={
+                    "X-RateLimit-Limit": str(
+                        int(os.environ.get("RATE_LIMIT_REQUESTS", "5"))
+                    ),
+                    "X-RateLimit-Remaining": "0",
+                    "X-RateLimit-Reset": str(reset_at) if reset_at else "",
+                    "Retry-After": str(
+                        reset_at - int(time.time()) if reset_at else 3600
+                    ),
+                },
+            )
+
+        # Add rate limit headers to successful responses
+        response = await call_next(request)
+        if remaining is not None and reset_at is not None:
+            response.headers["X-RateLimit-Limit"] = str(
+                int(os.environ.get("RATE_LIMIT_REQUESTS", "5"))
+            )
+            response.headers["X-RateLimit-Remaining"] = str(remaining)
+            response.headers["X-RateLimit-Reset"] = str(reset_at)
+        return response
+
+    # For all other endpoints, pass through without rate limiting
+    return await call_next(request)
 
 
 # Exception handler for Pydantic validation errors
