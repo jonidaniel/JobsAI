@@ -82,7 +82,7 @@ export default function Search() {
     searching: "Searching for jobs...",
     scoring: "Scoring the jobs...",
     analyzing: "Doing analysis...",
-    generating: "Generating cover letters for you...",
+    generating: "Generating cover letters...",
   };
 
   // Form data received from QuestionSets component via callback
@@ -626,10 +626,10 @@ export default function Search() {
           <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
             {currentPhase && phaseMessages[currentPhase]
               ? phaseMessages[currentPhase]
-              : "Starting pipeline..."}
+              : "Starting search..."}
           </h3>
           <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
-            This might take a minute
+            This might take a few minutes
           </h3>
         </>
       ) : showDownloadPrompt && downloadInfo ? (
@@ -663,7 +663,7 @@ export default function Search() {
         // Success state: show completion message (only after user has downloaded)
         <>
           <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
-            Here are your cover letters. Thank you very much.
+            Here are your cover letters. <i>Thank you very much.</i>
           </h3>
         </>
       ) : (

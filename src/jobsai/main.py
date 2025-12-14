@@ -308,7 +308,7 @@ def main(
     # Returns a Document object
     # The document is also saved to /src/jobsai/data/cover_letters/{timestamp}_cover_letter.docx for convenience
     if progress_callback:
-        progress_callback("generating", "Generating cover letters for you...")
+        progress_callback("generating", "Generating cover letters...")
 
     if cancellation_check and cancellation_check():
         raise CancellationError("Pipeline cancelled before generation")
