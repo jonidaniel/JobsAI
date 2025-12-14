@@ -1,6 +1,9 @@
 # Guides used in development
 docs/temp
 
+# Data used in development
+git_log.txt
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
