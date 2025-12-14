@@ -118,11 +118,6 @@
 │       │       ├── 20251126_031625_job_report.txt
 │       │       └── 20251126_032404_job_report.txt
 │       ├── main.py
-│       ├── memory
-│       │   └── vector_db
-│       │       ├── 20251126_030736_skill_profile.json
-│       │       ├── 20251126_031625_skill_profile.json
-│       │       └── 20251126_032404_skill_profile.json
 │       └── utils
 │           ├── __init__.py
 │           ├── __pycache__

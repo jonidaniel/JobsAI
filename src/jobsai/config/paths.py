@@ -14,7 +14,6 @@ Detection:
     - Falls back to local paths if not in Lambda
 
 Directory Structure:
-    - memory/vector_db/: Skill profiles (JSON files)
     - data/job_listings/raw/: Raw job listings from scrapers (JSON files)
     - data/job_listings/scored/: Scored job listings (JSON files)
     - data/job_analyses/: Job analyses (text files)
@@ -50,10 +49,6 @@ else:
     # Local development: use src/jobsai paths
     BASE_PATH = Path("src/jobsai")
 
-# Path where skill profiles are stored
-# Files are named with timestamp: {timestamp}_skill_profile.json
-SKILL_PROFILE_PATH = BASE_PATH / "memory" / "vector_db"
-
 # Path where raw job listings from scrapers are saved
 # Files are named: {timestamp}_{job_board}_{query}.json
 RAW_JOB_LISTING_PATH = BASE_PATH / "data" / "job_listings" / "raw"
@@ -75,7 +70,6 @@ COVER_LETTER_PATH = BASE_PATH / "data" / "cover_letters"
 # Note: In Lambda, this will create directories in /tmp (writable)
 # In local dev, this will create directories in src/jobsai
 try:
-    SKILL_PROFILE_PATH.mkdir(parents=True, exist_ok=True)
     RAW_JOB_LISTING_PATH.mkdir(parents=True, exist_ok=True)
     SCORED_JOB_LISTING_PATH.mkdir(parents=True, exist_ok=True)
     JOB_ANALYSIS_PATH.mkdir(parents=True, exist_ok=True)
