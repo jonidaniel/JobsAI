@@ -10,7 +10,6 @@ The generated keywords are typically two-word phrases (e.g., "ai engineer",
 "software engineer") that are tailored to the candidate's skills and experience.
 """
 
-import logging
 import json
 from typing import List, Dict, Any
 
@@ -20,8 +19,9 @@ from jobsai.config.prompts import (
 )
 
 from jobsai.utils.llms import call_llm, extract_json
+from jobsai.utils.logger import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class QueryBuilderAgent:
@@ -138,7 +138,10 @@ class QueryBuilderAgent:
                     else:
                         raise ValueError("LLM returned an empty keywords list")
 
-                logger.info(f" Successfully extracted {len(keywords)} keywords")
+                logger.info(
+                    "Successfully extracted keywords",
+                    extra={"extra_fields": {"keywords_count": len(keywords)}},
+                )
                 return keywords
 
             except ValueError:

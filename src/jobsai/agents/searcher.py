@@ -14,17 +14,16 @@ The service:
 """
 
 import os
-import logging
 import json
 from typing import List, Dict, Optional, Callable, Any
 
 from jobsai.config.paths import RAW_JOB_LISTING_PATH
 from jobsai.utils.exceptions import CancellationError
-
 from jobsai.utils.scrapers.duunitori import scrape_duunitori
 from jobsai.utils.scrapers.jobly import scrape_jobly
+from jobsai.utils.logger import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class SearcherService:
@@ -123,7 +122,12 @@ class SearcherService:
                     )
                 else:
                     # Unknown job board - skip with empty result
-                    logger.warning(f" Unknown job board: {job_board}. Skipping.")
+                    logger.warning(
+                        "Unknown job board",
+                        extra={
+                            "extra_fields": {"job_board": job_board, "query": query}
+                        },
+                    )
                     jobs = []
 
                 # Check for cancellation after scraping (before saving)
@@ -204,5 +208,14 @@ class SearcherService:
                 deduped.append(job)
                 seen_urls.add(url)
 
-        logger.info(f" Deduplicated {len(jobs)} jobs to {len(deduped)} unique listings")
+        logger.info(
+            "Deduplicated jobs",
+            extra={
+                "extra_fields": {
+                    "total_jobs": len(jobs),
+                    "unique_jobs": len(deduped),
+                    "duplicates_removed": len(jobs) - len(deduped),
+                }
+            },
+        )
         return deduped

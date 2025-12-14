@@ -14,16 +14,15 @@ The scoring process:
 """
 
 import os
-import logging
 import json
 from typing import List, Dict, Optional, Callable, Any, Union
 
 from jobsai.config.paths import SCORED_JOB_LISTING_PATH
 from jobsai.utils.exceptions import CancellationError
-
 from jobsai.utils.normalization import normalize_list
+from jobsai.utils.logger import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class ScorerService:
@@ -94,7 +93,14 @@ class ScorerService:
         self._save_scored_jobs(scored_jobs)
 
         logger.info(
-            f" Scored {len(scored_jobs)} jobs to /{SCORED_JOB_LISTING_PATH}/{self.timestamp}_scored_jobs.json"
+            "Scored jobs",
+            extra={
+                "extra_fields": {
+                    "jobs_count": len(scored_jobs),
+                    "timestamp": self.timestamp,
+                    "path": f"{SCORED_JOB_LISTING_PATH}/{self.timestamp}_scored_jobs.json",
+                }
+            },
         )
 
         return scored_jobs
@@ -247,4 +253,13 @@ class ScorerService:
             with open(path, "w", encoding="utf-8") as f:
                 json.dump(jobs, f, ensure_ascii=False, indent=2)
         except Exception as e:
-            logger.error(f" Failed to save scored jobs: {e}")
+            logger.error(
+                "Failed to save scored jobs",
+                extra={
+                    "extra_fields": {
+                        "timestamp": self.timestamp,
+                        "error": str(e),
+                        "error_type": type(e).__name__,
+                    }
+                },
+            )

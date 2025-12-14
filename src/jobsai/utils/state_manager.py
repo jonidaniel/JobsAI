@@ -21,12 +21,12 @@ Note:
 """
 
 import json
-import logging
 import os
 from datetime import datetime, timedelta
 from typing import Dict, Optional, Any, Union
+from jobsai.utils.logger import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # DynamoDB table name (set via environment variable or use default)
 TABLE_NAME = os.environ.get("DYNAMODB_TABLE_NAME", "jobsai-pipeline-states")
@@ -56,7 +56,10 @@ def get_dynamodb_client() -> Optional[Any]:
 
             _dynamodb_client = boto3.client("dynamodb")
         except ImportError:
-            logger.warning("boto3 not available, DynamoDB operations will fail")
+            logger.warning(
+                "boto3 not available",
+                extra={"extra_fields": {"operation": "dynamodb_client_init"}},
+            )
             _dynamodb_client = None
     return _dynamodb_client
 
@@ -78,7 +81,10 @@ def get_dynamodb_resource() -> Optional[Any]:
 
             _dynamodb_resource = boto3.resource("dynamodb")
         except ImportError:
-            logger.warning("boto3 not available, DynamoDB operations will fail")
+            logger.warning(
+                "boto3 not available",
+                extra={"extra_fields": {"operation": "dynamodb_resource_init"}},
+            )
             _dynamodb_resource = None
     return _dynamodb_resource
 
@@ -145,10 +151,23 @@ def store_job_state(job_id: str, state: Dict) -> None:
 
         # Store in DynamoDB
         table.put_item(Item=item)
-        logger.info(f"Stored job state for job_id: {job_id} in DynamoDB")
+        logger.info(
+            "Stored job state",
+            extra={"extra_fields": {"job_id": job_id, "status": state.get("status")}},
+        )
 
     except Exception as e:
-        logger.error(f"Failed to store job state in DynamoDB: {str(e)}", exc_info=True)
+        logger.error(
+            "Failed to store job state in DynamoDB",
+            extra={
+                "extra_fields": {
+                    "job_id": job_id,
+                    "error": str(e),
+                    "error_type": type(e).__name__,
+                }
+            },
+            exc_info=True,
+        )
         raise
 
 
@@ -177,7 +196,12 @@ def get_job_state(job_id: str) -> Optional[Dict[str, Any]]:
     try:
         dynamodb = get_dynamodb_resource()
         if dynamodb is None:
-            logger.error("DynamoDB resource not available")
+            logger.error(
+                "DynamoDB resource not available",
+                extra={
+                    "extra_fields": {"job_id": job_id, "operation": "get_job_state"}
+                },
+            )
             return None
 
         table = dynamodb.Table(TABLE_NAME)
@@ -213,7 +237,17 @@ def get_job_state(job_id: str) -> Optional[Dict[str, Any]]:
         return state
 
     except Exception as e:
-        logger.error(f"Failed to get job state from DynamoDB: {str(e)}", exc_info=True)
+        logger.error(
+            "Failed to get job state from DynamoDB",
+            extra={
+                "extra_fields": {
+                    "job_id": job_id,
+                    "error": str(e),
+                    "error_type": type(e).__name__,
+                }
+            },
+            exc_info=True,
+        )
         return None
 
 
@@ -248,11 +282,28 @@ def update_job_progress(job_id: str, progress: Dict) -> None:
             ExpressionAttributeValues={":progress": json.dumps(progress)},
         )
 
-        logger.info(f"Updated progress for job_id: {job_id} in DynamoDB")
+        logger.info(
+            "Updated progress",
+            extra={
+                "extra_fields": {
+                    "job_id": job_id,
+                    "phase": progress.get("phase"),
+                    "message": progress.get("message"),
+                }
+            },
+        )
 
     except Exception as e:
         logger.error(
-            f"Failed to update job progress in DynamoDB: {str(e)}", exc_info=True
+            "Failed to update job progress in DynamoDB",
+            extra={
+                "extra_fields": {
+                    "job_id": job_id,
+                    "error": str(e),
+                    "error_type": type(e).__name__,
+                }
+            },
+            exc_info=True,
         )
 
 
@@ -283,7 +334,10 @@ def store_document_in_s3(job_id: str, document: Any, filename: str) -> Optional[
         from io import BytesIO
 
         if not S3_BUCKET:
-            logger.warning("S3_BUCKET not configured, cannot store document")
+            logger.warning(
+                "S3_BUCKET not configured",
+                extra={"extra_fields": {"job_id": job_id, "filename": filename}},
+            )
             return None
 
         s3_client = boto3.client("s3")
@@ -302,11 +356,32 @@ def store_document_in_s3(job_id: str, document: Any, filename: str) -> Optional[
             ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         )
 
-        logger.info(f"Stored document in S3: s3://{S3_BUCKET}/{s3_key}")
+        logger.info(
+            "Stored document in S3",
+            extra={
+                "extra_fields": {
+                    "job_id": job_id,
+                    "filename": filename,
+                    "s3_key": s3_key,
+                    "s3_bucket": S3_BUCKET,
+                }
+            },
+        )
         return s3_key
 
     except Exception as e:
-        logger.error(f"Failed to store document in S3: {str(e)}", exc_info=True)
+        logger.error(
+            "Failed to store document in S3",
+            extra={
+                "extra_fields": {
+                    "job_id": job_id,
+                    "filename": filename,
+                    "error": str(e),
+                    "error_type": type(e).__name__,
+                }
+            },
+            exc_info=True,
+        )
         return None
 
 
@@ -335,12 +410,27 @@ def get_presigned_s3_url(s3_key: str, expiration: int = 3600) -> Optional[str]:
 
         if not S3_BUCKET or not s3_key:
             logger.warning(
-                f"S3_BUCKET or s3_key not set. S3_BUCKET: {S3_BUCKET}, s3_key: {s3_key}"
+                "S3_BUCKET or s3_key not set",
+                extra={
+                    "extra_fields": {
+                        "s3_bucket": S3_BUCKET,
+                        "s3_key": s3_key,
+                    }
+                },
             )
             return None
 
         s3_client = boto3.client("s3")
-        logger.info(f"Generating presigned URL for S3: s3://{S3_BUCKET}/{s3_key}")
+        logger.info(
+            "Generating presigned URL",
+            extra={
+                "extra_fields": {
+                    "s3_bucket": S3_BUCKET,
+                    "s3_key": s3_key,
+                    "expiration_seconds": expiration,
+                }
+            },
+        )
 
         # Extract filename from S3 key (last part after /)
         filename_from_key = s3_key.split("/")[-1]
@@ -357,11 +447,29 @@ def get_presigned_s3_url(s3_key: str, expiration: int = 3600) -> Optional[str]:
             ExpiresIn=expiration,
         )
 
-        logger.info(f"Generated presigned URL (expires in {expiration}s)")
+        logger.info(
+            "Generated presigned URL",
+            extra={
+                "extra_fields": {
+                    "s3_key": s3_key,
+                    "expiration_seconds": expiration,
+                }
+            },
+        )
         return url
 
     except Exception as e:
-        logger.error(f"Failed to generate presigned S3 URL: {str(e)}", exc_info=True)
+        logger.error(
+            "Failed to generate presigned S3 URL",
+            extra={
+                "extra_fields": {
+                    "s3_key": s3_key,
+                    "error": str(e),
+                    "error_type": type(e).__name__,
+                }
+            },
+            exc_info=True,
+        )
         return None
 
 
@@ -387,21 +495,53 @@ def get_document_from_s3(s3_key: str) -> Optional[bytes]:
 
         if not S3_BUCKET or not s3_key:
             logger.warning(
-                f"S3_BUCKET or s3_key not set. S3_BUCKET: {S3_BUCKET}, s3_key: {s3_key}"
+                "S3_BUCKET or s3_key not set",
+                extra={
+                    "extra_fields": {
+                        "s3_bucket": S3_BUCKET,
+                        "s3_key": s3_key,
+                    }
+                },
             )
             return None
 
         s3_client = boto3.client("s3")
-        logger.info(f"Retrieving document from S3: s3://{S3_BUCKET}/{s3_key}")
+        logger.info(
+            "Retrieving document from S3",
+            extra={
+                "extra_fields": {
+                    "s3_bucket": S3_BUCKET,
+                    "s3_key": s3_key,
+                }
+            },
+        )
         response = s3_client.get_object(Bucket=S3_BUCKET, Key=s3_key)
 
         # Read all bytes from the response body
         document_bytes = response["Body"].read()
-        logger.info(f"Retrieved {len(document_bytes)} bytes from S3")
+        logger.info(
+            "Retrieved document from S3",
+            extra={
+                "extra_fields": {
+                    "s3_key": s3_key,
+                    "bytes": len(document_bytes),
+                }
+            },
+        )
         return document_bytes
 
     except Exception as e:
-        logger.error(f"Failed to get document from S3: {str(e)}", exc_info=True)
+        logger.error(
+            "Failed to get document from S3",
+            extra={
+                "extra_fields": {
+                    "s3_key": s3_key,
+                    "error": str(e),
+                    "error_type": type(e).__name__,
+                }
+            },
+            exc_info=True,
+        )
         return None
 
 
@@ -439,7 +579,17 @@ def get_cancellation_flag(job_id: str) -> bool:
         return status == "cancelling" or status == "cancelled"
 
     except Exception as e:
-        logger.error(f"Failed to check cancellation flag: {str(e)}", exc_info=True)
+        logger.error(
+            "Failed to check cancellation flag",
+            extra={
+                "extra_fields": {
+                    "job_id": job_id,
+                    "error": str(e),
+                    "error_type": type(e).__name__,
+                }
+            },
+            exc_info=True,
+        )
         return False
 
 
@@ -503,9 +653,28 @@ def update_job_status(
             ExpressionAttributeValues=expr_values,
         )
 
-        logger.info(f"Updated job status for job_id: {job_id} to {status} in DynamoDB")
+        logger.info(
+            "Updated job status",
+            extra={
+                "extra_fields": {
+                    "job_id": job_id,
+                    "status": status,
+                    "has_result": bool(result),
+                    "has_error": bool(error),
+                }
+            },
+        )
 
     except Exception as e:
         logger.error(
-            f"Failed to update job status in DynamoDB: {str(e)}", exc_info=True
+            "Failed to update job status in DynamoDB",
+            extra={
+                "extra_fields": {
+                    "job_id": job_id,
+                    "status": status,
+                    "error": str(e),
+                    "error_type": type(e).__name__,
+                }
+            },
+            exc_info=True,
         )

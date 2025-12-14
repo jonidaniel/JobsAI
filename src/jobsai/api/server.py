@@ -419,7 +419,15 @@ async def start_pipeline(payload: FrontendPayload) -> JSONResponse:
     # This ensures the pipeline runs in a separate Lambda invocation
     try:
         invoke_worker_lambda(job_id, payload)
-        logger.info(f"Invoked worker Lambda for job_id: {job_id}")
+        logger.info(
+            "Invoked worker Lambda",
+            extra={
+                "extra_fields": {
+                    "job_id": job_id,
+                    "function_name": worker_function_name,
+                }
+            },
+        )
     except Exception as e:
         logger.error(
             "Failed to start pipeline",
@@ -696,7 +704,10 @@ async def download_document(
     if s3_key:
         presigned_url = get_presigned_s3_url(s3_key)
         if presigned_url:
-            logger.info(f"Returning presigned S3 URL for download: {s3_key}")
+            logger.info(
+                "Returning presigned S3 URL for download",
+                extra={"extra_fields": {"job_id": job_id, "s3_key": s3_key}},
+            )
             return JSONResponse(
                 content={
                     "download_url": presigned_url,

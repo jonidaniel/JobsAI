@@ -13,7 +13,6 @@ The analysis includes:
 """
 
 import os
-import logging
 from typing import List, Dict, Optional, Callable, Any
 
 from jobsai.config.paths import JOB_ANALYSIS_PATH
@@ -24,8 +23,9 @@ from jobsai.config.prompts import (
 
 from jobsai.utils.llms import call_llm
 from jobsai.utils.exceptions import CancellationError
+from jobsai.utils.logger import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class AnalyzerAgent:
@@ -151,9 +151,22 @@ class AnalyzerAgent:
         try:
             with open(path, "w", encoding="utf-8") as f:
                 f.write(analysis_text)
-            logger.info(f" Saved job analysis to {path}")
+            logger.info(
+                "Saved job analysis",
+                extra={"extra_fields": {"path": path, "timestamp": self.timestamp}},
+            )
         except Exception as e:
             # Log error but don't fail - analysis text is still returned
-            logger.error(f" Failed to save job analysis to disk: {e}")
+            logger.error(
+                "Failed to save job analysis to disk",
+                extra={
+                    "extra_fields": {
+                        "path": path,
+                        "timestamp": self.timestamp,
+                        "error": str(e),
+                        "error_type": type(e).__name__,
+                    }
+                },
+            )
 
         return analysis_text

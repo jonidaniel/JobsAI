@@ -14,7 +14,6 @@ The generated documents include:
 """
 
 import os
-import logging
 from datetime import datetime
 from typing import Union, List, Any
 
@@ -29,8 +28,9 @@ from jobsai.config.prompts import (
 
 from jobsai.utils.llms import call_llm
 from jobsai.utils.normalization import normalize_text
+from jobsai.utils.logger import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class GeneratorAgent:
@@ -144,7 +144,15 @@ class GeneratorAgent:
             )
             cover_letters.append(cover_letter)
 
-        logger.info(f"Generated {len(cover_letters)} cover letter(s)")
+        logger.info(
+            "Generated cover letters",
+            extra={
+                "extra_fields": {
+                    "count": len(cover_letters),
+                    "timestamp": self.timestamp,
+                }
+            },
+        )
         return cover_letters
 
     # ------------------------------
@@ -312,6 +320,15 @@ class GeneratorAgent:
             filename = f"{self.timestamp}_cover_letter.docx"
         filepath = os.path.join(COVER_LETTER_PATH, filename)
         cover_letter.save(filepath)
-        logger.info(f" Saved cover letter {letter_index} to {filepath}")
+        logger.info(
+            "Saved cover letter",
+            extra={
+                "extra_fields": {
+                    "letter_index": letter_index,
+                    "filepath": filepath,
+                    "timestamp": self.timestamp,
+                }
+            },
+        )
 
         return cover_letter

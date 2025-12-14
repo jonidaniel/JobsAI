@@ -30,7 +30,6 @@ You can easily switch to light mode by setting DEEP_MODE=False in /config/settin
 """
 
 import time
-import logging
 import requests
 import re
 from typing import List, Dict, Optional, Callable, Any
@@ -44,8 +43,9 @@ from jobsai.config.paths import (
     HOST_URL_JOBLY,
     SEARCH_URL_BASE_JOBLY,
 )
+from jobsai.utils.logger import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 # ------------------------------

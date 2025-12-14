@@ -77,10 +77,13 @@ try:
 except OSError as e:
     # Log error but don't fail - directories might already exist or be read-only
     # In Lambda, /tmp should always be writable
-    import logging
+    from jobsai.utils.logger import get_logger
 
-    logger = logging.getLogger(__name__)
-    logger.warning(f"Could not create directory: {e}")
+    logger = get_logger(__name__)
+    logger.warning(
+        "Could not create directory",
+        extra={"extra_fields": {"error": str(e), "error_type": type(e).__name__}},
+    )
 
 # ----- URLS -----
 
