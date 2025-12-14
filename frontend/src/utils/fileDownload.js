@@ -33,16 +33,25 @@ export function downloadBlob(blob, headers, defaultFilename = "document.docx") {
     if (contentDisposition) {
       // Handle both quoted and unquoted filenames
       // Match: filename="file.docx" or filename=file.docx or filename*=UTF-8''file.docx
-      const quotedMatch = contentDisposition.match(
-        /filename\*?=['"]?([^'";]+)['"]?/i
-      );
-      if (quotedMatch && quotedMatch[1]) {
-        // Decode URL-encoded filename if present (RFC 5987 format: filename*=UTF-8''encoded)
-        let extracted = quotedMatch[1];
-        if (extracted.includes("''")) {
-          extracted = decodeURIComponent(extracted.split("''")[1]);
+      // First try RFC 5987 format (filename*=encoding''value)
+      const rfc5987Match = contentDisposition.match(/filename\*=([^;]+)/i);
+      if (rfc5987Match && rfc5987Match[1]) {
+        const rfc5987Value = rfc5987Match[1].trim();
+        if (rfc5987Value.includes("''")) {
+          // Extract and decode: UTF-8''test%20file.docx -> test file.docx
+          const encoded = rfc5987Value.split("''")[1];
+          filename = decodeURIComponent(encoded);
+        } else {
+          filename = rfc5987Value;
         }
-        filename = extracted.trim();
+      } else {
+        // Fall back to standard format: filename="file.docx" or filename=file.docx
+        const quotedMatch = contentDisposition.match(
+          /filename=['"]?([^'";]+)['"]?/i
+        );
+        if (quotedMatch && quotedMatch[1]) {
+          filename = quotedMatch[1].trim();
+        }
       }
     }
   }
@@ -77,7 +86,12 @@ export function downloadBlob(blob, headers, defaultFilename = "document.docx") {
     }
   });
 
-  download_link.remove();
+  // Remove the link from DOM (use removeChild for compatibility with jsdom)
+  if (download_link.remove) {
+    download_link.remove();
+  } else if (download_link.parentNode) {
+    download_link.parentNode.removeChild(download_link);
+  }
 
   // Clean up the blob URL to free memory
   window.URL.revokeObjectURL(url);

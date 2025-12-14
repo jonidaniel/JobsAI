@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import Slider from "../Slider";
 import { SLIDER_MIN, SLIDER_MAX } from "../../../config/sliders";
@@ -18,16 +18,15 @@ describe("Slider", () => {
     expect(screen.getByLabelText("Test Slider")).toBeInTheDocument();
   });
 
-  it("should call onChange when slider value changes", async () => {
-    const user = userEvent.setup();
+  it("should call onChange when slider value changes", () => {
     const onChange = vi.fn();
     render(<Slider {...defaultProps} onChange={onChange} />);
 
     const slider = screen.getByLabelText("Test Slider");
-    await user.clear(slider);
-    await user.type(slider, "5");
+    // Range inputs need fireEvent.change to simulate value change
+    fireEvent.change(slider, { target: { value: "5" } });
 
-    expect(onChange).toHaveBeenCalled();
+    expect(onChange).toHaveBeenCalledWith(defaultProps.keyName, 5);
   });
 
   it("should have correct min and max values", () => {

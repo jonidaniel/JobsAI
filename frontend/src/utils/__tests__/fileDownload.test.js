@@ -7,29 +7,39 @@ describe("downloadBlob", () => {
   let mockAppendChild;
   let mockRemoveChild;
   let mockClick;
+  let mockAnchor;
 
   beforeEach(() => {
     // Mock URL.createObjectURL and revokeObjectURL
     mockCreateObjectURL = vi.fn(() => "blob:mock-url");
     mockRevokeObjectURL = vi.fn();
-    global.URL.createObjectURL = mockCreateObjectURL;
-    global.URL.revokeObjectURL = mockRevokeObjectURL;
+    window.URL.createObjectURL = mockCreateObjectURL;
+    window.URL.revokeObjectURL = mockRevokeObjectURL;
 
     // Mock DOM methods
     mockClick = vi.fn();
     mockAppendChild = vi.fn();
     mockRemoveChild = vi.fn();
 
-    // Create mock anchor element
-    const mockAnchor = {
+    // Create mock anchor element (create fresh for each test)
+    mockAnchor = {
       href: "",
       download: "",
-      style: {},
+      style: {
+        display: "",
+        position: "",
+        left: "",
+        top: "",
+        visibility: "",
+        opacity: "",
+      },
       setAttribute: vi.fn(),
       click: mockClick,
+      parentNode: document.body,
+      remove: undefined, // Will be set if available
     };
 
-    // Mock document.createElement
+    // Mock document.createElement to return our mock anchor
     vi.spyOn(document, "createElement").mockReturnValue(mockAnchor);
     vi.spyOn(document.body, "appendChild").mockImplementation(mockAppendChild);
     vi.spyOn(document.body, "removeChild").mockImplementation(mockRemoveChild);
@@ -47,14 +57,23 @@ describe("downloadBlob", () => {
     });
 
     // Mock requestAnimationFrame
-    global.requestAnimationFrame = vi.fn((cb) => {
+    window.requestAnimationFrame = vi.fn((cb) => {
       cb();
       return 1;
     });
-    global.window.scrollTo = vi.fn();
+    window.scrollTo = vi.fn();
   });
 
   afterEach(() => {
+    // Reset mock anchor properties
+    mockAnchor.download = "";
+    mockAnchor.href = "";
+    mockAnchor.style.display = "";
+    mockAnchor.style.position = "";
+    mockAnchor.style.left = "";
+    mockAnchor.style.top = "";
+    mockAnchor.style.visibility = "";
+    mockAnchor.style.opacity = "";
     vi.restoreAllMocks();
   });
 
@@ -68,8 +87,7 @@ describe("downloadBlob", () => {
 
     expect(mockCreateObjectURL).toHaveBeenCalledWith(blob);
     expect(document.createElement).toHaveBeenCalledWith("a");
-    const anchor = document.createElement("a");
-    expect(anchor.download).toBe("document.docx");
+    expect(mockAnchor.download).toBe("document.docx");
     expect(mockClick).toHaveBeenCalled();
     expect(mockRevokeObjectURL).toHaveBeenCalledWith("blob:mock-url");
   });
@@ -95,8 +113,7 @@ describe("downloadBlob", () => {
 
     downloadBlob(blob, headers, "document.docx");
 
-    const anchor = document.createElement("a");
-    expect(anchor.download).toBe("test_file.docx");
+    expect(mockAnchor.download).toBe("test_file.docx");
   });
 
   it("should prioritize defaultFilename over header when defaultFilename is not generic", () => {
@@ -121,8 +138,7 @@ describe("downloadBlob", () => {
 
     downloadBlob(blob, headers, "document.docx");
 
-    const anchor = document.createElement("a");
-    expect(anchor.download).toBe("test file.docx");
+    expect(mockAnchor.download).toBe("test file.docx");
   });
 
   it("should handle unquoted filename in Content-Disposition", () => {
@@ -134,8 +150,7 @@ describe("downloadBlob", () => {
 
     downloadBlob(blob, headers, "document.docx");
 
-    const anchor = document.createElement("a");
-    expect(anchor.download).toBe("unquoted_file.docx");
+    expect(mockAnchor.download).toBe("unquoted_file.docx");
   });
 
   it("should set anchor element styles correctly", () => {
@@ -146,13 +161,12 @@ describe("downloadBlob", () => {
 
     downloadBlob(blob, headers);
 
-    const anchor = document.createElement("a");
-    expect(anchor.style.display).toBe("none");
-    expect(anchor.style.position).toBe("absolute");
-    expect(anchor.style.left).toBe("-9999px");
-    expect(anchor.style.top).toBe("-9999px");
-    expect(anchor.style.visibility).toBe("hidden");
-    expect(anchor.style.opacity).toBe("0");
+    expect(mockAnchor.style.display).toBe("none");
+    expect(mockAnchor.style.position).toBe("absolute");
+    expect(mockAnchor.style.left).toBe("-9999px");
+    expect(mockAnchor.style.top).toBe("-9999px");
+    expect(mockAnchor.style.visibility).toBe("hidden");
+    expect(mockAnchor.style.opacity).toBe("0");
   });
 
   it("should append and remove anchor element from DOM", () => {
@@ -163,8 +177,10 @@ describe("downloadBlob", () => {
 
     downloadBlob(blob, headers);
 
-    expect(mockAppendChild).toHaveBeenCalled();
-    expect(mockRemoveChild).toHaveBeenCalled();
+    expect(mockAppendChild).toHaveBeenCalledWith(mockAnchor);
+    // Check that remove was attempted (either remove() or removeChild)
+    // Since we're using removeChild fallback in jsdom, check for that
+    expect(mockRemoveChild).toHaveBeenCalledWith(mockAnchor);
   });
 
   it("should restore scroll position if it changes during download", () => {
@@ -173,16 +189,27 @@ describe("downloadBlob", () => {
     });
     const headers = new Headers();
 
-    // Simulate scroll position change
+    // Set initial scroll position (saved before click)
+    Object.defineProperty(window, "scrollY", {
+      writable: true,
+      configurable: true,
+      value: 100,
+    });
+
+    downloadBlob(blob, headers);
+
+    // After download, simulate scroll change
     Object.defineProperty(window, "scrollY", {
       writable: true,
       configurable: true,
       value: 200,
     });
 
-    downloadBlob(blob, headers);
-
-    expect(global.requestAnimationFrame).toHaveBeenCalled();
+    // requestAnimationFrame callback should restore scroll
+    expect(window.requestAnimationFrame).toHaveBeenCalled();
+    // The callback will check scrollY (now 200) vs scrollBeforeClick (100) and restore
+    const rafCallback = window.requestAnimationFrame.mock.calls[0][0];
+    rafCallback();
     expect(window.scrollTo).toHaveBeenCalledWith(0, 100);
   });
 });

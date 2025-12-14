@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import TextField from "../TextField";
 import { DEFAULT_TEXT_FIELD_MAX_LENGTH } from "../../../config/constants";
@@ -72,17 +72,46 @@ describe("TextField", () => {
   it("should show validation warning when limit is exceeded and showValidation is true", async () => {
     const user = userEvent.setup();
     const longText = "a".repeat(DEFAULT_TEXT_FIELD_MAX_LENGTH + 10);
-    render(<TextField {...defaultProps} showValidation={true} />);
+    let currentValue = "";
+    const onChange = vi.fn((key, value) => {
+      currentValue = value;
+    });
+
+    const { rerender } = render(
+      <TextField
+        {...defaultProps}
+        showValidation={true}
+        onChange={onChange}
+        value={currentValue}
+      />
+    );
 
     const input = screen.getByLabelText("Test Field");
     await user.type(input, longText);
+
+    // Update component with new value (simulating parent component update)
+    rerender(
+      <TextField
+        {...defaultProps}
+        showValidation={true}
+        onChange={onChange}
+        value={longText}
+      />
+    );
+
     await user.tab(); // Trigger blur
 
-    expect(
-      screen.getByText(
-        `Character limit exceeded. Please reduce to ${DEFAULT_TEXT_FIELD_MAX_LENGTH} characters or less.`
-      )
-    ).toBeInTheDocument();
+    // Wait for validation message to appear
+    await waitFor(
+      () => {
+        expect(
+          screen.getByText(
+            `Character limit exceeded. Please reduce to ${DEFAULT_TEXT_FIELD_MAX_LENGTH} characters or less.`
+          )
+        ).toBeInTheDocument();
+      },
+      { timeout: 3000 }
+    );
   });
 
   it("should not show validation warning when showValidation is false", async () => {
@@ -122,7 +151,8 @@ describe("TextField", () => {
 
   it("should display label2 when provided", () => {
     render(<TextField {...defaultProps} label2="Additional info" />);
-    expect(screen.getByText("Additional info")).toBeInTheDocument();
+    // label2 is rendered inside the label element, so use a flexible matcher
+    expect(screen.getByText(/Additional info/)).toBeInTheDocument();
   });
 
   it("should have correct data attributes", () => {
