@@ -63,6 +63,9 @@ export default function Search() {
   const [currentPhase, setCurrentPhase] = useState(null);
   const [jobId, setJobId] = useState(null);
   const pollingIntervalRef = useRef(null);
+  // Delivery method selection state
+  const [showDeliveryMethodPrompt, setShowDeliveryMethodPrompt] =
+    useState(false);
   // Download prompt state
   const [showDownloadPrompt, setShowDownloadPrompt] = useState(false);
   const [downloadInfo, setDownloadInfo] = useState(null); // { jobId, filenames }
@@ -161,6 +164,7 @@ export default function Search() {
       setDownloadInfo(null);
       setHasDownloaded(false);
       setHasRespondedToPrompt(false);
+      setShowDeliveryMethodPrompt(false);
       // Navigate to question set 1 (index 0)
       setActiveQuestionSetIndex(0);
       // Scroll to question set 1 after a brief delay to ensure DOM is ready
@@ -255,6 +259,37 @@ export default function Search() {
     // Clear validation errors if validation passes
     setValidationErrors({});
     setActiveQuestionSetIndex(undefined); // Clear active index when validation passes
+
+    // Show delivery method selection prompt instead of starting pipeline immediately
+    setShowDeliveryMethodPrompt(true);
+    setError(null);
+    setSuccess(false);
+  };
+
+  /**
+   * Handles the delivery method selection.
+   * Starts the pipeline if "download" is selected, or shows a message for "email".
+   */
+  const handleDeliveryMethod = async (method) => {
+    setShowDeliveryMethodPrompt(false);
+
+    if (method === "download") {
+      // Start the pipeline
+      await startPipeline();
+    } else if (method === "email") {
+      // Email option - do nothing for now
+      setError(
+        "Email delivery is not yet available. Please select 'Stay anonymous and download them to browser'."
+      );
+      setShowDeliveryMethodPrompt(true); // Show prompt again
+    }
+  };
+
+  /**
+   * Starts the pipeline after delivery method is selected.
+   * Extracted from handleSubmit to be reusable.
+   */
+  const startPipeline = async () => {
     setIsSubmitting(true);
     setError(null);
     setSuccess(false);
@@ -632,6 +667,29 @@ export default function Search() {
             This might take a few minutes
           </h3>
         </>
+      ) : showDeliveryMethodPrompt ? (
+        // Delivery method selection prompt
+        <>
+          <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
+            How do you want the cover letters?
+          </h3>
+          <div className="flex justify-center items-center gap-4 mt-6">
+            <button
+              onClick={() => handleDeliveryMethod("email")}
+              className="text-base sm:text-lg md:text-xl lg:text-2xl px-3 sm:px-4 py-1.5 sm:py-2 border border-white bg-transparent text-white font-semibold rounded-lg shadow hover:bg-white hover:text-gray-800 transition-colors"
+              aria-label="Receive cover letters via email"
+            >
+              Via email
+            </button>
+            <button
+              onClick={() => handleDeliveryMethod("download")}
+              className="text-base sm:text-lg md:text-xl lg:text-2xl px-3 sm:px-4 py-1.5 sm:py-2 border border-white bg-transparent text-white font-semibold rounded-lg shadow hover:bg-white hover:text-gray-800 transition-colors"
+              aria-label="Stay anonymous and download cover letters to browser"
+            >
+              Stay anonymous and download them to browser
+            </button>
+          </div>
+        </>
       ) : showDownloadPrompt && downloadInfo ? (
         // Download prompt state: show download prompt text
         <>
@@ -715,9 +773,10 @@ export default function Search() {
       {error && <ErrorMessage message={error} />}
       {/* Submit button and cancel button */}
       <div className="flex justify-center items-center gap-4 mt-6">
-        {/* Only show submit button when NOT submitting */}
+        {/* Only show submit button when NOT submitting and NOT showing delivery method prompt */}
         {/* Hide button entirely if there's a successful submission but user hasn't responded to download prompt yet */}
         {!isSubmitting &&
+          !showDeliveryMethodPrompt &&
           (!submissionState.current.hasSuccessfulSubmission ||
             hasRespondedToPrompt) && (
             <button
