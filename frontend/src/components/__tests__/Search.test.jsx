@@ -91,9 +91,13 @@ describe("Search Component", () => {
       expect(submitButton).toBeInTheDocument();
       await user.click(submitButton);
 
+      // Button should be hidden when submitting, so we check that it's not visible
       await waitFor(
         () => {
-          expect(screen.getByText(/Finding Jobs/i)).toBeInTheDocument();
+          const submitButton = document.getElementById("submit-btn");
+          expect(submitButton).not.toBeInTheDocument();
+          // Cancel button should appear immediately
+          expect(screen.getByText("Cancel")).toBeInTheDocument();
         },
         { timeout: 3000 }
       );

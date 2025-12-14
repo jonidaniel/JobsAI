@@ -444,9 +444,17 @@ export default function Search() {
   /**
    * Handles pipeline cancellation
    * Sends cancel request to backend and stops polling
+   * Can be called even if jobId isn't set yet (cancels before pipeline starts)
    */
   const handleCancel = async () => {
-    if (jobId && pollingIntervalRef.current) {
+    // Stop polling if it's running
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+      pollingIntervalRef.current = null;
+    }
+
+    // If we have a jobId, send cancel request to backend
+    if (jobId) {
       try {
         await fetch(`${API_ENDPOINTS.CANCEL}/${jobId}`, {
           method: "POST",
@@ -454,13 +462,13 @@ export default function Search() {
       } catch (error) {
         console.error("Error cancelling pipeline:", error);
       }
-      clearInterval(pollingIntervalRef.current);
-      pollingIntervalRef.current = null;
-      setIsSubmitting(false);
-      setCurrentPhase(null);
-      setJobId(null);
-      setError("Pipeline was cancelled");
     }
+
+    // Reset state regardless of whether jobId exists
+    setIsSubmitting(false);
+    setCurrentPhase(null);
+    setJobId(null);
+    setError("Pipeline was cancelled");
   };
 
   /**
@@ -616,25 +624,25 @@ export default function Search() {
       {error && <ErrorMessage message={error} />}
       {/* Submit button and cancel button */}
       <div className="flex justify-center items-center gap-4 mt-6">
-        <button
-          id="submit-btn"
-          onClick={handleSubmit}
-          disabled={isSubmitting}
-          className="text-lg sm:text-xl md:text-2xl lg:text-3xl px-4 sm:px-6 py-2 sm:py-3 border border-white bg-transparent text-white font-semibold rounded-lg shadow disabled:opacity-50 disabled:cursor-not-allowed"
-          aria-label={
-            submissionState.current.hasSuccessfulSubmission
-              ? "Start a new job search"
-              : "Submit form and generate job search document"
-          }
-        >
-          {isSubmitting
-            ? "Finding Jobs..."
-            : submissionState.current.hasSuccessfulSubmission
-            ? "Find Again"
-            : "Find Jobs"}
-        </button>
-        {/* Cancel button - only show when pipeline is running */}
-        {isSubmitting && jobId && (
+        {/* Only show submit button when NOT submitting (but show "Find Again" after success) */}
+        {!isSubmitting && (
+          <button
+            id="submit-btn"
+            onClick={handleSubmit}
+            className="text-lg sm:text-xl md:text-2xl lg:text-3xl px-4 sm:px-6 py-2 sm:py-3 border border-white bg-transparent text-white font-semibold rounded-lg shadow disabled:opacity-50 disabled:cursor-not-allowed"
+            aria-label={
+              submissionState.current.hasSuccessfulSubmission
+                ? "Start a new job search"
+                : "Submit form and generate job search document"
+            }
+          >
+            {submissionState.current.hasSuccessfulSubmission
+              ? "Find Again"
+              : "Find Jobs"}
+          </button>
+        )}
+        {/* Cancel button - show immediately when submitting */}
+        {isSubmitting && (
           <button
             id="cancel-btn"
             onClick={handleCancel}
