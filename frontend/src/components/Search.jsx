@@ -754,8 +754,9 @@ export default function Search() {
         </>
       )}
       {/* Question sets component with blue/gray background - contains all question sets and manages all form inputs */}
-      {/* Only show question sets if not submitting AND not successfully completed */}
+      {/* Only show question sets if not submitting AND not showing delivery method prompt AND not successfully completed */}
       {!isSubmitting &&
+        !showDeliveryMethodPrompt &&
         !success &&
         !submissionState.current.hasSuccessfulSubmission && (
           <QuestionSetList
