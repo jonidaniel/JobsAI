@@ -265,9 +265,10 @@ Comprehensive documentation is available in the `docs/` directory:
 
 - **API**: `docs/api.md` - API endpoint documentation
 - **Architecture**: `docs/architecture.md` - System architecture overview
-- **Frontend**: `docs/frontend.md` - Frontend architecture and components
 - **Configuration**: `docs/configuration.md` - Environment variables and settings
+- **Deployment**: `docs/deployment.md` - AWS deployment guide
 - **Rate Limiting**: `docs/rate-limiting.md` - Rate limiting configuration and usage
+- **Frontend**: `docs/frontend.md` - Frontend architecture and components
 - **User Guide**: `docs/user-guide.md` - End-user instructions
 - **How-To**: `docs/how-to.md` - Development and setup guides
 - **Project Structure**: `docs/project-structure.md` - Detailed file organization
