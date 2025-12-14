@@ -18,7 +18,7 @@ Functions:
 import re
 from typing import List, Dict, Any, Union
 
-from jobsai.config.schemas import SKILL_ALIAS_MAP
+from jobsai.config.aliases import SKILL_ALIAS_MAP
 
 # ------------------------------
 # Public interfaces

@@ -124,22 +124,14 @@ def main(
     Raises:
         CancellationError: If cancellation_check returns True during execution
     """
-    logger.info("[MAIN] main() function called, starting pipeline")
 
     # Extract and transform form submission data
-    logger.info("[MAIN] About to extract form data")
     answers = extract_form_data(form_submissions)
-    logger.info("[MAIN] Form data extracted")
     job_boards = answers["job_boards"]
     deep_mode = answers["deep_mode"]
     cover_letter_num = answers["cover_letter_num"]
     cover_letter_style = answers["cover_letter_style"]
     tech_stack = answers["tech_stack"]
-    logger.info(f"JOB BOARDS: {job_boards}")
-    logger.info(f"DEEP MODE: {deep_mode}")
-    logger.info(f"COVER LETTER NUM: {cover_letter_num}")
-    logger.info(f"COVER LETTER STYLE: {cover_letter_style}")
-    logger.info(f"TECH STACK: {tech_stack}")
 
     # Generate a timestamp for consistent file naming
     # Used throughout the pipeline to insert the same datetime to all output files
