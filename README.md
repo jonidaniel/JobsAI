@@ -268,6 +268,7 @@ Comprehensive documentation is available in the `docs/` directory:
 - **Configuration**: `docs/configuration.md` - Environment variables and settings
 - **Deployment**: `docs/deployment.md` - AWS deployment guide
 - **Rate Limiting**: `docs/rate-limiting.md` - Rate limiting configuration and usage
+- **Logging**: `docs/logging.md` - CloudWatch structured logging guide
 - **Frontend**: `docs/frontend.md` - Frontend architecture and components
 - **User Guide**: `docs/user-guide.md` - End-user instructions
 - **How-To**: `docs/how-to.md` - Development and setup guides

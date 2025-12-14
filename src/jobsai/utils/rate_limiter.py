@@ -16,13 +16,13 @@ Environment Variables:
     DYNAMODB_TABLE_NAME: DynamoDB table name (default: "jobsai-pipeline-states")
 """
 
-import logging
 import os
 import time
 from datetime import datetime, timedelta
 from typing import Optional, Tuple, Any
+from jobsai.utils.logger import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # Rate limiting configuration (from environment variables)
 RATE_LIMIT_REQUESTS = int(os.environ.get("RATE_LIMIT_REQUESTS", "5"))
@@ -107,12 +107,18 @@ def check_rate_limit(ip_address: str) -> Tuple[bool, Optional[int], Optional[int
         If DynamoDB is unavailable or rate limiting is disabled, returns (True, None, None).
     """
     if not RATE_LIMIT_ENABLED:
-        logger.debug("Rate limiting is disabled")
+        logger.debug(
+            "Rate limiting is disabled",
+            extra={"extra_fields": {"ip_address": ip_address}},
+        )
         return True, None, None
 
     dynamodb_client = get_dynamodb_client()
     if not dynamodb_client:
-        logger.warning("DynamoDB client not available, rate limiting disabled")
+        logger.warning(
+            "DynamoDB client not available, rate limiting disabled",
+            extra={"extra_fields": {"ip_address": ip_address}},
+        )
         return True, None, None
 
     try:
@@ -142,7 +148,15 @@ def check_rate_limit(ip_address: str) -> Tuple[bool, Optional[int], Optional[int
                         # Rate limit exceeded
                         reset_at = stored_window + RATE_LIMIT_WINDOW_SECONDS
                         logger.warning(
-                            f"Rate limit exceeded for IP {ip_address}: {count}/{RATE_LIMIT_REQUESTS} requests"
+                            "Rate limit exceeded",
+                            extra={
+                                "extra_fields": {
+                                    "ip_address": ip_address,
+                                    "request_count": count,
+                                    "rate_limit": RATE_LIMIT_REQUESTS,
+                                    "reset_at": reset_at,
+                                }
+                            },
                         )
                         return False, 0, reset_at
 
@@ -168,7 +182,15 @@ def check_rate_limit(ip_address: str) -> Tuple[bool, Optional[int], Optional[int
                     remaining = RATE_LIMIT_REQUESTS - new_count
                     reset_at = window_start + RATE_LIMIT_WINDOW_SECONDS
                     logger.debug(
-                        f"Rate limit check passed for IP {ip_address}: {new_count}/{RATE_LIMIT_REQUESTS} requests"
+                        "Rate limit check passed",
+                        extra={
+                            "extra_fields": {
+                                "ip_address": ip_address,
+                                "request_count": new_count,
+                                "rate_limit": RATE_LIMIT_REQUESTS,
+                                "remaining": remaining,
+                            }
+                        },
                     )
                     return True, remaining, reset_at
                 else:
@@ -194,7 +216,16 @@ def check_rate_limit(ip_address: str) -> Tuple[bool, Optional[int], Optional[int
                     remaining = RATE_LIMIT_REQUESTS - new_count
                     reset_at = window_start + RATE_LIMIT_WINDOW_SECONDS
                     logger.debug(
-                        f"Rate limit check passed for IP {ip_address}: {new_count}/{RATE_LIMIT_REQUESTS} requests (new window)"
+                        "Rate limit check passed (new window)",
+                        extra={
+                            "extra_fields": {
+                                "ip_address": ip_address,
+                                "request_count": new_count,
+                                "rate_limit": RATE_LIMIT_REQUESTS,
+                                "remaining": remaining,
+                                "window_reset": True,
+                            }
+                        },
                     )
                     return True, remaining, reset_at
             else:
@@ -215,18 +246,44 @@ def check_rate_limit(ip_address: str) -> Tuple[bool, Optional[int], Optional[int
                 remaining = RATE_LIMIT_REQUESTS - new_count
                 reset_at = window_start + RATE_LIMIT_WINDOW_SECONDS
                 logger.debug(
-                    f"Rate limit check passed for IP {ip_address}: {new_count}/{RATE_LIMIT_REQUESTS} requests (first request)"
+                    "Rate limit check passed (first request)",
+                    extra={
+                        "extra_fields": {
+                            "ip_address": ip_address,
+                            "request_count": new_count,
+                            "rate_limit": RATE_LIMIT_REQUESTS,
+                            "remaining": remaining,
+                        }
+                    },
                 )
                 return True, remaining, reset_at
 
         except Exception as e:
             logger.error(
-                f"Error checking rate limit in DynamoDB: {str(e)}", exc_info=True
+                "Error checking rate limit in DynamoDB",
+                extra={
+                    "extra_fields": {
+                        "ip_address": ip_address,
+                        "error": str(e),
+                        "error_type": type(e).__name__,
+                    }
+                },
+                exc_info=True,
             )
             # On error, allow the request (fail open) but log the error
             return True, None, None
 
     except Exception as e:
-        logger.error(f"Unexpected error in rate limit check: {str(e)}", exc_info=True)
+        logger.error(
+            "Unexpected error in rate limit check",
+            extra={
+                "extra_fields": {
+                    "ip_address": ip_address,
+                    "error": str(e),
+                    "error_type": type(e).__name__,
+                }
+            },
+            exc_info=True,
+        )
         # On error, allow the request (fail open) but log the error
         return True, None, None

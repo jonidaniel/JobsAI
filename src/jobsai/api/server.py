@@ -10,7 +10,6 @@ To run the server:
     python -m uvicorn jobsai.api.server:app --reload --app-dir src
 """
 
-import logging
 import uuid
 import json
 import os
@@ -33,8 +32,9 @@ from jobsai.utils.state_manager import (
     update_job_status,
 )
 from jobsai.utils.rate_limiter import check_rate_limit, get_client_ip
+from jobsai.utils.logger import get_logger, set_correlation_id, log_performance
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # ------------- State Management -------------
 # In-memory storage for pipeline state (fallback for local development)
@@ -87,16 +87,16 @@ app.add_middleware(
 )
 
 
-# Add request logging middleware to debug
+# Add request logging middleware
 @app.middleware("http")
 async def log_requests(
     request: Request, call_next: Any
 ) -> Any:  # Response type from FastAPI
-    """Log all incoming HTTP requests for debugging and monitoring.
+    """Log all incoming HTTP requests with structured context.
 
-    Middleware function that logs every incoming request method and path,
-    as well as the response status code. Useful for debugging API issues
-    and monitoring request patterns in CloudWatch logs.
+    Middleware function that logs every incoming request with structured fields
+    for CloudWatch Logs Insights queries. Includes method, path, client IP,
+    and response status code.
 
     Args:
         request: FastAPI Request object containing request details.
@@ -105,10 +105,44 @@ async def log_requests(
     Returns:
         Response: The response from the next middleware/handler.
     """
-    print(f"[MIDDLEWARE] {request.method} {request.url.path}")
-    logger.info(f"Request: {request.method} {request.url.path}")
+    start_time = time.time()
+    client_ip = get_client_ip(request)
+
+    # Set correlation ID from headers
+    request_id = (
+        request.headers.get("X-Request-ID")
+        or request.headers.get("X-Amzn-Trace-Id", "").split("=")[-1]
+        or None
+    )
+    set_correlation_id(request_id=request_id)
+
+    logger.info(
+        "HTTP request",
+        extra={
+            "extra_fields": {
+                "http_method": request.method,
+                "http_path": request.url.path,
+                "client_ip": client_ip,
+                "user_agent": request.headers.get("User-Agent", ""),
+            }
+        },
+    )
+
     response = await call_next(request)
-    print(f"[MIDDLEWARE] Response status: {response.status_code}")
+    duration_ms = (time.time() - start_time) * 1000
+
+    logger.info(
+        "HTTP response",
+        extra={
+            "extra_fields": {
+                "http_method": request.method,
+                "http_path": request.url.path,
+                "http_status_code": response.status_code,
+                "duration_ms": round(duration_ms, 2),
+            }
+        },
+    )
+
     return response
 
 
@@ -136,7 +170,15 @@ async def rate_limit_middleware(
 
         if not allowed:
             logger.warning(
-                f"Rate limit exceeded for IP {client_ip} on {request.url.path}"
+                "Rate limit exceeded",
+                extra={
+                    "extra_fields": {
+                        "client_ip": client_ip,
+                        "http_path": request.url.path,
+                        "http_method": request.method,
+                        "rate_limit_reset_at": reset_at,
+                    }
+                },
             )
             return JSONResponse(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
@@ -202,8 +244,15 @@ async def validation_exception_handler(
             }
         )
 
-    logger.error(" Validation error: %s", error_details)
-    logger.debug(" Request body: %s", await request.body())
+    logger.error(
+        "Validation error",
+        extra={
+            "extra_fields": {
+                "validation_errors": error_details,
+                "http_path": request.url.path if request else None,
+            }
+        },
+    )
 
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
@@ -254,25 +303,43 @@ def invoke_worker_lambda(job_id: str, payload: FrontendPayload) -> None:
         }
 
         # Invoke Lambda asynchronously (Event invocation type)
-        logger.info(
-            f"Invoking worker Lambda function: {worker_function_name} for job_id: {job_id}"
-        )
-        response = lambda_client.invoke(
-            FunctionName=worker_function_name,
-            InvocationType="Event",  # Async invocation
-            Payload=json.dumps(event_payload),
-        )
+        with log_performance(
+            "invoke_worker_lambda", job_id=job_id, function_name=worker_function_name
+        ):
+            response = lambda_client.invoke(
+                FunctionName=worker_function_name,
+                InvocationType="Event",  # Async invocation
+                Payload=json.dumps(event_payload),
+            )
 
         logger.info(
-            f"Worker Lambda invoked successfully for job_id: {job_id}, StatusCode: {response.get('StatusCode')}"
+            "Worker Lambda invoked successfully",
+            extra={
+                "extra_fields": {
+                    "job_id": job_id,
+                    "function_name": worker_function_name,
+                    "status_code": response.get("StatusCode"),
+                }
+            },
         )
 
     except ImportError:
-        logger.error("boto3 not available, cannot invoke worker Lambda")
+        logger.error(
+            "boto3 not available",
+            extra={"extra_fields": {"job_id": job_id, "error": "ImportError"}},
+        )
         raise RuntimeError("boto3 not available")
     except Exception as e:
         logger.error(
-            f"Failed to invoke worker Lambda for job_id: {job_id}: {str(e)}",
+            "Failed to invoke worker Lambda",
+            extra={
+                "extra_fields": {
+                    "job_id": job_id,
+                    "function_name": worker_function_name,
+                    "error": str(e),
+                    "error_type": type(e).__name__,
+                }
+            },
             exc_info=True,
         )
         raise
@@ -311,12 +378,10 @@ async def start_pipeline(payload: FrontendPayload) -> JSONResponse:
         to ensure the job_id is available for progress polling even if the worker
         hasn't started yet.
     """
-    # Explicit logging to verify endpoint is being called
-    print(f"[API] /api/start called")
-    logger.info("[API] /api/start endpoint called")
-
     job_id = str(uuid.uuid4())
-    print(f"[API] Generated job_id: {job_id}")
+    set_correlation_id(job_id=job_id)
+
+    logger.info("Pipeline start requested", extra={"extra_fields": {"job_id": job_id}})
 
     # Initialize state in DynamoDB IMMEDIATELY
     # This ensures state exists before async invocation
@@ -330,11 +395,22 @@ async def start_pipeline(payload: FrontendPayload) -> JSONResponse:
 
     # Store in DynamoDB (primary) and in-memory (fallback for local dev)
     try:
-        store_job_state(job_id, initial_state)
-        logger.info(f"Stored initial state for job_id: {job_id} in DynamoDB")
+        with log_performance("store_initial_state", job_id=job_id):
+            store_job_state(job_id, initial_state)
+        logger.info(
+            "Stored initial state",
+            extra={"extra_fields": {"job_id": job_id, "status": "running"}},
+        )
     except Exception as e:
         logger.warning(
-            f"Failed to store state in DynamoDB, using in-memory only: {str(e)}"
+            "Failed to store state in DynamoDB",
+            extra={
+                "extra_fields": {
+                    "job_id": job_id,
+                    "error": str(e),
+                    "fallback": "in_memory",
+                }
+            },
         )
     # Keep in-memory copy for local development fallback
     pipeline_states[job_id] = initial_state
@@ -345,7 +421,17 @@ async def start_pipeline(payload: FrontendPayload) -> JSONResponse:
         invoke_worker_lambda(job_id, payload)
         logger.info(f"Invoked worker Lambda for job_id: {job_id}")
     except Exception as e:
-        logger.error(f"Failed to invoke worker Lambda: {str(e)}", exc_info=True)
+        logger.error(
+            "Failed to start pipeline",
+            extra={
+                "extra_fields": {
+                    "job_id": job_id,
+                    "error": str(e),
+                    "error_type": type(e).__name__,
+                }
+            },
+            exc_info=True,
+        )
         # Update state to error
         update_job_status(job_id, "error", error=f"Failed to start pipeline: {str(e)}")
         raise HTTPException(
@@ -397,14 +483,15 @@ async def get_progress(job_id: str) -> JSONResponse:
         pipeline execution. The polling interval should balance responsiveness
         with API rate limits (typically 1-2 seconds is optimal).
     """
-    # Explicit logging to verify endpoint is being called
-    print(f"[API] /api/progress/{job_id} called")
-    logger.info(f"[API] /api/progress/{job_id} endpoint called")
+    set_correlation_id(job_id=job_id)
 
     # Get state from DynamoDB with in-memory fallback
     state = get_job_state_with_fallback(job_id)
 
-    logger.info(f"Retrieved state for job_id: {job_id}, status: {state.get('status')}")
+    logger.info(
+        "Retrieved job state",
+        extra={"extra_fields": {"job_id": job_id, "status": state.get("status")}},
+    )
 
     # Build response based on current state
     response_data = {
@@ -471,12 +558,20 @@ async def cancel_pipeline(job_id: str) -> JSONResponse:
     # Check if job exists (will raise 404 if not found)
     get_job_state_with_fallback(job_id)
 
+    set_correlation_id(job_id=job_id)
+
     # Update status in DynamoDB (worker Lambda reads from here)
     try:
         update_job_status(job_id, "cancelling")
-        logger.info(f"Cancellation requested for job_id: {job_id}")
+        logger.info(
+            "Cancellation requested",
+            extra={"extra_fields": {"job_id": job_id, "status": "cancelling"}},
+        )
     except Exception as e:
-        logger.warning(f"Failed to update cancellation in DynamoDB: {str(e)}")
+        logger.warning(
+            "Failed to update cancellation in DynamoDB",
+            extra={"extra_fields": {"job_id": job_id, "error": str(e)}},
+        )
         # Fallback: update in-memory state for local dev
         if job_id in pipeline_states:
             pipeline_states[job_id]["status"] = "cancelling"

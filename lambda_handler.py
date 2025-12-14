@@ -25,22 +25,13 @@ Environment Variables:
     FRONTEND_URL: Frontend domain for CORS configuration (optional)
 """
 
-import logging
 from typing import Any, Dict
 from mangum import Mangum
 from jobsai.api.server import app
 from lambda_worker import worker_handler
+from jobsai.utils.logger import configure_logging, get_logger, log_request
 
-# Configure logging for Lambda
-# Lambda automatically captures stdout/stderr, so we configure logging to use them
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-)
-
-logger = logging.getLogger(__name__)
-logger.info("Lambda handler initialized")
+logger = get_logger(__name__)
 
 # Create Mangum handler to wrap FastAPI app for Lambda
 # This handles API Gateway and Function URL requests
@@ -57,6 +48,7 @@ api_handler = Mangum(
 )
 
 
+@log_request
 def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """Main Lambda handler that routes incoming requests to appropriate handlers.
 
@@ -80,11 +72,19 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         The routing logic checks for "job_id" in the event and absence of "httpMethod"
         to identify worker invocations. All other events are treated as HTTP requests.
     """
+    # Configure logging with Lambda context
+    configure_logging(context)
+
     # Check if this is a worker invocation (has job_id in event)
     if isinstance(event, dict) and "job_id" in event and "httpMethod" not in event:
-        logger.info("Routing to worker handler")
+        logger.info(
+            "Routing to worker handler",
+            extra={
+                "extra_fields": {"job_id": event.get("job_id"), "event_type": "worker"}
+            },
+        )
         return worker_handler(event, context)
 
     # Otherwise, route to FastAPI app (API Gateway/Function URL)
-    logger.info("Routing to API handler")
+    logger.info("Routing to API handler", extra={"extra_fields": {"event_type": "api"}})
     return api_handler(event, context)

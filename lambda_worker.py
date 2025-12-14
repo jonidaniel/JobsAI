@@ -21,7 +21,6 @@ Note:
 """
 
 import json
-import logging
 from typing import Any, Dict, Tuple, List
 from jobsai.main import main
 from jobsai.utils.state_manager import (
@@ -33,15 +32,14 @@ from jobsai.utils.state_manager import (
 )
 from jobsai.config.schemas import FrontendPayload
 from jobsai.utils.exceptions import CancellationError
-
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
+from jobsai.utils.logger import (
+    configure_logging,
+    get_logger,
+    set_correlation_id,
+    log_performance,
 )
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 def _store_documents_and_prepare_result(
@@ -136,55 +134,106 @@ def worker_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         the caller. All state updates happen through DynamoDB, which the API polls.
         Progress updates are written to DynamoDB via the progress_callback function.
     """
-    try:
-        logger.info(f"Worker handler invoked with event: {json.dumps(event)}")
+    # Configure logging with Lambda context
+    configure_logging(context)
 
+    try:
         # Extract job_id and payload from event
         job_id = event.get("job_id")
         payload_data = event.get("payload")
 
+        # Set correlation ID for tracing
+        set_correlation_id(
+            request_id=context.aws_request_id if context else None, job_id=job_id
+        )
+
+        logger.info(
+            "Worker handler invoked",
+            extra={
+                "extra_fields": {"job_id": job_id, "has_payload": bool(payload_data)}
+            },
+        )
+
         if not job_id:
-            logger.error("Missing job_id in event")
+            logger.error(
+                "Missing job_id in event",
+                extra={"extra_fields": {"event_keys": list(event.keys())}},
+            )
             return {"statusCode": 400, "body": "Missing job_id"}
 
         if not payload_data:
-            logger.error("Missing payload in event")
+            logger.error(
+                "Missing payload in event", extra={"extra_fields": {"job_id": job_id}}
+            )
             return {"statusCode": 400, "body": "Missing payload"}
 
-        logger.info(f"Processing pipeline for job_id: {job_id}")
+        logger.info("Processing pipeline", extra={"extra_fields": {"job_id": job_id}})
 
         # Convert payload dict to FrontendPayload model
         payload = FrontendPayload(**payload_data)
 
         # Define progress callback that updates DynamoDB
         def progress_callback(phase: str, message: str):
-            logger.info(f"Progress update - {phase}: {message}")
+            logger.info(
+                "Progress update",
+                extra={
+                    "extra_fields": {
+                        "job_id": job_id,
+                        "phase": phase,
+                        "message": message,
+                    }
+                },
+            )
             update_job_progress(job_id, {"phase": phase, "message": message})
 
         # Define cancellation check that reads from DynamoDB
         def cancellation_check() -> bool:
             return get_cancellation_flag(job_id)
 
-        # Run the pipeline
-        logger.info(f"Starting pipeline execution for job_id: {job_id}")
-        result = main(
-            payload.model_dump(by_alias=True), progress_callback, cancellation_check
-        )
+        # Run the pipeline with performance logging
+        with log_performance("pipeline_execution", job_id=job_id):
+            result = main(
+                payload.model_dump(by_alias=True), progress_callback, cancellation_check
+            )
 
         # Store documents in S3 and prepare result data
-        s3_keys, result_data = _store_documents_and_prepare_result(job_id, result)
+        with log_performance("store_documents", job_id=job_id):
+            s3_keys, result_data = _store_documents_and_prepare_result(job_id, result)
 
         update_job_status(job_id, "complete", result=result_data)
 
-        logger.info(f"Pipeline completed successfully for job_id: {job_id}")
+        logger.info(
+            "Pipeline completed successfully",
+            extra={
+                "extra_fields": {
+                    "job_id": job_id,
+                    "documents_count": len(s3_keys) if s3_keys else 0,
+                    "status": "complete",
+                }
+            },
+        )
         return {"statusCode": 200, "body": "Pipeline completed"}
 
     except CancellationError:
-        logger.info(f"Pipeline cancelled for job_id: {job_id}")
+        logger.info(
+            "Pipeline cancelled",
+            extra={"extra_fields": {"job_id": job_id, "status": "cancelled"}},
+        )
         update_job_status(job_id, "cancelled")
         return {"statusCode": 200, "body": "Pipeline cancelled"}
 
     except Exception as e:
-        logger.error(f"Pipeline failed for job_id: {job_id}: {str(e)}", exc_info=True)
+        logger.error(
+            "Pipeline failed",
+            extra={
+                "extra_fields": {
+                    "job_id": job_id,
+                    "status": "error",
+                    "error": str(e),
+                    "error_type": type(e).__name__,
+                }
+            },
+            exc_info=True,
+        )
         update_job_status(job_id, "error", error=str(e))
         return {"statusCode": 500, "body": f"Pipeline failed: {str(e)}"}

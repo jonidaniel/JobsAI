@@ -28,7 +28,6 @@ Note:
 """
 
 import os
-import logging
 import json
 import time
 from typing import Optional
@@ -37,8 +36,9 @@ from dotenv import load_dotenv
 
 from openai import OpenAI
 from openai import RateLimitError, APIConnectionError, APITimeoutError
+from jobsai.utils.logger import get_logger, log_performance
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # Load environment variables from .env file
 load_dotenv()
@@ -131,17 +131,24 @@ def call_llm(
 
     for attempt in range(max_retries + 1):
         try:
-            # Make API call to OpenAI
-            # Temperature is set low (0.2) for more deterministic, focused responses
-            response = client.chat.completions.create(
+            # Make API call to OpenAI with performance logging
+            with log_performance(
+                "llm_call",
                 model=OPENAI_MODEL,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt},
-                ],
+                attempt=attempt + 1,
+                max_retries=max_retries,
                 max_tokens=max_tokens,
-                temperature=0.2,  # Low temperature for consistent, focused output
-            )
+            ):
+                # Temperature is set low (0.2) for more deterministic, focused responses
+                response = client.chat.completions.create(
+                    model=OPENAI_MODEL,
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt},
+                    ],
+                    max_tokens=max_tokens,
+                    temperature=0.2,  # Low temperature for consistent, focused output
+                )
             break  # Success, exit retry loop
 
         except retryable_errors as e:
@@ -150,20 +157,44 @@ def call_llm(
                 # Exponential backoff: delay doubles with each retry
                 delay = retry_delay * (2**attempt)
                 logger.warning(
-                    f" LLM API call failed (attempt {attempt + 1}/{max_retries + 1}): {type(e).__name__}. "
-                    f"Retrying in {delay:.1f}s..."
+                    "LLM API call failed, retrying",
+                    extra={
+                        "extra_fields": {
+                            "model": OPENAI_MODEL,
+                            "attempt": attempt + 1,
+                            "max_retries": max_retries,
+                            "error_type": type(e).__name__,
+                            "retry_delay_seconds": delay,
+                        }
+                    },
                 )
                 time.sleep(delay)
             else:
                 # Final attempt failed
                 logger.error(
-                    f" LLM API call failed after {max_retries + 1} attempts: {type(e).__name__}"
+                    "LLM API call failed after all retries",
+                    extra={
+                        "extra_fields": {
+                            "model": OPENAI_MODEL,
+                            "attempts": max_retries + 1,
+                            "error_type": type(e).__name__,
+                        }
+                    },
+                    exc_info=True,
                 )
                 raise
         except Exception as e:
             # Non-retryable errors (e.g., authentication, invalid request) fail immediately
             logger.error(
-                f" LLM API call failed with non-retryable error: {type(e).__name__}: {str(e)}"
+                "LLM API call failed with non-retryable error",
+                extra={
+                    "extra_fields": {
+                        "model": OPENAI_MODEL,
+                        "error_type": type(e).__name__,
+                        "error": str(e),
+                    }
+                },
+                exc_info=True,
             )
             raise
 
@@ -197,8 +228,17 @@ def call_llm(
         logger.error(error_msg)
         raise ValueError(error_msg)
 
-    # Log first 500 characters for debugging (full response may be very long)
-    logger.debug(" LLM response: %s", text[:500])
+    # Log response summary for debugging (full response may be very long)
+    logger.debug(
+        "LLM response received",
+        extra={
+            "extra_fields": {
+                "model": OPENAI_MODEL,
+                "response_length": len(text),
+                "response_preview": text[:200] if len(text) > 200 else text,
+            }
+        },
+    )
 
     return text
 

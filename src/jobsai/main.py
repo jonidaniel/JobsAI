@@ -17,7 +17,6 @@ across all steps.
 For overall project description, see README.md or docs/README.md.
 """
 
-import logging
 from datetime import datetime
 from typing import Dict, Callable, Any, Optional, List, Union
 from docx import Document
@@ -34,10 +33,9 @@ from jobsai.agents import (
 
 from jobsai.utils.form_data import extract_form_data
 from jobsai.utils.exceptions import CancellationError
+from jobsai.utils.logger import get_logger, log_performance
 
-logging.basicConfig(level=logging.INFO)
-
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 def pipeline_step(step_name: str, step_number: int, total_steps: int):
@@ -68,19 +66,53 @@ def pipeline_step(step_name: str, step_number: int, total_steps: int):
     def decorator(func: Callable) -> Callable:
         @wraps(func)
         def wrapper(*args, **kwargs) -> Any:
-            try:
-                logger.info(f" Step {step_number}/{total_steps}: {step_name}...")
-                result = func(*args, **kwargs)
-                logger.info(
-                    f" Step {step_number}/{total_steps}: {step_name} completed successfully"
-                )
-                return result
-            except Exception as e:
-                error_msg = (
-                    f" Step {step_number}/{total_steps}: {step_name} failed: {str(e)}"
-                )
-                logger.error(error_msg)
-                raise RuntimeError(error_msg) from e
+            with log_performance(
+                "pipeline_step",
+                step_name=step_name,
+                step_number=step_number,
+                total_steps=total_steps,
+            ):
+                try:
+                    logger.info(
+                        "Pipeline step started",
+                        extra={
+                            "extra_fields": {
+                                "step_name": step_name,
+                                "step_number": step_number,
+                                "total_steps": total_steps,
+                            }
+                        },
+                    )
+                    result = func(*args, **kwargs)
+                    logger.info(
+                        "Pipeline step completed",
+                        extra={
+                            "extra_fields": {
+                                "step_name": step_name,
+                                "step_number": step_number,
+                                "total_steps": total_steps,
+                                "status": "success",
+                            }
+                        },
+                    )
+                    return result
+                except Exception as e:
+                    logger.error(
+                        "Pipeline step failed",
+                        extra={
+                            "extra_fields": {
+                                "step_name": step_name,
+                                "step_number": step_number,
+                                "total_steps": total_steps,
+                                "status": "error",
+                                "error": str(e),
+                                "error_type": type(e).__name__,
+                            }
+                        },
+                        exc_info=True,
+                    )
+                    error_msg = f" Step {step_number}/{total_steps}: {step_name} failed: {str(e)}"
+                    raise RuntimeError(error_msg) from e
 
         return wrapper
 
@@ -140,7 +172,7 @@ def main(
 
     # Initialize all agents and services
     try:
-        logger.info(" Initializing agents and services...")
+        logger.info("Initializing agents and services")
         # 1. Profiles the candidate
         profiler = ProfilerAgent()
         # 2. Creates keywords from the candidate profile
@@ -153,10 +185,19 @@ def main(
         analyzer = AnalyzerAgent(timestamp)
         # 6. Generates cover letters based on the analysis
         generator = GeneratorAgent(timestamp)
-        logger.info(" Agents and services initialized successfully")
+        logger.info("Agents and services initialized successfully")
     except Exception as e:
+        logger.error(
+            "Failed to initialize agents and services",
+            extra={
+                "extra_fields": {
+                    "error": str(e),
+                    "error_type": type(e).__name__,
+                }
+            },
+            exc_info=True,
+        )
         error_msg = f" Failed to initialize agents and services: {str(e)}"
-        logger.error(error_msg)
         raise RuntimeError(error_msg) from e
 
     # Check for cancellation before starting
@@ -176,7 +217,10 @@ def main(
         return profiler.create_profile(form_submissions)
 
     profile = _step1_profile()
-    logger.info(f"Profile created, length: {len(profile) if profile else 0}")
+    logger.info(
+        "Profile created",
+        extra={"extra_fields": {"profile_length": len(profile) if profile else 0}},
+    )
 
     # Step 2: Create search keywords
     # Uses LLM to create search keywords from the candidate profile
@@ -282,7 +326,13 @@ def main(
     # Return documents and metadata for API response
     # If multiple letters, return list; if single, return single document for backward compatibility
     logger.info(
-        f" Pipeline completed successfully, generated {len(cover_letters)} cover letter(s)"
+        "Pipeline completed successfully",
+        extra={
+            "extra_fields": {
+                "cover_letters_count": len(cover_letters),
+                "timestamp": timestamp,
+            }
+        },
     )
 
     if len(cover_letters) == 1:
