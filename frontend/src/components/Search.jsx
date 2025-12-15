@@ -158,6 +158,49 @@ export default function Search() {
     e.preventDefault();
     e.stopPropagation();
 
+    // If this is a "Find Again" click while submitting (e.g., during email delivery), just reset UI
+    // Do NOT cancel the running job - let it complete in the background
+    if (isSubmitting) {
+      // Stop polling for the current job (but don't send cancel request)
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+      // Reset UI state and allow new submission
+      setError(null);
+      setSuccess(false);
+      submissionState.current.justCompleted = false;
+      submissionState.current.hasSuccessfulSubmission = false;
+      setShowDownloadPrompt(false);
+      setDownloadInfo(null);
+      setDeclinedDocumentCount(null);
+      setHasDownloaded(false);
+      setHasRespondedToPrompt(false);
+      setShowDeliveryMethodPrompt(false);
+      setDeliveryMethod(null);
+      setEmail("");
+      setEmailError(null);
+      setIsCancelled(false);
+      setIsSubmitting(false);
+      setCurrentPhase(null);
+      setJobId(null); // Clear jobId but don't cancel the job
+      // Navigate to question set 1 (index 0)
+      setActiveQuestionSetIndex(0);
+      // Scroll to question set 1 after a brief delay to ensure DOM is ready
+      setTimeout(() => {
+        const questionSetSection = document.querySelector('[data-index="0"]');
+        if (questionSetSection) {
+          const rect = questionSetSection.getBoundingClientRect();
+          const targetPosition = window.scrollY + rect.top - SCROLL_OFFSET;
+          window.scrollTo({
+            top: targetPosition,
+            behavior: "smooth",
+          });
+        }
+      }, SCROLL_DELAY);
+      return;
+    }
+
     // If this is a "Find Again" click (from successful submission or cancellation), navigate to question set 1 and reset
     if (submissionState.current.hasSuccessfulSubmission || isCancelled) {
       // Reset states
@@ -189,11 +232,6 @@ export default function Search() {
           });
         }
       }, SCROLL_DELAY);
-      return;
-    }
-
-    // Prevent double submission
-    if (isSubmitting) {
       return;
     }
 
@@ -715,8 +753,15 @@ export default function Search() {
   return (
     <section id="search">
       <h2>Search</h2>
-      {isSubmitting ? (
-        // Loading state: show progress message
+      {isSubmitting && deliveryMethod === "email" ? (
+        // Email delivery: show message instead of progress
+        <>
+          <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
+            Expect the cover letters to drop in your email shortly
+          </h3>
+        </>
+      ) : isSubmitting ? (
+        // Download delivery: show progress message
         <>
           <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
             {currentPhase && phaseMessages[currentPhase]
@@ -841,6 +886,24 @@ export default function Search() {
           </h3>
         </>
       ) : submissionState.current.hasSuccessfulSubmission &&
+        deliveryMethod === "email" &&
+        hasRespondedToPrompt ? (
+        // Email delivery complete: show completion message
+        <>
+          <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
+            Expect the cover letters to drop in your email shortly
+          </h3>
+        </>
+      ) : submissionState.current.hasSuccessfulSubmission &&
+        deliveryMethod === "email" &&
+        hasRespondedToPrompt ? (
+        // Email delivery complete: show completion message
+        <>
+          <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
+            Expect the cover letters to drop in your email shortly
+          </h3>
+        </>
+      ) : submissionState.current.hasSuccessfulSubmission &&
         hasRespondedToPrompt &&
         !hasDownloaded ? (
         // User declined download: show message
@@ -917,6 +980,31 @@ export default function Search() {
             Find Again
           </button>
         )}
+        {/* Show "Find Again" button immediately when email delivery is selected */}
+        {isSubmitting && deliveryMethod === "email" && (
+          <button
+            id="submit-btn"
+            onClick={handleSubmit}
+            className="text-lg sm:text-xl md:text-2xl lg:text-3xl px-4 sm:px-6 py-2 sm:py-3 border border-white bg-transparent text-white font-semibold rounded-lg shadow disabled:opacity-50 disabled:cursor-not-allowed"
+            aria-label="Start a new job search"
+          >
+            Find Again
+          </button>
+        )}
+        {/* Show "Find Again" button when email delivery is complete */}
+        {!isSubmitting &&
+          submissionState.current.hasSuccessfulSubmission &&
+          deliveryMethod === "email" &&
+          hasRespondedToPrompt && (
+            <button
+              id="submit-btn"
+              onClick={handleSubmit}
+              className="text-lg sm:text-xl md:text-2xl lg:text-3xl px-4 sm:px-6 py-2 sm:py-3 border border-white bg-transparent text-white font-semibold rounded-lg shadow disabled:opacity-50 disabled:cursor-not-allowed"
+              aria-label="Start a new job search"
+            >
+              Find Again
+            </button>
+          )}
         {/* Only show submit button when NOT submitting and NOT showing delivery method prompt and NOT cancelled */}
         {/* Hide button entirely if there's a successful submission but user hasn't responded to download prompt yet */}
         {!isSubmitting &&
@@ -941,8 +1029,8 @@ export default function Search() {
                 : "Find Jobs"}
             </button>
           )}
-        {/* Cancel button - show immediately when submitting */}
-        {isSubmitting && (
+        {/* Cancel button - show immediately when submitting (only for download delivery) */}
+        {isSubmitting && deliveryMethod !== "email" && (
           <button
             id="cancel-btn"
             onClick={handleCancel}
