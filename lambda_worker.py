@@ -29,6 +29,7 @@ from jobsai.utils.state_manager import (
     store_job_state,
     store_document_in_s3,
     get_cancellation_flag,
+    get_job_state,
 )
 from jobsai.config.schemas import FrontendPayload
 from jobsai.utils.exceptions import CancellationError
@@ -199,6 +200,59 @@ def worker_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         # Store documents in S3 and prepare result data
         with log_performance("store_documents", job_id=job_id):
             s3_keys, result_data = _store_documents_and_prepare_result(job_id, result)
+
+        # Get job state to check delivery method
+        job_state = get_job_state(job_id)
+        delivery_method = job_state.get("delivery_method") if job_state else None
+        email = job_state.get("email") if job_state else None
+
+        # Send email if delivery method is email
+        if delivery_method == "email" and email and s3_keys:
+            from jobsai.utils.email_service import send_cover_letters_email
+
+            filenames = result_data.get("filenames", [])
+            if not filenames and result_data.get("filename"):
+                # Single document (backward compatibility)
+                filenames = [result_data.get("filename")]
+
+            logger.info(
+                "Sending cover letters via email",
+                extra={
+                    "extra_fields": {
+                        "job_id": job_id,
+                        "recipient_email_hash": (
+                            email[:3] + "***@" + email.split("@")[1]
+                            if "@" in email
+                            else "***"
+                        ),
+                        "attachment_count": len(filenames),
+                    }
+                },
+            )
+
+            email_sent = send_cover_letters_email(
+                recipient_email=email,
+                job_id=job_id,
+                s3_keys=s3_keys,
+                filenames=filenames,
+            )
+
+            if not email_sent:
+                logger.warning(
+                    "Email delivery failed, but documents are available in S3",
+                    extra={
+                        "extra_fields": {
+                            "job_id": job_id,
+                            "recipient_email_hash": (
+                                email[:3] + "***@" + email.split("@")[1]
+                                if "@" in email
+                                else "***"
+                            ),
+                        }
+                    },
+                )
+                # Still mark as complete - documents are in S3
+                # User can download manually if needed
 
         update_job_status(job_id, "complete", result=result_data)
 

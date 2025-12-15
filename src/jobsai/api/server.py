@@ -393,6 +393,12 @@ async def start_pipeline(payload: FrontendPayload) -> JSONResponse:
         "created_at": datetime.now(),
     }
 
+    # Add delivery method and email if provided
+    if payload.delivery_method:
+        initial_state["delivery_method"] = payload.delivery_method
+    if payload.email:
+        initial_state["email"] = payload.email
+
     # Store in DynamoDB (primary) and in-memory (fallback for local dev)
     try:
         with log_performance("store_initial_state", job_id=job_id):

@@ -22,9 +22,16 @@ Note:
     see jobsai.config.aliases module.
 """
 
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
-from pydantic import BaseModel, Field, model_validator, field_validator, ConfigDict
+from pydantic import (
+    BaseModel,
+    Field,
+    model_validator,
+    field_validator,
+    ConfigDict,
+    EmailStr,
+)
 
 # Import alias mappings from separate module
 from jobsai.config.aliases import (
@@ -477,6 +484,14 @@ class FrontendPayload(BaseModel):
         alias="additional-info",
         description="Personal description (required)",
     )
+    delivery_method: Optional[str] = Field(
+        None,
+        description="Delivery method: 'email' or 'download'",
+    )
+    email: Optional[str] = Field(
+        None,
+        description="Email address for email delivery (required if delivery_method is 'email')",
+    )
 
     @model_validator(mode="after")
     def validate_general_questions(self) -> "FrontendPayload":
@@ -521,6 +536,31 @@ class FrontendPayload(BaseModel):
             or info_value.strip() == ""
         ):
             raise ValueError("additional-info cannot be empty")
+
+        return self
+
+    @model_validator(mode="after")
+    def validate_delivery_method(self) -> "FrontendPayload":
+        """Validate delivery method and email if provided."""
+        if self.delivery_method is not None:
+            if self.delivery_method not in ["email", "download"]:
+                raise ValueError("delivery_method must be either 'email' or 'download'")
+
+            if self.delivery_method == "email":
+                if not self.email or not self.email.strip():
+                    raise ValueError(
+                        "email is required when delivery_method is 'email'"
+                    )
+                # Validate email format using Pydantic's EmailStr
+                try:
+                    # Use field_validator approach - validate email format
+                    import re
+
+                    email_pattern = r"^[^\s@]+@[^\s@]+\.[^\s@]+$"
+                    if not re.match(email_pattern, self.email.strip()):
+                        raise ValueError("Invalid email address format")
+                except Exception as e:
+                    raise ValueError(f"Invalid email address: {str(e)}")
 
         return self
 

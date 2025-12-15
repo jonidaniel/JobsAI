@@ -66,6 +66,9 @@ export default function Search() {
   // Delivery method selection state
   const [showDeliveryMethodPrompt, setShowDeliveryMethodPrompt] =
     useState(false);
+  const [deliveryMethod, setDeliveryMethod] = useState(null); // "email" or "download"
+  const [email, setEmail] = useState("");
+  const [emailError, setEmailError] = useState(null);
   // Cancellation state
   const [isCancelled, setIsCancelled] = useState(false);
   // Download prompt state
@@ -167,6 +170,9 @@ export default function Search() {
       setHasDownloaded(false);
       setHasRespondedToPrompt(false);
       setShowDeliveryMethodPrompt(false);
+      setDeliveryMethod(null);
+      setEmail("");
+      setEmailError(null);
       setIsCancelled(false);
       // Navigate to question set 1 (index 0)
       setActiveQuestionSetIndex(0);
@@ -199,6 +205,9 @@ export default function Search() {
     setShowDownloadPrompt(false);
     setDownloadInfo(null);
     setHasDownloaded(false);
+    setDeliveryMethod(null);
+    setEmail("");
+    setEmailError(null);
     setIsCancelled(false);
 
     // Validate general questions before submission
@@ -266,27 +275,59 @@ export default function Search() {
 
     // Show delivery method selection prompt instead of starting pipeline immediately
     setShowDeliveryMethodPrompt(true);
+    setDeliveryMethod(null);
+    setEmail("");
+    setEmailError(null);
     setError(null);
     setSuccess(false);
   };
 
   /**
-   * Handles the delivery method selection.
-   * Starts the pipeline if "download" is selected, or shows a message for "email".
+   * Validates email address format
    */
-  const handleDeliveryMethod = async (method) => {
-    setShowDeliveryMethodPrompt(false);
+  const validateEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  /**
+   * Handles the delivery method selection.
+   * For "download", starts the pipeline immediately.
+   * For "email", shows email input field.
+   */
+  const handleDeliveryMethod = (method) => {
+    setDeliveryMethod(method);
+    setEmailError(null);
 
     if (method === "download") {
-      // Start the pipeline
-      await startPipeline();
+      // Start the pipeline immediately
+      setShowDeliveryMethodPrompt(false);
+      startPipeline();
     } else if (method === "email") {
-      // Email option - do nothing for now
-      setError(
-        "Email delivery is not yet available. Please select 'Stay anonymous and download them to browser'."
-      );
-      setShowDeliveryMethodPrompt(true); // Show prompt again
+      // Show email input - don't hide prompt yet
+      // User needs to enter email and click "Continue"
     }
+  };
+
+  /**
+   * Handles email submission when user clicks "Continue" after entering email
+   */
+  const handleEmailSubmit = async () => {
+    // Validate email
+    if (!email || !email.trim()) {
+      setEmailError("Email address is required");
+      return;
+    }
+
+    if (!validateEmail(email)) {
+      setEmailError("Please enter a valid email address");
+      return;
+    }
+
+    // Clear errors and start pipeline
+    setEmailError(null);
+    setShowDeliveryMethodPrompt(false);
+    await startPipeline();
   };
 
   /**
@@ -301,6 +342,14 @@ export default function Search() {
 
     // Transform form data into grouped structure for backend API
     const result = transformFormData(formData);
+
+    // Add delivery method and email to payload
+    if (deliveryMethod === "email") {
+      result.delivery_method = "email";
+      result.email = email;
+    } else {
+      result.delivery_method = "download";
+    }
 
     // Send to backend using new SSE-based flow
     try {
@@ -676,25 +725,80 @@ export default function Search() {
       ) : showDeliveryMethodPrompt ? (
         // Delivery method selection prompt
         <>
-          <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
-            How do you want the cover letters?
-          </h3>
-          <div className="flex justify-center items-center gap-4 mt-6">
-            <button
-              onClick={() => handleDeliveryMethod("email")}
-              className="text-base sm:text-lg md:text-xl lg:text-2xl px-3 sm:px-4 py-1.5 sm:py-2 border border-white bg-transparent text-white font-semibold rounded-lg shadow hover:bg-white hover:text-gray-800 transition-colors"
-              aria-label="Receive cover letters via email"
-            >
-              Via email
-            </button>
-            <button
-              onClick={() => handleDeliveryMethod("download")}
-              className="text-base sm:text-lg md:text-xl lg:text-2xl px-3 sm:px-4 py-1.5 sm:py-2 border border-white bg-transparent text-white font-semibold rounded-lg shadow hover:bg-white hover:text-gray-800 transition-colors"
-              aria-label="Stay anonymous and download cover letters to browser"
-            >
-              Stay anonymous and download them to browser
-            </button>
-          </div>
+          {!deliveryMethod ? (
+            // Initial selection: choose delivery method
+            <>
+              <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
+                How do you want the cover letters?
+              </h3>
+              <div className="flex justify-center items-center gap-4 mt-6">
+                <button
+                  onClick={() => handleDeliveryMethod("email")}
+                  className="text-base sm:text-lg md:text-xl lg:text-2xl px-3 sm:px-4 py-1.5 sm:py-2 border border-white bg-transparent text-white font-semibold rounded-lg shadow hover:bg-white hover:text-gray-800 transition-colors"
+                  aria-label="Receive cover letters via email"
+                >
+                  Via email
+                </button>
+                <button
+                  onClick={() => handleDeliveryMethod("download")}
+                  className="text-base sm:text-lg md:text-xl lg:text-2xl px-3 sm:px-4 py-1.5 sm:py-2 border border-white bg-transparent text-white font-semibold rounded-lg shadow hover:bg-white hover:text-gray-800 transition-colors"
+                  aria-label="Stay anonymous and download cover letters to browser"
+                >
+                  Stay anonymous and download them to browser
+                </button>
+              </div>
+            </>
+          ) : deliveryMethod === "email" ? (
+            // Email input: user selected email, now need email address
+            <>
+              <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
+                Enter your email address
+              </h3>
+              <div className="flex flex-col items-center gap-4 mt-6">
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    setEmailError(null);
+                  }}
+                  placeholder="your.email@example.com"
+                  className="text-base sm:text-lg md:text-xl lg:text-2xl px-4 py-2 border border-white bg-transparent text-white placeholder-gray-400 rounded-lg shadow focus:outline-none focus:ring-2 focus:ring-white w-full max-w-md"
+                  aria-label="Email address"
+                  aria-invalid={emailError ? "true" : "false"}
+                  aria-describedby={emailError ? "email-error" : undefined}
+                />
+                {emailError && (
+                  <p
+                    id="email-error"
+                    className="text-sm sm:text-base text-red-400 text-center"
+                  >
+                    {emailError}
+                  </p>
+                )}
+                <div className="flex justify-center items-center gap-4">
+                  <button
+                    onClick={() => {
+                      setDeliveryMethod(null);
+                      setEmail("");
+                      setEmailError(null);
+                    }}
+                    className="text-base sm:text-lg md:text-xl lg:text-2xl px-3 sm:px-4 py-1.5 sm:py-2 border border-white bg-transparent text-white font-semibold rounded-lg shadow hover:bg-white hover:text-gray-800 transition-colors"
+                    aria-label="Go back to delivery method selection"
+                  >
+                    Back
+                  </button>
+                  <button
+                    onClick={handleEmailSubmit}
+                    className="text-base sm:text-lg md:text-xl lg:text-2xl px-3 sm:px-4 py-1.5 sm:py-2 border border-white bg-transparent text-white font-semibold rounded-lg shadow hover:bg-white hover:text-gray-800 transition-colors"
+                    aria-label="Continue with email delivery"
+                  >
+                    Continue
+                  </button>
+                </div>
+              </div>
+            </>
+          ) : null}
         </>
       ) : showDownloadPrompt && downloadInfo ? (
         // Download prompt state: show download prompt text

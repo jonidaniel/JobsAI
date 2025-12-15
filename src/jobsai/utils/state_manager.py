@@ -149,6 +149,12 @@ def store_job_state(job_id: str, state: Dict) -> None:
         if state.get("error"):
             item["error"] = str(state["error"])
 
+        # Add delivery method and email if available
+        if state.get("delivery_method"):
+            item["delivery_method"] = state["delivery_method"]
+        if state.get("email"):
+            item["email"] = state["email"]
+
         # Store in DynamoDB
         table.put_item(Item=item)
         logger.info(
@@ -233,6 +239,12 @@ def get_job_state(job_id: str) -> Optional[Dict[str, Any]]:
         # Add error if available
         if "error" in item:
             state["error"] = item["error"]
+
+        # Add delivery method and email if available
+        if "delivery_method" in item:
+            state["delivery_method"] = item["delivery_method"]
+        if "email" in item:
+            state["email"] = item["email"]
 
         return state
 
