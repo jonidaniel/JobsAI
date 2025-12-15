@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 
 import QuestionSetList from "./QuestionSetList";
-import SuccessMessage from "./messages/SuccessMessage";
 import ErrorMessage from "./messages/ErrorMessage";
 
 import { API_ENDPOINTS } from "../config/api";
@@ -886,8 +885,6 @@ export default function Search() {
             skipInitialScroll={submissionState.current.justCompleted}
           />
         )}
-      {/* Success message - displayed when document is successfully downloaded */}
-      {success && <SuccessMessage />}
       {/* Error message - displayed when submission fails */}
       {error && <ErrorMessage message={error} />}
       {/* Submit button and cancel button */}
