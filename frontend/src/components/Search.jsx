@@ -73,6 +73,7 @@ export default function Search() {
   // Download prompt state
   const [showDownloadPrompt, setShowDownloadPrompt] = useState(false);
   const [downloadInfo, setDownloadInfo] = useState(null); // { jobId, filenames }
+  const [declinedDocumentCount, setDeclinedDocumentCount] = useState(null); // Store count when user declines
   const [hasDownloaded, setHasDownloaded] = useState(false); // Track if user has clicked "Yes"
   const [hasRespondedToPrompt, setHasRespondedToPrompt] = useState(false); // Track if user has responded (Yes or No)
   // Consolidated submission state ref
@@ -166,6 +167,7 @@ export default function Search() {
       submissionState.current.hasSuccessfulSubmission = false;
       setShowDownloadPrompt(false);
       setDownloadInfo(null);
+      setDeclinedDocumentCount(null);
       setHasDownloaded(false);
       setHasRespondedToPrompt(false);
       setShowDeliveryMethodPrompt(false);
@@ -203,6 +205,7 @@ export default function Search() {
     submissionState.current.hasSuccessfulSubmission = false;
     setShowDownloadPrompt(false);
     setDownloadInfo(null);
+    setDeclinedDocumentCount(null);
     setHasDownloaded(false);
     setDeliveryMethod(null);
     setEmail("");
@@ -692,6 +695,9 @@ export default function Search() {
    * Closes the prompt without downloading.
    */
   const handleDownloadNo = () => {
+    // Store document count before clearing downloadInfo
+    const documentCount = downloadInfo?.filenames?.length || 1;
+    setDeclinedDocumentCount(documentCount);
     setShowDownloadPrompt(false);
     setDownloadInfo(null);
     setHasRespondedToPrompt(true);
@@ -807,7 +813,8 @@ export default function Search() {
             {downloadInfo.filenames.length !== 1 ? "s" : ""}
           </h3>
           <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
-            Would you like to download the files?
+            Would you like to download the{" "}
+            {downloadInfo.filenames.length === 1 ? "file" : "files"}?
           </h3>
           <div className="flex justify-center items-center gap-4 mt-6">
             <button
@@ -831,6 +838,16 @@ export default function Search() {
         <>
           <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
             You cancelled the job search
+          </h3>
+        </>
+      ) : submissionState.current.hasSuccessfulSubmission &&
+        hasRespondedToPrompt &&
+        !hasDownloaded ? (
+        // User declined download: show message
+        <>
+          <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
+            You turned down the{" "}
+            {declinedDocumentCount === 1 ? "document" : "documents"}
           </h3>
         </>
       ) : submissionState.current.hasSuccessfulSubmission && hasDownloaded ? (
