@@ -180,6 +180,39 @@ async def rate_limit_middleware(
                     }
                 },
             )
+            # Get origin from request for CORS headers
+            # Since rate limit middleware runs before CORS middleware processes the response,
+            # we need to manually add CORS headers
+            origin = request.headers.get("origin", "")
+            cors_headers = {}
+
+            # Check if origin is allowed or if we allow all origins
+            if "*" in origins:
+                cors_headers["Access-Control-Allow-Origin"] = "*"
+            elif origin and origin in origins:
+                cors_headers["Access-Control-Allow-Origin"] = origin
+                cors_headers["Access-Control-Allow-Credentials"] = "true"
+            elif origins:
+                # Fallback to first allowed origin if origin header is missing
+                cors_headers["Access-Control-Allow-Origin"] = origins[0]
+                cors_headers["Access-Control-Allow-Credentials"] = "true"
+
+            # Add other CORS headers if we're allowing the request
+            if cors_headers:
+                cors_headers["Access-Control-Allow-Methods"] = "POST, GET, OPTIONS"
+                cors_headers["Access-Control-Allow-Headers"] = "*"
+
+            # Combine CORS headers with rate limit headers
+            response_headers = {
+                "X-RateLimit-Limit": str(
+                    int(os.environ.get("RATE_LIMIT_REQUESTS", "5"))
+                ),
+                "X-RateLimit-Remaining": "0",
+                "X-RateLimit-Reset": str(reset_at) if reset_at else "",
+                "Retry-After": str(reset_at - int(time.time()) if reset_at else 3600),
+                **cors_headers,
+            }
+
             return JSONResponse(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                 content={
@@ -187,16 +220,7 @@ async def rate_limit_middleware(
                     "error": "too_many_requests",
                     "reset_at": reset_at,
                 },
-                headers={
-                    "X-RateLimit-Limit": str(
-                        int(os.environ.get("RATE_LIMIT_REQUESTS", "5"))
-                    ),
-                    "X-RateLimit-Remaining": "0",
-                    "X-RateLimit-Reset": str(reset_at) if reset_at else "",
-                    "Retry-After": str(
-                        reset_at - int(time.time()) if reset_at else 3600
-                    ),
-                },
+                headers=response_headers,
             )
 
         # Add rate limit headers to successful responses
