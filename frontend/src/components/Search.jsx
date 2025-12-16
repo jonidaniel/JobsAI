@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 
 import QuestionSetList from "./QuestionSetList";
 import ErrorMessage from "./messages/ErrorMessage";
@@ -142,6 +142,12 @@ export default function Search() {
 
   // Ref to track timeout for auto-dismissing success message after download
   const successTimeoutRef = useRef(null);
+
+  // Memoize cover letter count to avoid repeated parseInt calls
+  const coverLetterNumValue = formData["cover-letter-num"];
+  const coverLetterCount = useMemo(() => {
+    return parseInt(coverLetterNumValue || "1", 10);
+  }, [coverLetterNumValue]);
 
   /**
    * Handles form submission
@@ -829,11 +835,8 @@ export default function Search() {
           <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
             <i>Thank you very much for using JobsAI</i>
             <br />
-            Expect the cover{" "}
-            {parseInt(formData["cover-letter-num"] || "1", 10) === 1
-              ? "letter"
-              : "letters"}{" "}
-            to drop in your inbox shortly
+            Expect the cover {coverLetterCount === 1 ? "letter" : "letters"} to
+            drop in your inbox shortly
           </h3>
         </>
       ) : isSubmitting ? (
@@ -856,10 +859,7 @@ export default function Search() {
             <>
               <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
                 How do you want the cover{" "}
-                {parseInt(formData["cover-letter-num"] || "1", 10) === 1
-                  ? "letter"
-                  : "letters"}
-                ?
+                {coverLetterCount === 1 ? "letter" : "letters"}?
               </h3>
               <div className="flex justify-center items-center gap-4 mt-6">
                 <button
@@ -875,10 +875,7 @@ export default function Search() {
                   aria-label="Stay anonymous and download cover letters to browser"
                 >
                   Stay anonymous and download{" "}
-                  {parseInt(formData["cover-letter-num"] || "1", 10) === 1
-                    ? "it"
-                    : "them"}{" "}
-                  to browser
+                  {coverLetterCount === 1 ? "it" : "them"} to browser
                 </button>
               </div>
             </>

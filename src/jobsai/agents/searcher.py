@@ -106,15 +106,18 @@ class SearcherService:
 
                 logger.info(" Searching %s for query '%s'", job_board, query)
 
+                # Cache lowercase job board name to avoid repeated .lower() calls
+                job_board_lower = job_board.lower()
+
                 # Route to appropriate scraper based on job board name
                 # Pass cancellation_check to scrapers for checking during long operations
-                if job_board.lower() == "duunitori":
+                if job_board_lower == "duunitori":
                     jobs = scrape_duunitori(
                         query,
                         deep_mode=deep_mode,
                         cancellation_check=cancellation_check,
                     )
-                elif job_board.lower() == "jobly":
+                elif job_board_lower == "jobly":
                     jobs = scrape_jobly(
                         query,
                         deep_mode=deep_mode,
@@ -135,7 +138,7 @@ class SearcherService:
                     logger.info(" Job search cancelled by user")
                     raise CancellationError("Pipeline cancelled during job search")
 
-                # Collect jobs and save to disk for debugging
+                # Collect jobs and save to disk for debugging (if enabled)
                 all_jobs.extend(jobs)
                 self._save_raw_jobs(jobs, job_board, query)
 
@@ -155,6 +158,9 @@ class SearcherService:
         includes timestamp, job board name, and search query. This allows
         for later analysis and debugging of search results.
 
+        Only saves if SAVE_RAW_JOBS environment variable is set to "true".
+        This prevents unnecessary I/O in production Lambda environments.
+
         Args:
             jobs (List[Dict]): Job listings to save. Empty list is handled
                 gracefully (no file created).
@@ -166,15 +172,23 @@ class SearcherService:
         File location:
             {RAW_JOB_LISTING_PATH}/{timestamp}_{board}_{query}.json
         """
+        # Check if file saving is enabled (disabled by default in production)
+        save_raw_jobs = os.environ.get("SAVE_RAW_JOBS", "false").lower() == "true"
+        if not save_raw_jobs:
+            return
+
         if not jobs:
             return
+
+        # Cache lowercase board name to avoid repeated .lower() calls
+        board_lower = board.lower()
 
         # Sanitize query for use in filename
         # Replace spaces and forward slashes with underscores
         safe_query = query.replace(" ", "_").replace("/", "_")
 
         # Construct filename: timestamp_board_query.json
-        filename = f"{self.timestamp}_{board.lower()}_{safe_query}.json"
+        filename = f"{self.timestamp}_{board_lower}_{safe_query}.json"
         path = os.path.join(RAW_JOB_LISTING_PATH, filename)
 
         # Save jobs as pretty-printed JSON

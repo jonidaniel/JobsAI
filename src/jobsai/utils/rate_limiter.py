@@ -129,60 +129,137 @@ def check_rate_limit(ip_address: str) -> Tuple[bool, Optional[int], Optional[int
         # Get current time and window boundaries
         current_time = int(time.time())
         window_start = current_time - (current_time % RATE_LIMIT_WINDOW_SECONDS)
+        ttl = current_time + RATE_LIMIT_WINDOW_SECONDS + 300  # 5 min buffer for cleanup
+        reset_at = window_start + RATE_LIMIT_WINDOW_SECONDS
 
-        # Try to get existing rate limit record
+        # Use atomic increment with UpdateItem to avoid race conditions
+        # This replaces the get_item + update_item pattern with a single atomic operation
         try:
-            response = dynamodb_client.get_item(
-                TableName=RATE_LIMIT_TABLE_NAME,
-                Key={"job_id": {"S": rate_limit_key}},
-            )
+            from botocore.exceptions import ClientError
 
-            if "Item" in response:
-                # Item exists, check count and window
-                stored_window = int(response["Item"]["window_start"]["N"])
-                count = int(response["Item"]["count"]["N"])
+            # Try to atomically increment count if window matches and count < limit
+            # This prevents exceeding the limit while still being atomic
+            try:
+                response = dynamodb_client.update_item(
+                    TableName=RATE_LIMIT_TABLE_NAME,
+                    Key={"job_id": {"S": rate_limit_key}},
+                    UpdateExpression="ADD #count :one SET #window = :window, #ttl = :ttl",
+                    ConditionExpression="#window = :window AND #count < :limit",
+                    ExpressionAttributeNames={
+                        "#count": "count",
+                        "#window": "window_start",
+                        "#ttl": "ttl",
+                    },
+                    ExpressionAttributeValues={
+                        ":one": {"N": "1"},
+                        ":window": {"N": str(window_start)},
+                        ":limit": {"N": str(RATE_LIMIT_REQUESTS)},
+                        ":ttl": {"N": str(ttl)},
+                    },
+                    ReturnValues="ALL_NEW",
+                )
 
-                # If we're in the same window, check count
-                if stored_window == window_start:
-                    if count >= RATE_LIMIT_REQUESTS:
-                        # Rate limit exceeded
-                        reset_at = stored_window + RATE_LIMIT_WINDOW_SECONDS
-                        logger.warning(
-                            "Rate limit exceeded",
-                            extra={
-                                "extra_fields": {
-                                    "ip_address": ip_address,
-                                    "request_count": count,
-                                    "rate_limit": RATE_LIMIT_REQUESTS,
-                                    "reset_at": reset_at,
-                                }
-                            },
+                # Successfully incremented - get the new count
+                new_count = int(response["Attributes"]["count"]["N"])
+                remaining = max(0, RATE_LIMIT_REQUESTS - new_count)
+                logger.debug(
+                    "Rate limit check passed",
+                    extra={
+                        "extra_fields": {
+                            "ip_address": ip_address,
+                            "request_count": new_count,
+                            "rate_limit": RATE_LIMIT_REQUESTS,
+                            "remaining": remaining,
+                        }
+                    },
+                )
+                return True, remaining, reset_at
+
+            except ClientError as e:
+                error_code = e.response.get("Error", {}).get("Code", "")
+                if error_code == "ConditionalCheckFailedException":
+                    # Condition failed - either window doesn't match, item doesn't exist, or limit exceeded
+                    # Check if it's because limit was exceeded
+                    try:
+                        # Try to get current state to check if limit exceeded
+                        get_response = dynamodb_client.get_item(
+                            TableName=RATE_LIMIT_TABLE_NAME,
+                            Key={"job_id": {"S": rate_limit_key}},
                         )
-                        return False, 0, reset_at
+                        if "Item" in get_response:
+                            stored_window = int(
+                                get_response["Item"]["window_start"]["N"]
+                            )
+                            count = int(get_response["Item"]["count"]["N"])
 
-                    # Increment count
-                    new_count = count + 1
-                    dynamodb_client.update_item(
+                            # If same window and count >= limit, rate limit exceeded
+                            if (
+                                stored_window == window_start
+                                and count >= RATE_LIMIT_REQUESTS
+                            ):
+                                logger.warning(
+                                    "Rate limit exceeded",
+                                    extra={
+                                        "extra_fields": {
+                                            "ip_address": ip_address,
+                                            "request_count": count,
+                                            "rate_limit": RATE_LIMIT_REQUESTS,
+                                            "reset_at": reset_at,
+                                        }
+                                    },
+                                )
+                                return False, 0, reset_at
+
+                            # Window changed - reset count
+                            if stored_window != window_start:
+                                dynamodb_client.update_item(
+                                    TableName=RATE_LIMIT_TABLE_NAME,
+                                    Key={"job_id": {"S": rate_limit_key}},
+                                    UpdateExpression="SET #count = :one, #window = :window, #ttl = :ttl",
+                                    ExpressionAttributeNames={
+                                        "#count": "count",
+                                        "#window": "window_start",
+                                        "#ttl": "ttl",
+                                    },
+                                    ExpressionAttributeValues={
+                                        ":one": {"N": "1"},
+                                        ":window": {"N": str(window_start)},
+                                        ":ttl": {"N": str(ttl)},
+                                    },
+                                )
+                                new_count = 1
+                                remaining = RATE_LIMIT_REQUESTS - new_count
+                                logger.debug(
+                                    "Rate limit check passed (new window)",
+                                    extra={
+                                        "extra_fields": {
+                                            "ip_address": ip_address,
+                                            "request_count": new_count,
+                                            "rate_limit": RATE_LIMIT_REQUESTS,
+                                            "remaining": remaining,
+                                            "window_reset": True,
+                                        }
+                                    },
+                                )
+                                return True, remaining, reset_at
+                    except Exception:
+                        pass  # Fall through to create new item
+
+                    # Item doesn't exist or other error - create new one
+                    dynamodb_client.put_item(
                         TableName=RATE_LIMIT_TABLE_NAME,
-                        Key={"job_id": {"S": rate_limit_key}},
-                        UpdateExpression="SET #count = :count, #window = :window, #ttl = :ttl",
-                        ExpressionAttributeNames={
-                            "#count": "count",
-                            "#window": "window_start",
-                            "#ttl": "ttl",
-                        },
-                        ExpressionAttributeValues={
-                            ":count": {"N": str(new_count)},
-                            ":window": {"N": str(window_start)},
-                            ":ttl": {
-                                "N": str(current_time + RATE_LIMIT_WINDOW_SECONDS + 300)
-                            },
+                        Item={
+                            "job_id": {"S": rate_limit_key},
+                            "count": {"N": "1"},
+                            "window_start": {"N": str(window_start)},
+                            "ttl": {"N": str(ttl)},
                         },
                     )
+
+                    new_count = 1
                     remaining = RATE_LIMIT_REQUESTS - new_count
-                    reset_at = window_start + RATE_LIMIT_WINDOW_SECONDS
                     logger.debug(
-                        "Rate limit check passed",
+                        "Rate limit check passed (first request)",
                         extra={
                             "extra_fields": {
                                 "ip_address": ip_address,
@@ -194,69 +271,8 @@ def check_rate_limit(ip_address: str) -> Tuple[bool, Optional[int], Optional[int
                     )
                     return True, remaining, reset_at
                 else:
-                    # New window, reset count
-                    new_count = 1
-                    dynamodb_client.update_item(
-                        TableName=RATE_LIMIT_TABLE_NAME,
-                        Key={"job_id": {"S": rate_limit_key}},
-                        UpdateExpression="SET #count = :count, #window = :window, #ttl = :ttl",
-                        ExpressionAttributeNames={
-                            "#count": "count",
-                            "#window": "window_start",
-                            "#ttl": "ttl",
-                        },
-                        ExpressionAttributeValues={
-                            ":count": {"N": str(new_count)},
-                            ":window": {"N": str(window_start)},
-                            ":ttl": {
-                                "N": str(current_time + RATE_LIMIT_WINDOW_SECONDS + 300)
-                            },
-                        },
-                    )
-                    remaining = RATE_LIMIT_REQUESTS - new_count
-                    reset_at = window_start + RATE_LIMIT_WINDOW_SECONDS
-                    logger.debug(
-                        "Rate limit check passed (new window)",
-                        extra={
-                            "extra_fields": {
-                                "ip_address": ip_address,
-                                "request_count": new_count,
-                                "rate_limit": RATE_LIMIT_REQUESTS,
-                                "remaining": remaining,
-                                "window_reset": True,
-                            }
-                        },
-                    )
-                    return True, remaining, reset_at
-            else:
-                # No existing record, create new one
-                new_count = 1
-                ttl = (
-                    current_time + RATE_LIMIT_WINDOW_SECONDS + 300
-                )  # 5 min buffer for cleanup
-                dynamodb_client.put_item(
-                    TableName=RATE_LIMIT_TABLE_NAME,
-                    Item={
-                        "job_id": {"S": rate_limit_key},
-                        "count": {"N": str(new_count)},
-                        "window_start": {"N": str(window_start)},
-                        "ttl": {"N": str(ttl)},
-                    },
-                )
-                remaining = RATE_LIMIT_REQUESTS - new_count
-                reset_at = window_start + RATE_LIMIT_WINDOW_SECONDS
-                logger.debug(
-                    "Rate limit check passed (first request)",
-                    extra={
-                        "extra_fields": {
-                            "ip_address": ip_address,
-                            "request_count": new_count,
-                            "rate_limit": RATE_LIMIT_REQUESTS,
-                            "remaining": remaining,
-                        }
-                    },
-                )
-                return True, remaining, reset_at
+                    # Other error - re-raise
+                    raise
 
         except Exception as e:
             logger.error(
