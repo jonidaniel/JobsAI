@@ -77,6 +77,7 @@ export default function Search() {
   const [downloadedDocumentCount, setDownloadedDocumentCount] = useState(null); // Store count when user downloads
   const [hasDownloaded, setHasDownloaded] = useState(false); // Track if user has clicked "Yes"
   const [hasRespondedToPrompt, setHasRespondedToPrompt] = useState(false); // Track if user has responded (Yes or No)
+  const [isRateLimited, setIsRateLimited] = useState(false); // Track if rate limit is exceeded
   // Consolidated submission state ref
   // Tracks submission-related state that doesn't need to trigger re-renders
   const submissionState = useRef({
@@ -183,6 +184,7 @@ export default function Search() {
       setEmail("");
       setEmailError(null);
       setIsCancelled(false);
+      setIsRateLimited(false);
       setIsSubmitting(false);
       setCurrentPhase(null);
       setJobId(null); // Clear jobId but don't cancel the job
@@ -221,6 +223,7 @@ export default function Search() {
       setEmail("");
       setEmailError(null);
       setIsCancelled(false);
+      setIsRateLimited(false);
       // Navigate to question set 1 (index 0)
       setActiveQuestionSetIndex(0);
       // Scroll to question set 1 after a brief delay to ensure DOM is ready
@@ -252,6 +255,7 @@ export default function Search() {
     setEmail("");
     setEmailError(null);
     setIsCancelled(false);
+    setIsRateLimited(false);
 
     // Validate general questions before submission
     const validation = validateGeneralQuestions(formData);
@@ -407,6 +411,14 @@ export default function Search() {
 
       if (!startResponse.ok) {
         const errorData = await startResponse.json().catch(() => ({}));
+        // Check if this is a rate limit error (429)
+        if (startResponse.status === 429) {
+          setIsRateLimited(true);
+          setError(null); // Clear any existing error
+          setIsSubmitting(false);
+          setShowDeliveryMethodPrompt(false);
+          return; // Exit early, don't throw error
+        }
         throw new Error(
           errorData.detail || `Server error: ${startResponse.status}`
         );
@@ -760,7 +772,14 @@ export default function Search() {
   return (
     <section id="search">
       <h2>Search</h2>
-      {isSubmitting && deliveryMethod === "email" ? (
+      {isRateLimited ? (
+        // Rate limit exceeded: show only the rate limit message
+        <>
+          <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
+            You've made too many searches lately. Try again later.
+          </h3>
+        </>
+      ) : isSubmitting && deliveryMethod === "email" ? (
         // Email delivery: show message instead of progress
         <>
           <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
@@ -966,11 +985,12 @@ export default function Search() {
         </>
       )}
       {/* Question sets component with blue/gray background - contains all question sets and manages all form inputs */}
-      {/* Only show question sets if not submitting AND not showing delivery method prompt AND not cancelled AND not successfully completed */}
+      {/* Only show question sets if not submitting AND not showing delivery method prompt AND not cancelled AND not successfully completed AND not rate limited */}
       {!isSubmitting &&
         !showDeliveryMethodPrompt &&
         !isCancelled &&
         !success &&
+        !isRateLimited &&
         !submissionState.current.hasSuccessfulSubmission && (
           <QuestionSetList
             onFormDataChange={handleFormDataChange}
@@ -981,37 +1001,13 @@ export default function Search() {
             skipInitialScroll={submissionState.current.justCompleted}
           />
         )}
-      {/* Error message - displayed when submission fails */}
-      {error && <ErrorMessage message={error} />}
-      {/* Submit button and cancel button */}
-      <div className="flex justify-center items-center gap-4 mt-6">
-        {/* Show "Find Again" button when cancelled */}
-        {isCancelled && (
-          <button
-            id="submit-btn"
-            onClick={handleSubmit}
-            className="text-lg sm:text-xl md:text-2xl lg:text-3xl px-4 sm:px-6 py-2 sm:py-3 border border-white bg-transparent text-white font-semibold rounded-lg shadow disabled:opacity-50 disabled:cursor-not-allowed"
-            aria-label="Start a new job search"
-          >
-            Find Again
-          </button>
-        )}
-        {/* Show "Find Again" button immediately when email delivery is selected */}
-        {isSubmitting && deliveryMethod === "email" && (
-          <button
-            id="submit-btn"
-            onClick={handleSubmit}
-            className="text-lg sm:text-xl md:text-2xl lg:text-3xl px-4 sm:px-6 py-2 sm:py-3 border border-white bg-transparent text-white font-semibold rounded-lg shadow disabled:opacity-50 disabled:cursor-not-allowed"
-            aria-label="Start a new job search"
-          >
-            Find Again
-          </button>
-        )}
-        {/* Show "Find Again" button when email delivery is complete */}
-        {!isSubmitting &&
-          submissionState.current.hasSuccessfulSubmission &&
-          deliveryMethod === "email" &&
-          hasRespondedToPrompt && (
+      {/* Error message - displayed when submission fails (but not for rate limit errors) */}
+      {error && !isRateLimited && <ErrorMessage message={error} />}
+      {/* Submit button and cancel button - hide when rate limited */}
+      {!isRateLimited && (
+        <div className="flex justify-center items-center gap-4 mt-6">
+          {/* Show "Find Again" button when cancelled */}
+          {isCancelled && (
             <button
               id="submit-btn"
               onClick={handleSubmit}
@@ -1021,42 +1017,68 @@ export default function Search() {
               Find Again
             </button>
           )}
-        {/* Only show submit button when NOT submitting and NOT showing delivery method prompt and NOT cancelled */}
-        {/* Hide button entirely if there's a successful submission but user hasn't responded to download prompt yet */}
-        {!isSubmitting &&
-          !showDeliveryMethodPrompt &&
-          !isCancelled &&
-          (!submissionState.current.hasSuccessfulSubmission ||
-            hasRespondedToPrompt) && (
+          {/* Show "Find Again" button immediately when email delivery is selected */}
+          {isSubmitting && deliveryMethod === "email" && (
             <button
               id="submit-btn"
               onClick={handleSubmit}
               className="text-lg sm:text-xl md:text-2xl lg:text-3xl px-4 sm:px-6 py-2 sm:py-3 border border-white bg-transparent text-white font-semibold rounded-lg shadow disabled:opacity-50 disabled:cursor-not-allowed"
-              aria-label={
-                submissionState.current.hasSuccessfulSubmission &&
-                hasRespondedToPrompt
-                  ? "Start a new job search"
-                  : "Submit form and generate job search document"
-              }
+              aria-label="Start a new job search"
             >
-              {submissionState.current.hasSuccessfulSubmission &&
-              hasRespondedToPrompt
-                ? "Find Again"
-                : "Find Jobs"}
+              Find Again
             </button>
           )}
-        {/* Cancel button - show immediately when submitting (only for download delivery) */}
-        {isSubmitting && deliveryMethod !== "email" && (
-          <button
-            id="cancel-btn"
-            onClick={handleCancel}
-            className="text-base sm:text-lg md:text-xl lg:text-2xl px-3 sm:px-4 py-2 sm:py-3 border border-red-400 bg-transparent text-red-400 font-semibold rounded-lg shadow hover:bg-red-400 hover:text-white transition-colors"
-            aria-label="Cancel the current job search"
-          >
-            Cancel
-          </button>
-        )}
-      </div>
+          {/* Show "Find Again" button when email delivery is complete */}
+          {!isSubmitting &&
+            submissionState.current.hasSuccessfulSubmission &&
+            deliveryMethod === "email" &&
+            hasRespondedToPrompt && (
+              <button
+                id="submit-btn"
+                onClick={handleSubmit}
+                className="text-lg sm:text-xl md:text-2xl lg:text-3xl px-4 sm:px-6 py-2 sm:py-3 border border-white bg-transparent text-white font-semibold rounded-lg shadow disabled:opacity-50 disabled:cursor-not-allowed"
+                aria-label="Start a new job search"
+              >
+                Find Again
+              </button>
+            )}
+          {/* Only show submit button when NOT submitting and NOT showing delivery method prompt and NOT cancelled */}
+          {/* Hide button entirely if there's a successful submission but user hasn't responded to download prompt yet */}
+          {!isSubmitting &&
+            !showDeliveryMethodPrompt &&
+            !isCancelled &&
+            (!submissionState.current.hasSuccessfulSubmission ||
+              hasRespondedToPrompt) && (
+              <button
+                id="submit-btn"
+                onClick={handleSubmit}
+                className="text-lg sm:text-xl md:text-2xl lg:text-3xl px-4 sm:px-6 py-2 sm:py-3 border border-white bg-transparent text-white font-semibold rounded-lg shadow disabled:opacity-50 disabled:cursor-not-allowed"
+                aria-label={
+                  submissionState.current.hasSuccessfulSubmission &&
+                  hasRespondedToPrompt
+                    ? "Start a new job search"
+                    : "Submit form and generate job search document"
+                }
+              >
+                {submissionState.current.hasSuccessfulSubmission &&
+                hasRespondedToPrompt
+                  ? "Find Again"
+                  : "Find Jobs"}
+              </button>
+            )}
+          {/* Cancel button - show immediately when submitting (only for download delivery) */}
+          {isSubmitting && deliveryMethod !== "email" && (
+            <button
+              id="cancel-btn"
+              onClick={handleCancel}
+              className="text-base sm:text-lg md:text-xl lg:text-2xl px-3 sm:px-4 py-2 sm:py-3 border border-red-400 bg-transparent text-red-400 font-semibold rounded-lg shadow hover:bg-red-400 hover:text-white transition-colors"
+              aria-label="Cancel the current job search"
+            >
+              Cancel
+            </button>
+          )}
+        </div>
+      )}
     </section>
   );
 }
