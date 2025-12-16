@@ -818,14 +818,18 @@ export default function Search() {
         // Rate limit exceeded: show only the rate limit message
         <>
           <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
-            You've made too many searches lately. Try again later.
+            You've made too many searches lately
+            <br />
+            Try again later
           </h3>
         </>
       ) : isSubmitting && deliveryMethod === "email" ? (
         // Email delivery: show message instead of progress
         <>
           <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
-            Thank you very much for using JobsAI. Expect the cover{" "}
+            <i>Thank you very much for using JobsAI</i>
+            <br />
+            Expect the cover{" "}
             {parseInt(formData["cover-letter-num"] || "1", 10) === 1
               ? "letter"
               : "letters"}{" "}
