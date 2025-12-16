@@ -282,6 +282,8 @@ def log_performance(operation: str, **extra_fields):
         logger.removeFilter(ExtraFieldsFilter())
     except Exception as e:
         duration_ms = (time.time() - start_time) * 1000
+        # Capture exception string to avoid closure issues
+        error_str = str(e)
 
         class ExtraFieldsFilter(logging.Filter):
             def filter(self, record):
@@ -289,7 +291,7 @@ def log_performance(operation: str, **extra_fields):
                     "operation": operation,
                     "duration_ms": round(duration_ms, 2),
                     "status": "error",
-                    "error": str(e),
+                    "error": error_str,
                     **extra_fields,
                 }
                 return True
@@ -375,6 +377,8 @@ def log_request(func):
                 return response
             except Exception as e:
                 duration_ms = (time.time() - start_time) * 1000
+                # Capture exception string to avoid closure issues
+                error_str = str(e)
 
                 # Add HTTP error context to log record
                 class HTTPErrorFilter(logging.Filter):
@@ -382,7 +386,7 @@ def log_request(func):
                         record.http_method = request.method
                         record.http_path = request.url.path
                         record.duration_ms = round(duration_ms, 2)
-                        record.extra_fields = {"error": str(e)}
+                        record.extra_fields = {"error": error_str}
                         return True
 
                 logger.addFilter(HTTPErrorFilter())
@@ -451,6 +455,8 @@ def log_request(func):
             return result
         except Exception as e:
             duration_ms = (time.time() - start_time) * 1000
+            # Capture exception string to avoid closure issues
+            error_str = str(e)
 
             # Add Lambda error context
             class LambdaErrorFilter(logging.Filter):
@@ -459,7 +465,7 @@ def log_request(func):
                         "handler": func.__name__,
                         "duration_ms": round(duration_ms, 2),
                         "status": "error",
-                        "error": str(e),
+                        "error": error_str,
                     }
                     return True
 
