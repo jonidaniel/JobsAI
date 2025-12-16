@@ -941,7 +941,7 @@ export default function Search() {
         // Download prompt state: show download prompt text
         <>
           <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
-            Generated {downloadInfo.filenames.length} cover letter
+            All set! Generated {downloadInfo.filenames.length} cover letter
             {downloadInfo.filenames.length !== 1 ? "s" : ""}
           </h3>
           <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
@@ -999,9 +999,7 @@ export default function Search() {
         // Success state: show completion message (only after user has downloaded)
         <>
           <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
-            Here {downloadedDocumentCount === 1 ? "is" : "are"} your cover{" "}
-            {downloadedDocumentCount === 1 ? "letter" : "letters"}.{" "}
-            <i>Thank you very much.</i>
+            Thank you very much for using JobsAI. Feel free to do another search
           </h3>
         </>
       ) : (
