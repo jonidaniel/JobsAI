@@ -410,14 +410,42 @@ export default function Search() {
       });
 
       if (!startResponse.ok) {
-        const errorData = await startResponse.json().catch(() => ({}));
-        // Check if this is a rate limit error (429)
+        // Check if this is a rate limit error (429) BEFORE parsing JSON
         if (startResponse.status === 429) {
           setIsRateLimited(true);
           setError(null); // Clear any existing error
           setIsSubmitting(false);
           setShowDeliveryMethodPrompt(false);
-          return; // Exit early, don't throw error
+          setDeliveryMethod(null);
+          setEmail("");
+          setEmailError(null);
+          setCurrentPhase(null);
+          setJobId(null);
+          // Clear submission state flags
+          submissionState.current.hasSuccessfulSubmission = false;
+          submissionState.current.justCompleted = false;
+          // Don't parse JSON or throw error - just return
+          return;
+        }
+        // For other errors, parse JSON and throw
+        const errorData = await startResponse.json().catch(() => ({}));
+        // Also check error message content in case status code check missed it
+        if (
+          errorData.error === "too_many_requests" ||
+          errorData.detail?.includes("Rate limit exceeded")
+        ) {
+          setIsRateLimited(true);
+          setError(null);
+          setIsSubmitting(false);
+          setShowDeliveryMethodPrompt(false);
+          setDeliveryMethod(null);
+          setEmail("");
+          setEmailError(null);
+          setCurrentPhase(null);
+          setJobId(null);
+          submissionState.current.hasSuccessfulSubmission = false;
+          submissionState.current.justCompleted = false;
+          return;
         }
         throw new Error(
           errorData.detail || `Server error: ${startResponse.status}`
@@ -520,7 +548,20 @@ export default function Search() {
         clearInterval(pollingIntervalRef.current);
         pollingIntervalRef.current = null;
       }
-      setError(getErrorMessage(error));
+      // Check if error message indicates rate limit (fallback check)
+      const errorMessage = getErrorMessage(error);
+      if (errorMessage === "RATE_LIMIT_EXCEEDED") {
+        setIsRateLimited(true);
+        setError(null);
+        setShowDeliveryMethodPrompt(false);
+        setDeliveryMethod(null);
+        setEmail("");
+        setEmailError(null);
+        submissionState.current.hasSuccessfulSubmission = false;
+        submissionState.current.justCompleted = false;
+      } else if (!isRateLimited) {
+        setError(errorMessage);
+      }
       setSuccess(false);
       setIsSubmitting(false);
       setCurrentPhase(null);

@@ -27,6 +27,15 @@
  * }
  */
 export function getErrorMessage(error) {
+  // Check for rate limit errors first
+  if (
+    error.message.includes("Server error: 429") ||
+    error.message.includes("Rate limit exceeded") ||
+    error.message.includes("too_many_requests")
+  ) {
+    // Return a special marker that indicates rate limit (will be handled in component)
+    return "RATE_LIMIT_EXCEEDED";
+  }
   if (error instanceof TypeError && error.message.includes("fetch")) {
     return "Unable to connect to the server. Please check your internet connection and try again.";
   }
