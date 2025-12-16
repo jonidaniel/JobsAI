@@ -62,6 +62,8 @@ export default function Search() {
   const [currentPhase, setCurrentPhase] = useState(null);
   const [jobId, setJobId] = useState(null);
   const pollingIntervalRef = useRef(null);
+  // Track current jobId in a ref to prevent stale polling updates
+  const currentJobIdRef = useRef(null);
   // Delivery method selection state
   const [showDeliveryMethodPrompt, setShowDeliveryMethodPrompt] =
     useState(false);
@@ -192,6 +194,7 @@ export default function Search() {
       setIsSubmitting(false);
       setCurrentPhase(null);
       setJobId(null); // Clear jobId but don't cancel the job
+      currentJobIdRef.current = null; // Clear ref to prevent stale updates
       // Navigate to question set 1 (index 0)
       setActiveQuestionSetIndex(0);
       // Scroll to question set 1 after a brief delay to ensure DOM is ready
@@ -465,18 +468,34 @@ export default function Search() {
 
       const { job_id } = await startResponse.json();
       setJobId(job_id);
+      // Update ref to track current job ID
+      currentJobIdRef.current = job_id;
 
       // Step 2: Poll for progress updates
       const pollProgress = async () => {
         try {
+          // Check if this job is still the current one - ignore if job was replaced
+          if (currentJobIdRef.current !== job_id) {
+            // This polling is for an old job, stop it
+            if (pollingIntervalRef.current) {
+              clearInterval(pollingIntervalRef.current);
+              pollingIntervalRef.current = null;
+            }
+            return;
+          }
+
           const response = await fetch(`${API_ENDPOINTS.PROGRESS}/${job_id}`);
 
           if (!response.ok) {
             if (response.status === 404) {
-              setError("Job not found");
-              setIsSubmitting(false);
-              setCurrentPhase(null);
-              setJobId(null);
+              // Only update state if this is still the current job
+              if (currentJobIdRef.current === job_id) {
+                setError("Job not found");
+                setIsSubmitting(false);
+                setCurrentPhase(null);
+                setJobId(null);
+                currentJobIdRef.current = null;
+              }
               if (pollingIntervalRef.current) {
                 clearInterval(pollingIntervalRef.current);
                 pollingIntervalRef.current = null;
@@ -488,6 +507,11 @@ export default function Search() {
 
           const data = await response.json();
 
+          // Only update state if this is still the current job
+          if (currentJobIdRef.current !== job_id) {
+            return; // Job was replaced, ignore this response
+          }
+
           // Handle progress updates
           if (data.progress && data.progress.phase) {
             setCurrentPhase(data.progress.phase);
@@ -495,6 +519,11 @@ export default function Search() {
 
           // Handle completion
           if (data.status === "complete") {
+            // Only process completion if this is still the current job
+            if (currentJobIdRef.current !== job_id) {
+              return; // Job was replaced, ignore this response
+            }
+
             if (pollingIntervalRef.current) {
               clearInterval(pollingIntervalRef.current);
               pollingIntervalRef.current = null;
@@ -520,9 +549,15 @@ export default function Search() {
             setIsSubmitting(false);
             setCurrentPhase(null);
             setJobId(null);
+            currentJobIdRef.current = null;
           }
           // Handle errors
           else if (data.status === "error") {
+            // Only process error if this is still the current job
+            if (currentJobIdRef.current !== job_id) {
+              return; // Job was replaced, ignore this response
+            }
+
             if (pollingIntervalRef.current) {
               clearInterval(pollingIntervalRef.current);
               pollingIntervalRef.current = null;
@@ -531,9 +566,15 @@ export default function Search() {
             setIsSubmitting(false);
             setCurrentPhase(null);
             setJobId(null);
+            currentJobIdRef.current = null;
           }
           // Handle cancellation
           else if (data.status === "cancelled") {
+            // Only process cancellation if this is still the current job
+            if (currentJobIdRef.current !== job_id) {
+              return; // Job was replaced, ignore this response
+            }
+
             if (pollingIntervalRef.current) {
               clearInterval(pollingIntervalRef.current);
               pollingIntervalRef.current = null;
@@ -542,6 +583,7 @@ export default function Search() {
             setIsSubmitting(false);
             setCurrentPhase(null);
             setJobId(null);
+            currentJobIdRef.current = null;
           }
           // Continue polling if still running
         } catch (error) {
@@ -577,6 +619,7 @@ export default function Search() {
       setIsSubmitting(false);
       setCurrentPhase(null);
       setJobId(null);
+      currentJobIdRef.current = null;
       submissionState.current.justCompleted = true;
     }
   };
@@ -665,6 +708,7 @@ export default function Search() {
     setIsSubmitting(false);
     setCurrentPhase(null);
     setJobId(null);
+    currentJobIdRef.current = null; // Clear ref to prevent stale updates
     setShowDeliveryMethodPrompt(false);
     setIsCancelled(true);
     setError(null);
@@ -795,28 +839,6 @@ export default function Search() {
     }
   };
 
-  /**
-   * Handles the "No" button click in the download prompt.
-   * Closes the prompt without downloading.
-   */
-  const handleDownloadNo = () => {
-    // Store document count before clearing downloadInfo
-    const documentCount = downloadInfo?.filenames?.length || 1;
-    setDeclinedDocumentCount(documentCount);
-    setShowDownloadPrompt(false);
-    setDownloadInfo(null);
-    setHasRespondedToPrompt(true);
-
-    // Auto-dismiss success message after timeout
-    if (successTimeoutRef.current) {
-      clearTimeout(successTimeoutRef.current);
-    }
-    successTimeoutRef.current = setTimeout(() => {
-      setSuccess(false);
-      successTimeoutRef.current = null;
-    }, SUCCESS_MESSAGE_TIMEOUT);
-  };
-
   return (
     <section id="search">
       <h2>Search</h2>
@@ -941,24 +963,13 @@ export default function Search() {
             All set! Generated {downloadInfo.filenames.length} cover letter
             {downloadInfo.filenames.length !== 1 ? "s" : ""}
           </h3>
-          <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
-            Would you like to download the{" "}
-            {downloadInfo.filenames.length === 1 ? "file" : "files"}?
-          </h3>
           <div className="flex justify-center items-center gap-4 mt-6">
             <button
               onClick={handleDownloadYes}
               className="text-base sm:text-lg md:text-xl lg:text-2xl px-3 sm:px-4 py-1.5 sm:py-2 border border-white bg-transparent text-white font-semibold rounded-lg shadow hover:bg-white hover:text-gray-800 transition-all"
               aria-label="Download the cover letters"
             >
-              Yes
-            </button>
-            <button
-              onClick={handleDownloadNo}
-              className="text-base sm:text-lg md:text-xl lg:text-2xl px-3 sm:px-4 py-1.5 sm:py-2 border border-white bg-transparent text-white font-semibold rounded-lg shadow hover:bg-white hover:text-gray-800 transition-all"
-              aria-label="Skip downloading"
-            >
-              No
+              Download
             </button>
           </div>
         </>
