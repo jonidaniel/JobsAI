@@ -74,6 +74,7 @@ export default function Search() {
   const [showDownloadPrompt, setShowDownloadPrompt] = useState(false);
   const [downloadInfo, setDownloadInfo] = useState(null); // { jobId, filenames }
   const [declinedDocumentCount, setDeclinedDocumentCount] = useState(null); // Store count when user declines
+  const [downloadedDocumentCount, setDownloadedDocumentCount] = useState(null); // Store count when user downloads
   const [hasDownloaded, setHasDownloaded] = useState(false); // Track if user has clicked "Yes"
   const [hasRespondedToPrompt, setHasRespondedToPrompt] = useState(false); // Track if user has responded (Yes or No)
   // Consolidated submission state ref
@@ -86,11 +87,11 @@ export default function Search() {
 
   // Phase messages mapping
   const phaseMessages = {
-    profiling: "Creating your profile...",
-    searching: "Searching for jobs...",
-    scoring: "Scoring the jobs...",
-    analyzing: "Doing analysis...",
-    generating: "Generating cover letters...",
+    profiling: "1/5: Creating your profile...",
+    searching: "2/5: Searching for jobs...",
+    scoring: "3/5: Scoring the jobs...",
+    analyzing: "4/5: Doing analysis...",
+    generating: "5/5: Generating cover letters...",
   };
 
   // Form data received from QuestionSets component via callback
@@ -174,6 +175,7 @@ export default function Search() {
       setShowDownloadPrompt(false);
       setDownloadInfo(null);
       setDeclinedDocumentCount(null);
+      setDownloadedDocumentCount(null);
       setHasDownloaded(false);
       setHasRespondedToPrompt(false);
       setShowDeliveryMethodPrompt(false);
@@ -211,6 +213,7 @@ export default function Search() {
       setShowDownloadPrompt(false);
       setDownloadInfo(null);
       setDeclinedDocumentCount(null);
+      setDownloadedDocumentCount(null);
       setHasDownloaded(false);
       setHasRespondedToPrompt(false);
       setShowDeliveryMethodPrompt(false);
@@ -693,6 +696,10 @@ export default function Search() {
     if (!downloadInfo) return;
 
     try {
+      // Store document count before clearing downloadInfo
+      const documentCount = downloadInfo?.filenames?.length || 1;
+      setDownloadedDocumentCount(documentCount);
+
       // Save scroll position before download
       submissionState.current.savedScrollPosition =
         window.scrollY || window.pageYOffset;
@@ -757,7 +764,11 @@ export default function Search() {
         // Email delivery: show message instead of progress
         <>
           <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
-            Expect the cover letters to drop in your email shortly
+            Expect the cover{" "}
+            {parseInt(formData["cover-letter-num"] || "1", 10) === 1
+              ? "letter"
+              : "letters"}{" "}
+            to drop in your email shortly
           </h3>
         </>
       ) : isSubmitting ? (
@@ -779,7 +790,11 @@ export default function Search() {
             // Initial selection: choose delivery method
             <>
               <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
-                How do you want the cover letters?
+                How do you want the cover{" "}
+                {parseInt(formData["cover-letter-num"] || "1", 10) === 1
+                  ? "letter"
+                  : "letters"}
+                ?
               </h3>
               <div className="flex justify-center items-center gap-4 mt-6">
                 <button
@@ -794,7 +809,11 @@ export default function Search() {
                   className="text-base sm:text-lg md:text-xl lg:text-2xl px-3 sm:px-4 py-1.5 sm:py-2 border border-white bg-transparent text-white font-semibold rounded-lg shadow hover:bg-white hover:text-gray-800 transition-colors"
                   aria-label="Stay anonymous and download cover letters to browser"
                 >
-                  Stay anonymous and download them to browser
+                  Stay anonymous and download{" "}
+                  {parseInt(formData["cover-letter-num"] || "1", 10) === 1
+                    ? "it"
+                    : "them"}{" "}
+                  to browser
                 </button>
               </div>
             </>
@@ -891,16 +910,11 @@ export default function Search() {
         // Email delivery complete: show completion message
         <>
           <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
-            Expect the cover letters to drop in your email shortly
-          </h3>
-        </>
-      ) : submissionState.current.hasSuccessfulSubmission &&
-        deliveryMethod === "email" &&
-        hasRespondedToPrompt ? (
-        // Email delivery complete: show completion message
-        <>
-          <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
-            Expect the cover letters to drop in your email shortly
+            Expect the cover{" "}
+            {parseInt(formData["cover-letter-num"] || "1", 10) === 1
+              ? "letter"
+              : "letters"}{" "}
+            to drop in your email shortly
           </h3>
         </>
       ) : submissionState.current.hasSuccessfulSubmission &&
@@ -917,7 +931,9 @@ export default function Search() {
         // Success state: show completion message (only after user has downloaded)
         <>
           <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
-            Here are your cover letters. <i>Thank you very much.</i>
+            Here {downloadedDocumentCount === 1 ? "is" : "are"} your cover{" "}
+            {downloadedDocumentCount === 1 ? "letter" : "letters"}.{" "}
+            <i>Thank you very much.</i>
           </h3>
         </>
       ) : (
