@@ -858,24 +858,27 @@ export default function Search() {
             // Initial selection: choose delivery method
             <>
               <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
-                How do you want the cover{" "}
-                {coverLetterCount === 1 ? "letter" : "letters"}?
+                Choose delivery method for the cover{" "}
+                {coverLetterCount === 1 ? "letter" : "letters"}
               </h3>
               <div className="flex justify-center items-center gap-4 mt-6">
                 <button
                   onClick={() => handleDeliveryMethod("email")}
                   className="text-base sm:text-lg md:text-xl lg:text-2xl px-3 sm:px-4 py-1.5 sm:py-2 border border-white bg-transparent text-white font-semibold rounded-lg shadow hover:bg-white hover:text-gray-800 transition-all"
-                  aria-label="Receive cover letters via email"
+                  aria-label="Via email when ready"
                 >
                   Via email
+                  <br />
+                  when ready
                 </button>
                 <button
                   onClick={() => handleDeliveryMethod("download")}
                   className="text-base sm:text-lg md:text-xl lg:text-2xl px-3 sm:px-4 py-1.5 sm:py-2 border border-white bg-transparent text-white font-semibold rounded-lg shadow hover:bg-white hover:text-gray-800 transition-all"
-                  aria-label="Stay anonymous and download cover letters to browser"
+                  aria-label="Via browser download (might take minutes)"
                 >
-                  Stay anonymous and download{" "}
-                  {coverLetterCount === 1 ? "it" : "them"} to browser
+                  Via browser download
+                  <br />
+                  (might take minutes)
                 </button>
               </div>
             </>
@@ -993,7 +996,7 @@ export default function Search() {
         // Success state: show completion message (only after user has downloaded)
         <>
           <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
-            <i>Thank you very much for using JobsAI.</i>
+            <i>Thank you very much for using JobsAI</i>
             <br />
             Feel free to do another search
           </h3>
