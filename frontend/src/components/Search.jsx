@@ -87,11 +87,11 @@ export default function Search() {
 
   // Phase messages mapping
   const phaseMessages = {
-    profiling: "2/6: Creating your profile...",
-    searching: "3/6: Searching for jobs...",
-    scoring: "4/6: Scoring the jobs...",
-    analyzing: "5/6: Doing analysis...",
-    generating: "6/6: Generating cover letters...",
+    profiling: "2/6 Creating your profile...",
+    searching: "3/6 Searching for jobs...",
+    scoring: "4/6 Scoring the jobs...",
+    analyzing: "5/6 Doing analysis...",
+    generating: "6/6 Generating cover letters...",
   };
 
   // Form data received from QuestionSets component via callback
