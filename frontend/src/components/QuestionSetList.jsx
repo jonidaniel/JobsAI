@@ -215,7 +215,7 @@ export default function QuestionSetList({
         style={arrowContainerStyle}
       >
         <button
-          className="prev-btn text-white rounded-lg transition-colors hover:bg-gray-700"
+          className="prev-btn text-white rounded-lg transition-all hover:bg-gray-700"
           style={arrowButtonStyle}
           onClick={handlePrevious}
           aria-label="Previous question set"
@@ -250,7 +250,7 @@ export default function QuestionSetList({
         style={arrowContainerStyle}
       >
         <button
-          className="next-btn text-white rounded-lg transition-colors hover:bg-gray-700"
+          className="next-btn text-white rounded-lg transition-all hover:bg-gray-700"
           style={arrowButtonStyle}
           onClick={handleNext}
           aria-label="Next question set"

@@ -33,3 +33,21 @@ h2,
     font-size: 4.8rem;
   }
 }
+
+/* Smooth button transitions */
+button {
+  transition: all 0.2s ease-in-out;
+  transform: scale(1);
+}
+
+button:active {
+  transform: scale(0.98);
+}
+
+button:not(:disabled):hover {
+  transform: scale(1.02);
+}
+
+button:disabled {
+  transform: scale(1);
+}

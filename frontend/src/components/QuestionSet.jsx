@@ -31,7 +31,7 @@ const AddMoreButton = ({ onClick, warningMessage }) => (
     <button
       type="button"
       onClick={onClick}
-      className="mt-4 px-4 py-2 text-sm border border-gray-400 rounded hover:bg-gray-800 transition-colors"
+      className="mt-4 px-4 py-2 text-sm border border-gray-400 rounded hover:bg-gray-800 transition-all"
       style={{ backgroundColor: "#0e0e0e" }}
     >
       Add more
