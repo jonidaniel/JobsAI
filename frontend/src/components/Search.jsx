@@ -412,8 +412,10 @@ export default function Search() {
       if (!startResponse.ok) {
         // Check if this is a rate limit error (429) BEFORE parsing JSON
         if (startResponse.status === 429) {
+          console.log("Rate limit detected: 429 status code");
+          // Use a single batch update to ensure all states are set together
           setIsRateLimited(true);
-          setError(null); // Clear any existing error
+          setError(null);
           setIsSubmitting(false);
           setShowDeliveryMethodPrompt(false);
           setDeliveryMethod(null);
@@ -421,9 +423,15 @@ export default function Search() {
           setEmailError(null);
           setCurrentPhase(null);
           setJobId(null);
+          setDownloadInfo(null);
+          setShowDownloadPrompt(false);
+          setHasDownloaded(false);
+          setHasRespondedToPrompt(false);
+          setIsCancelled(false);
           // Clear submission state flags
           submissionState.current.hasSuccessfulSubmission = false;
           submissionState.current.justCompleted = false;
+          console.log("Rate limit state set, isRateLimited should be true");
           // Don't parse JSON or throw error - just return
           return;
         }
