@@ -87,11 +87,11 @@ export default function Search() {
 
   // Phase messages mapping
   const phaseMessages = {
-    profiling: "1/5: Creating your profile...",
-    searching: "2/5: Searching for jobs...",
-    scoring: "3/5: Scoring the jobs...",
-    analyzing: "4/5: Doing analysis...",
-    generating: "5/5: Generating cover letters...",
+    profiling: "2/6: Creating your profile...",
+    searching: "3/6: Searching for jobs...",
+    scoring: "4/6: Scoring the jobs...",
+    analyzing: "5/6: Doing analysis...",
+    generating: "6/6: Generating cover letters...",
   };
 
   // Form data received from QuestionSets component via callback
@@ -777,7 +777,7 @@ export default function Search() {
           <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
             {currentPhase && phaseMessages[currentPhase]
               ? phaseMessages[currentPhase]
-              : "Starting search..."}
+              : "1/6 Starting search..."}
           </h3>
           <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
             This might take a few minutes
