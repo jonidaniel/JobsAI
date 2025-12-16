@@ -74,7 +74,6 @@ export default function Search() {
   const [showDownloadPrompt, setShowDownloadPrompt] = useState(false);
   const [downloadInfo, setDownloadInfo] = useState(null); // { jobId, filenames }
   const [declinedDocumentCount, setDeclinedDocumentCount] = useState(null); // Store count when user declines
-  const [downloadedDocumentCount, setDownloadedDocumentCount] = useState(null); // Store count when user downloads
   const [hasDownloaded, setHasDownloaded] = useState(false); // Track if user has clicked "Yes"
   const [hasRespondedToPrompt, setHasRespondedToPrompt] = useState(false); // Track if user has responded (Yes or No)
   const [isRateLimited, setIsRateLimited] = useState(false); // Track if rate limit is exceeded
@@ -176,7 +175,6 @@ export default function Search() {
       setShowDownloadPrompt(false);
       setDownloadInfo(null);
       setDeclinedDocumentCount(null);
-      setDownloadedDocumentCount(null);
       setHasDownloaded(false);
       setHasRespondedToPrompt(false);
       setShowDeliveryMethodPrompt(false);
@@ -215,7 +213,6 @@ export default function Search() {
       setShowDownloadPrompt(false);
       setDownloadInfo(null);
       setDeclinedDocumentCount(null);
-      setDownloadedDocumentCount(null);
       setHasDownloaded(false);
       setHasRespondedToPrompt(false);
       setShowDeliveryMethodPrompt(false);
@@ -757,10 +754,6 @@ export default function Search() {
     if (!downloadInfo) return;
 
     try {
-      // Store document count before clearing downloadInfo
-      const documentCount = downloadInfo?.filenames?.length || 1;
-      setDownloadedDocumentCount(documentCount);
-
       // Save scroll position before download
       submissionState.current.savedScrollPosition =
         window.scrollY || window.pageYOffset;
