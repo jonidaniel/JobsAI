@@ -6,7 +6,6 @@ import ErrorMessage from "./messages/ErrorMessage";
 import { API_ENDPOINTS } from "../config/api";
 
 import { transformFormData } from "../utils/formDataTransform";
-import { downloadBlob } from "../utils/fileDownload";
 import { getErrorMessage } from "../utils/errorMessages";
 import { validateGeneralQuestions } from "../utils/validation";
 import { GENERAL_QUESTION_KEYS } from "../config/generalQuestions";
@@ -15,6 +14,8 @@ import {
   SCROLL_OFFSET,
   SCROLL_DELAY,
 } from "../config/constants";
+import { usePipelinePolling } from "../hooks/usePipelinePolling";
+import { useDownload } from "../hooks/useDownload";
 
 import "../styles/search.css";
 
@@ -61,7 +62,6 @@ export default function Search() {
   // Progress tracking with polling
   const [currentPhase, setCurrentPhase] = useState(null);
   const [jobId, setJobId] = useState(null);
-  const pollingIntervalRef = useRef(null);
   // Track current jobId in a ref to prevent stale polling updates
   const currentJobIdRef = useRef(null);
   // Delivery method selection state
@@ -151,6 +151,31 @@ export default function Search() {
     return parseInt(coverLetterNumValue || "1", 10);
   }, [coverLetterNumValue]);
 
+  // Custom hooks for polling and downloads
+  const { startPolling, stopPolling } = usePipelinePolling({
+    setCurrentPhase,
+    setIsSubmitting,
+    setError,
+    setJobId,
+    setDownloadInfo,
+    setShowDownloadPrompt,
+    setSuccess,
+    submissionState,
+    currentJobIdRef,
+  });
+
+  const { handleDownloadYes } = useDownload({
+    downloadInfo,
+    submissionState,
+    successTimeoutRef,
+    setShowDownloadPrompt,
+    setDownloadInfo,
+    setHasDownloaded,
+    setHasRespondedToPrompt,
+    setSuccess,
+    setError,
+  });
+
   /**
    * Handles form submission
    *
@@ -171,10 +196,7 @@ export default function Search() {
     // Do NOT cancel the running job - let it complete in the background
     if (isSubmitting) {
       // Stop polling for the current job (but don't send cancel request)
-      if (pollingIntervalRef.current) {
-        clearInterval(pollingIntervalRef.current);
-        pollingIntervalRef.current = null;
-      }
+      stopPolling();
       // Reset UI state and allow new submission
       setError(null);
       setSuccess(false);
@@ -468,139 +490,12 @@ export default function Search() {
 
       const { job_id } = await startResponse.json();
       setJobId(job_id);
-      // Update ref to track current job ID
-      currentJobIdRef.current = job_id;
 
-      // Step 2: Poll for progress updates
-      const pollProgress = async () => {
-        try {
-          // Check if this job is still the current one - ignore if job was replaced
-          if (currentJobIdRef.current !== job_id) {
-            // This polling is for an old job, stop it
-            if (pollingIntervalRef.current) {
-              clearInterval(pollingIntervalRef.current);
-              pollingIntervalRef.current = null;
-            }
-            return;
-          }
-
-          const response = await fetch(`${API_ENDPOINTS.PROGRESS}/${job_id}`);
-
-          if (!response.ok) {
-            if (response.status === 404) {
-              // Only update state if this is still the current job
-              if (currentJobIdRef.current === job_id) {
-                setError("Job not found");
-                setIsSubmitting(false);
-                setCurrentPhase(null);
-                setJobId(null);
-                currentJobIdRef.current = null;
-              }
-              if (pollingIntervalRef.current) {
-                clearInterval(pollingIntervalRef.current);
-                pollingIntervalRef.current = null;
-              }
-              return;
-            }
-            throw new Error(`HTTP error! status: ${response.status}`);
-          }
-
-          const data = await response.json();
-
-          // Only update state if this is still the current job
-          if (currentJobIdRef.current !== job_id) {
-            return; // Job was replaced, ignore this response
-          }
-
-          // Handle progress updates
-          if (data.progress && data.progress.phase) {
-            setCurrentPhase(data.progress.phase);
-          }
-
-          // Handle completion
-          if (data.status === "complete") {
-            // Only process completion if this is still the current job
-            if (currentJobIdRef.current !== job_id) {
-              return; // Job was replaced, ignore this response
-            }
-
-            if (pollingIntervalRef.current) {
-              clearInterval(pollingIntervalRef.current);
-              pollingIntervalRef.current = null;
-            }
-
-            // Store download info and show prompt instead of auto-downloading
-            const filenames =
-              data.filenames && Array.isArray(data.filenames)
-                ? data.filenames
-                : [data.filename || "cover_letter.docx"];
-
-            setDownloadInfo({
-              jobId: job_id,
-              filenames: filenames,
-            });
-            setShowDownloadPrompt(true);
-
-            // Update submission state
-            setSuccess(true);
-            setError(null);
-            submissionState.current.justCompleted = true;
-            submissionState.current.hasSuccessfulSubmission = true;
-            setIsSubmitting(false);
-            setCurrentPhase(null);
-            setJobId(null);
-            currentJobIdRef.current = null;
-          }
-          // Handle errors
-          else if (data.status === "error") {
-            // Only process error if this is still the current job
-            if (currentJobIdRef.current !== job_id) {
-              return; // Job was replaced, ignore this response
-            }
-
-            if (pollingIntervalRef.current) {
-              clearInterval(pollingIntervalRef.current);
-              pollingIntervalRef.current = null;
-            }
-            setError(data.error || "An error occurred during processing");
-            setIsSubmitting(false);
-            setCurrentPhase(null);
-            setJobId(null);
-            currentJobIdRef.current = null;
-          }
-          // Handle cancellation
-          else if (data.status === "cancelled") {
-            // Only process cancellation if this is still the current job
-            if (currentJobIdRef.current !== job_id) {
-              return; // Job was replaced, ignore this response
-            }
-
-            if (pollingIntervalRef.current) {
-              clearInterval(pollingIntervalRef.current);
-              pollingIntervalRef.current = null;
-            }
-            setError("Pipeline was cancelled");
-            setIsSubmitting(false);
-            setCurrentPhase(null);
-            setJobId(null);
-            currentJobIdRef.current = null;
-          }
-          // Continue polling if still running
-        } catch (error) {
-          console.error("Error polling progress:", error);
-          // Don't stop polling on network errors, just log them
-        }
-      };
-
-      // Start polling immediately, then every 2 seconds
-      pollProgress();
-      pollingIntervalRef.current = setInterval(pollProgress, 2000);
+      // Step 2: Start polling for progress updates
+      startPolling(job_id);
     } catch (error) {
       // Stop polling if it was started
-      if (pollingIntervalRef.current) {
-        clearInterval(pollingIntervalRef.current);
-        pollingIntervalRef.current = null;
-      }
+      stopPolling();
       // Check if error message indicates rate limit (fallback check)
       const errorMessage = getErrorMessage(error);
       if (errorMessage === "RATE_LIMIT_EXCEEDED") {
@@ -666,20 +561,19 @@ export default function Search() {
   }, [isSubmitting]);
 
   /**
-   * Cleanup: Clear timeout and EventSource if component unmounts
+   * Cleanup: Clear timeout and polling interval if component unmounts
    * Prevents memory leaks by clearing any pending timeouts and connections
    */
   useEffect(() => {
+    // Capture refs in closure to avoid stale references
+    const timeoutRef = successTimeoutRef;
     return () => {
-      if (successTimeoutRef.current) {
-        clearTimeout(successTimeoutRef.current);
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
       }
-      if (pollingIntervalRef.current) {
-        clearInterval(pollingIntervalRef.current);
-        pollingIntervalRef.current = null;
-      }
+      stopPolling();
     };
-  }, []);
+  }, [stopPolling]);
 
   /**
    * Handles pipeline cancellation
@@ -688,10 +582,7 @@ export default function Search() {
    */
   const handleCancel = async () => {
     // Stop polling if it's running
-    if (pollingIntervalRef.current) {
-      clearInterval(pollingIntervalRef.current);
-      pollingIntervalRef.current = null;
-    }
+    stopPolling();
 
     // If we have a jobId, send cancel request to backend
     if (jobId) {
@@ -712,131 +603,6 @@ export default function Search() {
     setShowDeliveryMethodPrompt(false);
     setIsCancelled(true);
     setError(null);
-  };
-
-  /**
-   * Downloads the generated document(s).
-   *
-   * Handles both single document (backward compatibility) and multiple documents.
-   * If multiple documents exist, downloads all of them sequentially.
-   *
-   * @param {string} jobId - Job identifier
-   * @param {string|Array<string>} filenameOrFilenames - Single filename or array of filenames
-   */
-  const downloadDocument = async (jobId, filenameOrFilenames) => {
-    try {
-      const response = await fetch(`${API_ENDPOINTS.DOWNLOAD}/${jobId}`);
-
-      if (!response.ok) {
-        throw new Error(`Download failed: ${response.status}`);
-      }
-
-      // Save scroll position before download
-      submissionState.current.savedScrollPosition =
-        window.scrollY || window.pageYOffset;
-
-      // Check if response contains presigned S3 URL(s)
-      const contentType = response.headers.get("content-type");
-      if (contentType && contentType.includes("application/json")) {
-        const data = await response.json();
-
-        // Handle multiple documents
-        if (data.download_urls && Array.isArray(data.download_urls)) {
-          // Download all documents sequentially
-          for (let i = 0; i < data.download_urls.length; i++) {
-            const item = data.download_urls[i];
-            await downloadFromS3(item.url, item.filename);
-            // Small delay between downloads to avoid browser blocking
-            if (i < data.download_urls.length - 1) {
-              await new Promise((resolve) => setTimeout(resolve, 500));
-            }
-          }
-          return;
-        }
-
-        // Handle single document
-        if (data.download_url) {
-          await downloadFromS3(
-            data.download_url,
-            data.filename || filenameOrFilenames
-          );
-          return;
-        }
-      }
-
-      // Fallback: Get the response as a blob (direct download from API Gateway)
-      const blob = await response.blob();
-      const filename = Array.isArray(filenameOrFilenames)
-        ? filenameOrFilenames[0]
-        : filenameOrFilenames;
-      downloadBlob(blob, response.headers, filename);
-    } catch (error) {
-      console.error("Error downloading document:", error);
-      throw error;
-    }
-  };
-
-  /**
-   * Downloads a single document from S3 using a presigned URL.
-   *
-   * @param {string} s3Url - Presigned S3 URL
-   * @param {string} filename - Filename for the document
-   */
-  const downloadFromS3 = async (s3Url, filename) => {
-    const s3Response = await fetch(s3Url);
-
-    // Ensure we get the binary data correctly
-    // Use arrayBuffer first to preserve binary integrity, then create blob with correct MIME type
-    const arrayBuffer = await s3Response.arrayBuffer();
-    const blob = new Blob([arrayBuffer], {
-      type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    });
-
-    // Use filename from parameter (more reliable than extracting from headers)
-    downloadBlob(blob, s3Response.headers, filename);
-  };
-
-  /**
-   * Handles the "Yes" button click in the download prompt.
-   * Triggers the download and closes the prompt.
-   */
-  const handleDownloadYes = async () => {
-    if (!downloadInfo) return;
-
-    try {
-      // Save scroll position before download
-      submissionState.current.savedScrollPosition =
-        window.scrollY || window.pageYOffset;
-
-      // Download the document(s)
-      if (downloadInfo.filenames.length > 1) {
-        // Multiple documents
-        await downloadDocument(downloadInfo.jobId, downloadInfo.filenames);
-      } else {
-        // Single document
-        await downloadDocument(downloadInfo.jobId, downloadInfo.filenames[0]);
-      }
-
-      // Close the prompt and mark as downloaded
-      setShowDownloadPrompt(false);
-      setDownloadInfo(null);
-      setHasDownloaded(true);
-      setHasRespondedToPrompt(true);
-
-      // Auto-dismiss success message after timeout
-      if (successTimeoutRef.current) {
-        clearTimeout(successTimeoutRef.current);
-      }
-      successTimeoutRef.current = setTimeout(() => {
-        setSuccess(false);
-        successTimeoutRef.current = null;
-      }, SUCCESS_MESSAGE_TIMEOUT);
-    } catch (error) {
-      console.error("Error downloading document:", error);
-      setError("Failed to download documents. Please try again.");
-      setShowDownloadPrompt(false);
-      setDownloadInfo(null);
-    }
   };
 
   return (
