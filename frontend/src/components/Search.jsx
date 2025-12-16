@@ -825,11 +825,11 @@ export default function Search() {
         // Email delivery: show message instead of progress
         <>
           <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
-            Expect the cover{" "}
+            Thank you very much for using JobsAI. Expect the cover{" "}
             {parseInt(formData["cover-letter-num"] || "1", 10) === 1
               ? "letter"
               : "letters"}{" "}
-            to drop in your email shortly
+            to drop in your inbox shortly
           </h3>
         </>
       ) : isSubmitting ? (
@@ -971,11 +971,11 @@ export default function Search() {
         // Email delivery complete: show completion message
         <>
           <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
-            Expect the cover{" "}
+            Thank you very much for using JobsAI. Expect the cover{" "}
             {parseInt(formData["cover-letter-num"] || "1", 10) === 1
               ? "letter"
               : "letters"}{" "}
-            to drop in your email shortly
+            to drop in your inbox shortly
           </h3>
         </>
       ) : submissionState.current.hasSuccessfulSubmission &&
@@ -992,7 +992,9 @@ export default function Search() {
         // Success state: show completion message (only after user has downloaded)
         <>
           <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
-            Thank you very much for using JobsAI. Feel free to do another search
+            <i>Thank you very much for using JobsAI.</i>
+            <br />
+            Feel free to do another search
           </h3>
         </>
       ) : (
