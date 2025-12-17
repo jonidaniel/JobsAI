@@ -2,16 +2,19 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 
 import QuestionSetList from "./QuestionSetList";
 import ErrorMessage from "./messages/ErrorMessage";
+import DeliveryMethodSelector from "./delivery/DeliveryMethodSelector";
+import ProgressTracker from "./progress/ProgressTracker";
+import StatusMessages from "./status/StatusMessages";
+import DownloadPrompt from "./download/DownloadPrompt";
+import ActionButtons from "./actions/ActionButtons";
 
 import { API_ENDPOINTS } from "../config/api";
 
-import { transformFormData } from "../utils/formDataTransform";
-import { getErrorMessage } from "../utils/errorMessages";
 import { validateGeneralQuestions } from "../utils/validation";
-import { GENERAL_QUESTION_KEYS } from "../config/generalQuestions";
 import { SCROLL_OFFSET, SCROLL_DELAY } from "../config/constants";
 import { usePipelinePolling } from "../hooks/usePipelinePolling";
 import { useDownload } from "../hooks/useDownload";
+import { useFormSubmission } from "../hooks/useFormSubmission";
 
 import "../styles/search.css";
 import type {
@@ -20,23 +23,13 @@ import type {
   PipelinePhase,
   DownloadInfo,
 } from "../types";
-
-// Phase messages mapping - moved outside component to avoid recreation on each render
-const PHASE_MESSAGES: Record<PipelinePhase, string> = {
-  profiling: "2/6 Creating your profile...",
-  searching: "3/6 Searching for jobs...",
-  scoring: "4/6 Scoring the jobs...",
-  analyzing: "5/6 Doing analysis...",
-  generating: "6/6 Generating cover letters...",
-};
+import type { DeliveryMethod } from "./delivery/types";
 
 interface SubmissionState {
   justCompleted: boolean;
   savedScrollPosition: number | null;
   hasSuccessfulSubmission: boolean;
 }
-
-type DeliveryMethod = "email" | "download" | null;
 
 /**
  * Search Component - Main Questionnaire and Pipeline Interface.
@@ -226,8 +219,41 @@ export default function Search() {
     setError,
   });
 
+  // Form submission hook
+  const {
+    handleSubmit: handleFormSubmit,
+    startPipeline,
+    validateEmail,
+  } = useFormSubmission({
+    formData,
+    deliveryMethod,
+    email,
+    currentQuestionSetIndex,
+    isRateLimited,
+    setError,
+    setValidationErrors,
+    setActiveQuestionSetIndex,
+    setIsRateLimited,
+    setShowDeliveryMethodPrompt,
+    setDeliveryMethod,
+    setEmail,
+    setEmailError,
+    setIsSubmitting,
+    setCurrentPhase,
+    setJobId,
+    setDownloadInfo,
+    setShowDownloadPrompt,
+    setHasDownloaded,
+    setHasRespondedToPrompt,
+    setIsCancelled,
+    submissionState,
+    currentJobIdRef,
+    startPolling,
+    scrollToElement,
+  });
+
   /**
-   * Handles form submission or button click
+   * Handles form submission or button click (wrapper for "Find Again" logic)
    */
   const handleSubmit = async (
     e?: React.FormEvent<HTMLFormElement> | React.MouseEvent<HTMLButtonElement>
@@ -254,79 +280,8 @@ export default function Search() {
       return;
     }
 
-    // Clear previous errors
-    setError(null);
-    submissionState.current.justCompleted = false;
-    submissionState.current.hasSuccessfulSubmission = false;
-    setShowDownloadPrompt(false);
-    setDownloadInfo(null);
-    setHasDownloaded(false);
-    setDeliveryMethod(null);
-    setEmail("");
-    setEmailError(null);
-    setIsCancelled(false);
-    setIsRateLimited(false);
-
-    // Validate general questions before submission
-    const validation = validateGeneralQuestions(formData);
-    if (!validation.isValid) {
-      setValidationErrors(validation.errors);
-
-      // Check if the current question set has any errors
-      const currentSetHasErrors = (() => {
-        if (currentQuestionSetIndex === 0) {
-          return GENERAL_QUESTION_KEYS.some(
-            (key) => validation.errors[key as string]
-          );
-        } else if (currentQuestionSetIndex === 9) {
-          return validation.errors["additional-info"] !== undefined;
-        }
-        return false;
-      })();
-
-      // Find the first error key
-      const errorKeys = Object.keys(validation.errors);
-      if (errorKeys.length > 0) {
-        const firstErrorKey = errorKeys[0];
-
-        // Only navigate if the current question set doesn't have errors
-        if (!currentSetHasErrors) {
-          let targetIndex = 0;
-          if (firstErrorKey === "additional-info") {
-            targetIndex = 9;
-          }
-
-          if (targetIndex !== currentQuestionSetIndex) {
-            setActiveQuestionSetIndex(targetIndex);
-          }
-        }
-
-        scrollToElement(
-          `[data-question-key="${firstErrorKey}"]`,
-          SCROLL_DELAY + 50
-        );
-      }
-      return;
-    }
-
-    // Clear validation errors if validation passes
-    setValidationErrors({});
-    setActiveQuestionSetIndex(undefined);
-
-    // Show delivery method selection prompt instead of starting pipeline immediately
-    setShowDeliveryMethodPrompt(true);
-    setDeliveryMethod(null);
-    setEmail("");
-    setEmailError(null);
-    setError(null);
-  };
-
-  /**
-   * Validates email address format
-   */
-  const validateEmail = (email: string): boolean => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
+    // Otherwise, delegate to form submission handler
+    await handleFormSubmit(e);
   };
 
   /**
@@ -361,156 +316,6 @@ export default function Search() {
     setEmailError(null);
     setShowDeliveryMethodPrompt(false);
     await startPipeline();
-  };
-
-  /**
-   * Starts the pipeline after delivery method is selected.
-   */
-  const startPipeline = async (): Promise<void> => {
-    setIsSubmitting(true);
-    setError(null);
-    setCurrentPhase(null);
-
-    // Transform form data into grouped structure for backend API
-    const result = transformFormData(formData);
-
-    // Add delivery method and email to payload
-    if (deliveryMethod === "email") {
-      (result as Record<string, unknown>).delivery_method = "email";
-      (result as Record<string, unknown>).email = email;
-    } else {
-      (result as Record<string, unknown>).delivery_method = "download";
-    }
-
-    // Send to backend using new SSE-based flow
-    try {
-      // Step 1: Start pipeline and get job_id
-      const startResponse = await fetch(API_ENDPOINTS.START, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(result),
-      });
-
-      if (!startResponse.ok) {
-        // Check if this is a rate limit error (429) BEFORE parsing JSON
-        if (startResponse.status === 429) {
-          setIsRateLimited(true);
-          setError(null);
-          setIsSubmitting(false);
-          setShowDeliveryMethodPrompt(false);
-          setDeliveryMethod(null);
-          setEmail("");
-          setEmailError(null);
-          setCurrentPhase(null);
-          setJobId(null);
-          setDownloadInfo(null);
-          setShowDownloadPrompt(false);
-          setHasDownloaded(false);
-          setHasRespondedToPrompt(false);
-          setIsCancelled(false);
-          submissionState.current.hasSuccessfulSubmission = false;
-          submissionState.current.justCompleted = false;
-          return;
-        }
-        // For other errors, parse JSON and throw
-        const errorData = (await startResponse.json().catch(() => ({}))) as {
-          error?: string;
-          detail?: string;
-        };
-        if (
-          errorData.error === "too_many_requests" ||
-          errorData.detail?.includes("Rate limit exceeded")
-        ) {
-          setIsRateLimited(true);
-          setError(null);
-          setIsSubmitting(false);
-          setShowDeliveryMethodPrompt(false);
-          setDeliveryMethod(null);
-          setEmail("");
-          setEmailError(null);
-          setCurrentPhase(null);
-          setJobId(null);
-          submissionState.current.hasSuccessfulSubmission = false;
-          submissionState.current.justCompleted = false;
-          return;
-        }
-        throw new Error(
-          errorData.detail || `Server error: ${startResponse.status}`
-        );
-      }
-
-      const { job_id } = (await startResponse.json()) as { job_id: string };
-
-      // For email delivery: fire-and-forget, no polling, but keep UI state
-      if (deliveryMethod === "email") {
-        // Keep isSubmitting and deliveryMethod set to show "Thank you..." message
-        // Hide the delivery method prompt, but keep the rest of the state
-        setShowDeliveryMethodPrompt(false);
-        setEmailError(null);
-        setCurrentPhase(null);
-        setJobId(null);
-        currentJobIdRef.current = null;
-        // Don't poll - let pipeline run in background silently
-        // Keep isSubmitting=true and deliveryMethod="email" to persist the UI message
-        return;
-      }
-
-      // For download delivery: track progress with polling
-      setJobId(job_id);
-      startPolling(job_id);
-    } catch (error) {
-      // Only handle errors for download delivery or rate limiting
-      // For email delivery errors (except rate limit), fail silently
-      if (deliveryMethod === "email") {
-        // For email, only show rate limit errors, ignore everything else
-        const errorMessage = getErrorMessage(error);
-        if (errorMessage === "RATE_LIMIT_EXCEEDED" || isRateLimited) {
-          setIsRateLimited(true);
-          setError(null);
-          // On rate limit, reset everything
-          setIsSubmitting(false);
-          setShowDeliveryMethodPrompt(false);
-          setDeliveryMethod(null);
-          setEmail("");
-          setEmailError(null);
-          setCurrentPhase(null);
-          setJobId(null);
-          currentJobIdRef.current = null;
-        } else {
-          // For other errors, keep UI state (show "Thank you..." message)
-          // User won't see the error, but UI stays in submitted state
-          setShowDeliveryMethodPrompt(false);
-          setEmailError(null);
-          setCurrentPhase(null);
-          setJobId(null);
-          currentJobIdRef.current = null;
-        }
-        return;
-      }
-
-      // For download delivery: handle all errors normally
-      stopPolling();
-      const errorMessage = getErrorMessage(error);
-      if (errorMessage === "RATE_LIMIT_EXCEEDED") {
-        setIsRateLimited(true);
-        setError(null);
-        setShowDeliveryMethodPrompt(false);
-        setDeliveryMethod(null);
-        setEmail("");
-        setEmailError(null);
-        submissionState.current.hasSuccessfulSubmission = false;
-        submissionState.current.justCompleted = false;
-      } else if (!isRateLimited) {
-        setError(errorMessage);
-      }
-      setIsSubmitting(false);
-      setCurrentPhase(null);
-      setJobId(null);
-      currentJobIdRef.current = null;
-      submissionState.current.justCompleted = true;
-    }
   };
 
   /**
@@ -583,174 +388,61 @@ export default function Search() {
     setError(null);
   };
 
+  // Determine what to render based on state
+  const shouldShowProgressTracker =
+    isSubmitting && deliveryMethod !== "email" && !isRateLimited;
+  const shouldShowDeliverySelector = showDeliveryMethodPrompt && !isSubmitting;
+  const shouldShowDownloadPrompt = showDownloadPrompt && downloadInfo;
+  const shouldShowStatusMessages =
+    !isSubmitting ||
+    deliveryMethod === "email" ||
+    isRateLimited ||
+    isCancelled ||
+    (submissionState.current.hasSuccessfulSubmission && hasDownloaded);
+
   return (
     <section id="search">
       <h2>Search</h2>
-      {isRateLimited ? (
-        <>
-          <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
-            You've made too many searches lately
-            <br />
-            Try again later
-          </h3>
-        </>
-      ) : isSubmitting && deliveryMethod === "email" ? (
-        <>
-          <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
-            <i>Thank you very much for using JobsAI</i>
-            <br />
-            Expect the cover {coverLetterCount === 1 ? "letter" : "letters"} to
-            drop in your inbox shortly
-          </h3>
-        </>
-      ) : isSubmitting ? (
-        <>
-          <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
-            {currentPhase && PHASE_MESSAGES[currentPhase]
-              ? PHASE_MESSAGES[currentPhase]
-              : "1/6 Starting search..."}
-          </h3>
-          <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
-            This might take a few minutes
-          </h3>
-        </>
-      ) : showDeliveryMethodPrompt ? (
-        <>
-          {!deliveryMethod ? (
-            <>
-              <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
-                Choose delivery method for the cover{" "}
-                {coverLetterCount === 1 ? "letter" : "letters"}
-              </h3>
-              <div className="flex justify-center items-center gap-4 mt-6">
-                <button
-                  onClick={() => handleDeliveryMethod("email")}
-                  className="text-base sm:text-lg md:text-xl lg:text-2xl px-3 sm:px-4 py-1.5 sm:py-2 border border-white bg-transparent text-white font-semibold rounded-lg shadow hover:bg-white hover:text-gray-800 transition-all"
-                  aria-label="Via email when ready"
-                >
-                  Via email
-                  <br />
-                  when ready
-                </button>
-                <button
-                  onClick={() => handleDeliveryMethod("download")}
-                  className="text-base sm:text-lg md:text-xl lg:text-2xl px-3 sm:px-4 py-1.5 sm:py-2 border border-white bg-transparent text-white font-semibold rounded-lg shadow hover:bg-white hover:text-gray-800 transition-all"
-                  aria-label="Via browser download (might take minutes)"
-                >
-                  Via browser download
-                  <br />
-                  (might take minutes)
-                </button>
-              </div>
-            </>
-          ) : deliveryMethod === "email" ? (
-            <>
-              <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
-                Enter your email address
-              </h3>
-              <div className="flex flex-col items-center gap-4 mt-6">
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => {
-                    setEmail(e.target.value);
-                    setEmailError(null);
-                  }}
-                  placeholder="your.email@example.com"
-                  className="text-base sm:text-lg md:text-xl lg:text-2xl px-4 py-2 border border-white bg-transparent text-white placeholder-gray-400 rounded-lg shadow focus:outline-none focus:ring-2 focus:ring-white w-full max-w-md"
-                  aria-label="Email address"
-                  aria-invalid={emailError ? "true" : "false"}
-                  aria-describedby={emailError ? "email-error" : undefined}
-                />
-                {emailError && (
-                  <p
-                    id="email-error"
-                    className="text-sm sm:text-base text-red-400 text-center"
-                  >
-                    {emailError}
-                  </p>
-                )}
-                <div className="flex justify-center items-center gap-4">
-                  <button
-                    onClick={() => {
-                      setDeliveryMethod(null);
-                      setEmail("");
-                      setEmailError(null);
-                    }}
-                    className="text-base sm:text-lg md:text-xl lg:text-2xl px-3 sm:px-4 py-1.5 sm:py-2 border border-white bg-transparent text-white font-semibold rounded-lg shadow hover:bg-white hover:text-gray-800 transition-all"
-                    aria-label="Go back to delivery method selection"
-                  >
-                    Back
-                  </button>
-                  <button
-                    onClick={handleEmailSubmit}
-                    className="text-base sm:text-lg md:text-xl lg:text-2xl px-3 sm:px-4 py-1.5 sm:py-2 border border-white bg-transparent text-white font-semibold rounded-lg shadow hover:bg-white hover:text-gray-800 transition-all"
-                    aria-label="Continue with email delivery"
-                  >
-                    Continue
-                  </button>
-                </div>
-              </div>
-            </>
-          ) : null}
-        </>
-      ) : showDownloadPrompt && downloadInfo ? (
-        <>
-          <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
-            All set! Generated {downloadInfo.filenames.length} cover letter
-            {downloadInfo.filenames.length !== 1 ? "s" : ""}
-          </h3>
-          <div className="flex justify-center items-center gap-4 mt-6">
-            <button
-              onClick={handleDownloadYes}
-              className="text-base sm:text-lg md:text-xl lg:text-2xl px-3 sm:px-4 py-1.5 sm:py-2 border border-white bg-transparent text-white font-semibold rounded-lg shadow hover:bg-white hover:text-gray-800 transition-all"
-              aria-label="Download the cover letters"
-            >
-              Download
-            </button>
-          </div>
-        </>
-      ) : isCancelled ? (
-        <>
-          <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
-            You cancelled the job search
-          </h3>
-        </>
-      ) : submissionState.current.hasSuccessfulSubmission && hasDownloaded ? (
-        <>
-          <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
-            <i>Thank you very much for using JobsAI</i>
-            <br />
-            Feel free to do another search
-          </h3>
-        </>
-      ) : (
-        <>
-          <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
-            <i>We will find jobs for you.</i>
-          </h3>
-          <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
-            And the way you can make sure we find <i>the most relevant jobs</i>{" "}
-            and <i>write the best cover letters</i> is to provide us with a dose
-            of information.
-          </h3>
-          <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
-            <i>We don't ask you for any personal information.</i>
-          </h3>
-          <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
-            By answering as many questions as possible, you enable us to use all
-            tools in our arsenal when we scrape jobs for you. This is how we
-            find the absolute gems. The questions are easy, and in most of them
-            you just select the option that best describes you. Even if you felt
-            like you didn't have much experience, be truthful -
-          </h3>
-          <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
-            <i>if there is a job matching your skills, we will find it.</i>
-          </h3>
-          <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
-            <i>Find Jobs</i> let's us start the search.
-          </h3>
-        </>
+      {shouldShowProgressTracker && (
+        <ProgressTracker currentPhase={currentPhase} />
+      )}
+      {shouldShowDeliverySelector && (
+        <DeliveryMethodSelector
+          deliveryMethod={deliveryMethod}
+          email={email}
+          emailError={emailError}
+          coverLetterCount={coverLetterCount}
+          onMethodSelect={handleDeliveryMethod}
+          onEmailChange={(newEmail) => {
+            setEmail(newEmail);
+            setEmailError(null);
+          }}
+          onEmailSubmit={handleEmailSubmit}
+          onBack={() => {
+            setDeliveryMethod(null);
+            setEmail("");
+            setEmailError(null);
+          }}
+        />
+      )}
+      {shouldShowDownloadPrompt && downloadInfo && (
+        <DownloadPrompt
+          filenameCount={downloadInfo.filenames.length}
+          onDownload={handleDownloadYes}
+        />
+      )}
+      {shouldShowStatusMessages && (
+        <StatusMessages
+          isRateLimited={isRateLimited}
+          isSubmitting={isSubmitting}
+          deliveryMethod={deliveryMethod}
+          coverLetterCount={coverLetterCount}
+          isCancelled={isCancelled}
+          hasSuccessfulSubmission={
+            submissionState.current.hasSuccessfulSubmission
+          }
+          hasDownloaded={hasDownloaded}
+        />
       )}
       {/* Question sets component */}
       {!isSubmitting &&
@@ -771,62 +463,17 @@ export default function Search() {
       {error && !isRateLimited && <ErrorMessage message={error} />}
       {/* Submit button and cancel button */}
       {!isRateLimited && (
-        <div className="flex justify-center items-center gap-4 mt-6">
-          {isCancelled && (
-            <button
-              id="submit-btn"
-              onClick={handleSubmit}
-              className="text-lg sm:text-xl md:text-2xl lg:text-3xl px-4 sm:px-6 py-2 sm:py-3 border border-white bg-transparent text-white font-semibold rounded-lg shadow disabled:opacity-50 disabled:cursor-not-allowed"
-              aria-label="Start a new job search"
-            >
-              Find Again
-            </button>
-          )}
-          {isSubmitting && deliveryMethod === "email" && (
-            <button
-              id="submit-btn"
-              onClick={handleSubmit}
-              className="text-lg sm:text-xl md:text-2xl lg:text-3xl px-4 sm:px-6 py-2 sm:py-3 border border-white bg-transparent text-white font-semibold rounded-lg shadow disabled:opacity-50 disabled:cursor-not-allowed"
-              aria-label="Start a new job search"
-            >
-              Find Again
-            </button>
-          )}
-          {!isSubmitting &&
-            !showDeliveryMethodPrompt &&
-            !isCancelled &&
-            (!submissionState.current.hasSuccessfulSubmission ||
-              hasRespondedToPrompt) && (
-              <form onSubmit={handleSubmit}>
-                <button
-                  id="submit-btn"
-                  type="submit"
-                  className="text-lg sm:text-xl md:text-2xl lg:text-3xl px-4 sm:px-6 py-2 sm:py-3 border border-white bg-transparent text-white font-semibold rounded-lg shadow disabled:opacity-50 disabled:cursor-not-allowed"
-                  aria-label={
-                    submissionState.current.hasSuccessfulSubmission &&
-                    hasRespondedToPrompt
-                      ? "Start a new job search"
-                      : "Submit form and generate job search document"
-                  }
-                >
-                  {submissionState.current.hasSuccessfulSubmission &&
-                  hasRespondedToPrompt
-                    ? "Find Again"
-                    : "Find Jobs"}
-                </button>
-              </form>
-            )}
-          {isSubmitting && deliveryMethod !== "email" && (
-            <button
-              id="cancel-btn"
-              onClick={handleCancel}
-              className="text-base sm:text-lg md:text-xl lg:text-2xl px-3 sm:px-4 py-2 sm:py-3 border border-red-400 bg-transparent text-red-400 font-semibold rounded-lg shadow hover:bg-red-400 hover:text-white transition-all"
-              aria-label="Cancel the current job search"
-            >
-              Cancel
-            </button>
-          )}
-        </div>
+        <ActionButtons
+          isSubmitting={isSubmitting}
+          deliveryMethod={deliveryMethod}
+          isCancelled={isCancelled}
+          hasSuccessfulSubmission={
+            submissionState.current.hasSuccessfulSubmission
+          }
+          hasRespondedToPrompt={hasRespondedToPrompt}
+          onSubmit={handleSubmit}
+          onCancel={handleCancel}
+        />
       )}
     </section>
   );
