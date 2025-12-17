@@ -63,6 +63,10 @@ export function usePipelinePolling({
    * @param job_id - Job ID to poll for
    */
   const startPolling = (job_id: string): void => {
+    // Stop any existing polling before starting a new one
+    // This prevents multiple polling intervals from running simultaneously
+    stopPolling();
+
     // Update ref to track current job ID
     currentJobIdRef.current = job_id;
 
