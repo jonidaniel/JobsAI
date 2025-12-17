@@ -1,22 +1,23 @@
 import { useState } from "react";
 import { DEFAULT_TEXT_FIELD_MAX_LENGTH } from "../../config/constants";
 
+interface TextFieldProps {
+  keyName: string;
+  label?: string;
+  label2?: string;
+  value: string;
+  onChange: (keyName: string, value: string) => void;
+  error?: string;
+  required?: boolean;
+  height?: string;
+  maxLength?: number;
+  showValidation?: boolean;
+}
+
 /**
  * TextField Component
  *
  * Renders a controlled text input field for user text responses.
- *
- * @param {string} keyName - Unique identifier for the text field (used as data-key and id)
- * @param {string} label - Display label for the text field
- * @param {string} label2 - Second line of the label
- * @param {string} value - Current text field value (controlled component)
- * @param {function} onChange - Callback function called when text changes
- *                              Receives (keyName, newValue) as parameters
- * @param {string} error - Optional error message to display
- * @param {boolean} required - Whether this field is required (default: false)
- * @param {string|number} height - Optional height for the input field (e.g., "75px")
- * @param {number} maxLength - Maximum character length (default: 50 for text fields, 3000 for additional-info)
- * @param {boolean} showValidation - Whether to show validation warnings (default: true, false for tech experience fields)
  */
 export default function TextField({
   keyName,
@@ -29,7 +30,7 @@ export default function TextField({
   height,
   maxLength = DEFAULT_TEXT_FIELD_MAX_LENGTH,
   showValidation = true,
-}) {
+}: TextFieldProps) {
   // Track if user has interacted with the field (for validation display)
   const [hasInteracted, setHasInteracted] = useState(false);
 
@@ -42,10 +43,10 @@ export default function TextField({
   /**
    * Handles input change events
    * For tech fields (showValidation=false), enforces maxLength by slicing input
-   *
-   * @param {Event} e - The change event
    */
-  const handleChange = (e) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ): void => {
     if (!hasInteracted && showValidation) {
       setHasInteracted(true);
     }
@@ -60,7 +61,7 @@ export default function TextField({
    * Handles input blur events
    * Marks field as interacted for validation display
    */
-  const handleBlur = () => {
+  const handleBlur = (): void => {
     if (showValidation) {
       setHasInteracted(true);
     }

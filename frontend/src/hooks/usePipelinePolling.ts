@@ -1,5 +1,29 @@
 import { useRef, useCallback } from "react";
 import { API_ENDPOINTS } from "../config/api";
+import type { PipelinePhase, ProgressResponse, DownloadInfo } from "../types";
+
+interface SubmissionState {
+  justCompleted: boolean;
+  savedScrollPosition: number | null;
+  hasSuccessfulSubmission: boolean;
+}
+
+interface UsePipelinePollingOptions {
+  setCurrentPhase: (phase: PipelinePhase | null) => void;
+  setIsSubmitting: (isSubmitting: boolean) => void;
+  setError: (error: string | null) => void;
+  setJobId: (jobId: string | null) => void;
+  setDownloadInfo: (info: DownloadInfo | null) => void;
+  setShowDownloadPrompt: (show: boolean) => void;
+  setSuccess: (success: boolean) => void;
+  submissionState: React.MutableRefObject<SubmissionState>;
+  currentJobIdRef: React.MutableRefObject<string | null>;
+}
+
+interface UsePipelinePollingReturn {
+  startPolling: (job_id: string) => void;
+  stopPolling: () => void;
+}
 
 /**
  * Custom hook for polling pipeline progress updates.
@@ -8,21 +32,6 @@ import { API_ENDPOINTS } from "../config/api";
  * - Starting/stopping polling intervals
  * - Handling progress updates, completion, errors, and cancellation
  * - Preventing stale polling updates when jobs are replaced
- *
- * @param {Object} options - Configuration object
- * @param {Function} options.setCurrentPhase - State setter for current phase
- * @param {Function} options.setIsSubmitting - State setter for submitting state
- * @param {Function} options.setError - State setter for error messages
- * @param {Function} options.setJobId - State setter for job ID
- * @param {Function} options.setDownloadInfo - State setter for download info
- * @param {Function} options.setShowDownloadPrompt - State setter for download prompt visibility
- * @param {Function} options.setSuccess - State setter for success state
- * @param {Object} options.submissionState - Ref object for submission state
- * @param {Object} options.currentJobIdRef - Ref to track current job ID
- *
- * @returns {Object} Object containing polling control functions
- *   - startPolling: Function to start polling for a job ID
- *   - stopPolling: Function to stop polling
  */
 export function usePipelinePolling({
   setCurrentPhase,
@@ -34,8 +43,8 @@ export function usePipelinePolling({
   setSuccess,
   submissionState,
   currentJobIdRef,
-}) {
-  const pollingIntervalRef = useRef(null);
+}: UsePipelinePollingOptions): UsePipelinePollingReturn {
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   /**
    * Stops the polling interval if it's running.
@@ -51,14 +60,14 @@ export function usePipelinePolling({
   /**
    * Starts polling for progress updates for a given job ID.
    *
-   * @param {string} job_id - Job ID to poll for
+   * @param job_id - Job ID to poll for
    */
-  const startPolling = (job_id) => {
+  const startPolling = (job_id: string): void => {
     // Update ref to track current job ID
     currentJobIdRef.current = job_id;
 
     // Poll for progress updates
-    const pollProgress = async () => {
+    const pollProgress = async (): Promise<void> => {
       try {
         // Check if this job is still the current one - ignore if job was replaced
         if (currentJobIdRef.current !== job_id) {
@@ -85,7 +94,7 @@ export function usePipelinePolling({
           throw new Error(`HTTP error! status: ${response.status}`);
         }
 
-        const data = await response.json();
+        const data = (await response.json()) as ProgressResponse;
 
         // Only update state if this is still the current job
         if (currentJobIdRef.current !== job_id) {

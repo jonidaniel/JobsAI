@@ -18,9 +18,15 @@ import { usePipelinePolling } from "../hooks/usePipelinePolling";
 import { useDownload } from "../hooks/useDownload";
 
 import "../styles/search.css";
+import type {
+  FormData,
+  ValidationErrors,
+  PipelinePhase,
+  DownloadInfo,
+} from "../types";
 
 // Phase messages mapping - moved outside component to avoid recreation on each render
-const PHASE_MESSAGES = {
+const PHASE_MESSAGES: Record<PipelinePhase, string> = {
   profiling: "2/6 Creating your profile...",
   searching: "3/6 Searching for jobs...",
   scoring: "4/6 Scoring the jobs...",
@@ -28,110 +34,93 @@ const PHASE_MESSAGES = {
   generating: "6/6 Generating cover letters...",
 };
 
+interface SubmissionState {
+  justCompleted: boolean;
+  savedScrollPosition: number | null;
+  hasSuccessfulSubmission: boolean;
+}
+
+type DeliveryMethod = "email" | "download" | null;
+
 /**
  * Search Component - Main Questionnaire and Pipeline Interface.
  *
  * This is the primary component for the JobsAI application. It manages the complete
  * user flow from questionnaire completion through pipeline execution to document download.
- *
- * Responsibilities:
- * - Renders QuestionSetList component for form input
- * - Validates form data before submission
- * - Manages asynchronous pipeline execution via API
- * - Polls for progress updates during pipeline execution
- * - Handles document download from S3 using presigned URLs
- * - Displays error and success messages with auto-dismiss
- * - Manages submission state to prevent double-submission
- * - Handles cancellation of running pipelines
- *
- * Form Data Flow:
- *   QuestionSetList -> onFormDataChange -> formData state -> handleSubmit -> API
- *
- * Pipeline Flow:
- *   1. POST /api/start -> Receive job_id
- *   2. Poll GET /api/progress/{job_id} every 2 seconds
- *   3. When complete: GET /api/download/{job_id} -> Receive presigned S3 URL
- *   4. Download document directly from S3
- *
- * State Management:
- *   - formData: Complete form state from all question sets
- *   - isSubmitting: Prevents double-submission and shows loading state
- *   - jobId: Current pipeline job identifier for progress tracking
- *   - currentPhase: Current pipeline phase for progress display
- *   - error/success: User feedback messages
- *
- * @component
- * @returns {JSX.Element} The Search component with questionnaire and pipeline interface
  */
 export default function Search() {
   // Submission state management
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   // Progress tracking with polling
-  const [currentPhase, setCurrentPhase] = useState(null);
-  const [jobId, setJobId] = useState(null);
+  const [currentPhase, setCurrentPhase] = useState<PipelinePhase | null>(null);
+  const [jobId, setJobId] = useState<string | null>(null);
   // Track current jobId in a ref to prevent stale polling updates
-  const currentJobIdRef = useRef(null);
+  const currentJobIdRef = useRef<string | null>(null);
   // Delivery method selection state
   const [showDeliveryMethodPrompt, setShowDeliveryMethodPrompt] =
     useState(false);
-  const [deliveryMethod, setDeliveryMethod] = useState(null); // "email" or "download"
+  const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>(null);
   const [email, setEmail] = useState("");
-  const [emailError, setEmailError] = useState(null);
+  const [emailError, setEmailError] = useState<string | null>(null);
   // Cancellation state
   const [isCancelled, setIsCancelled] = useState(false);
   // Download prompt state
   const [showDownloadPrompt, setShowDownloadPrompt] = useState(false);
-  const [downloadInfo, setDownloadInfo] = useState(null); // { jobId, filenames }
-  const [declinedDocumentCount, setDeclinedDocumentCount] = useState(null); // Store count when user declines
-  const [hasDownloaded, setHasDownloaded] = useState(false); // Track if user has clicked "Yes"
-  const [hasRespondedToPrompt, setHasRespondedToPrompt] = useState(false); // Track if user has responded (Yes or No)
-  const [isRateLimited, setIsRateLimited] = useState(false); // Track if rate limit is exceeded
+  const [downloadInfo, setDownloadInfo] = useState<DownloadInfo | null>(null);
+  const [declinedDocumentCount, setDeclinedDocumentCount] = useState<
+    number | null
+  >(null);
+  const [hasDownloaded, setHasDownloaded] = useState(false);
+  const [hasRespondedToPrompt, setHasRespondedToPrompt] = useState(false);
+  const [isRateLimited, setIsRateLimited] = useState(false);
   // Consolidated submission state ref
-  // Tracks submission-related state that doesn't need to trigger re-renders
-  const submissionState = useRef({
-    justCompleted: false, // Track if we just completed a submission (to prevent scroll on remount)
-    savedScrollPosition: null, // Store scroll position to restore after download
-    hasSuccessfulSubmission: false, // Track if we've had a successful submission (to keep question sets hidden)
+  const submissionState = useRef<SubmissionState>({
+    justCompleted: false,
+    savedScrollPosition: null,
+    hasSuccessfulSubmission: false,
   });
 
   // Form data received from QuestionSets component via callback
-  const [formData, setFormData] = useState({});
+  const [formData, setFormData] = useState<FormData>({});
 
   // Validation errors for general questions
-  const [validationErrors, setValidationErrors] = useState({});
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>(
+    {}
+  );
 
   // Active question set index (for navigating to error location)
-  const [activeQuestionSetIndex, setActiveQuestionSetIndex] =
-    useState(undefined);
+  const [activeQuestionSetIndex, setActiveQuestionSetIndex] = useState<
+    number | undefined
+  >(undefined);
   // Current question set index (tracked from QuestionSetList)
   const [currentQuestionSetIndex, setCurrentQuestionSetIndex] = useState(0);
 
   /**
    * Scrolls to an element by selector with offset
-   * @param {string} selector - CSS selector for the element to scroll to
-   * @param {number} delay - Delay in milliseconds before scrolling (default: SCROLL_DELAY)
    */
-  const scrollToElement = useCallback((selector, delay = SCROLL_DELAY) => {
-    setTimeout(() => {
-      const element = document.querySelector(selector);
-      if (element) {
-        const rect = element.getBoundingClientRect();
-        const targetPosition = window.scrollY + rect.top - SCROLL_OFFSET;
-        window.scrollTo({
-          top: targetPosition,
-          behavior: "smooth",
-        });
-      }
-    }, delay);
-  }, []);
+  const scrollToElement = useCallback(
+    (selector: string, delay: number = SCROLL_DELAY): void => {
+      setTimeout(() => {
+        const element = document.querySelector(selector);
+        if (element) {
+          const rect = element.getBoundingClientRect();
+          const targetPosition = window.scrollY + rect.top - SCROLL_OFFSET;
+          window.scrollTo({
+            top: targetPosition,
+            behavior: "smooth",
+          });
+        }
+      }, delay);
+    },
+    []
+  );
 
   /**
    * Resets all form and submission state
-   * @param {boolean} includeSubmissionState - Whether to reset submission-specific state (isSubmitting, jobId, etc.)
    */
-  const resetFormState = useCallback((includeSubmissionState = false) => {
+  const resetFormState = useCallback((includeSubmissionState = false): void => {
     setError(null);
     setSuccess(false);
     submissionState.current.justCompleted = false;
@@ -157,18 +146,13 @@ export default function Search() {
 
   /**
    * Handles form data changes from QuestionSetList component
-   * Memoized with useCallback to prevent infinite loops in QuestionSetList's useEffect
-   *
-   * @param {Object} newFormData - Complete form data object from QuestionSetList
    */
-  const handleFormDataChange = useCallback((newFormData) => {
+  const handleFormDataChange = useCallback((newFormData: FormData): void => {
     setFormData(newFormData);
   }, []);
 
   /**
    * Clears validation errors when user fixes them
-   * Runs separately from handleFormDataChange to avoid infinite loops
-   * Only validates when formData changes and there are existing errors
    */
   useEffect(() => {
     // Only validate if there are existing errors (user is fixing them)
@@ -178,7 +162,6 @@ export default function Search() {
         setValidationErrors({});
       } else {
         // Update validation errors to reflect current state
-        // Only update if errors have actually changed to avoid infinite loops
         const errorKeys = Object.keys(validation.errors).sort().join(",");
         const currentErrorKeys = Object.keys(validationErrors).sort().join(",");
         if (errorKeys !== currentErrorKeys) {
@@ -190,12 +173,16 @@ export default function Search() {
   }, [formData]);
 
   // Ref to track timeout for auto-dismissing success message after download
-  const successTimeoutRef = useRef(null);
+  const successTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Memoize cover letter count to avoid repeated parseInt calls
   const coverLetterNumValue = formData["cover-letter-num"];
   const coverLetterCount = useMemo(() => {
-    return parseInt(coverLetterNumValue || "1", 10);
+    const value =
+      typeof coverLetterNumValue === "string"
+        ? coverLetterNumValue
+        : String(coverLetterNumValue || "1");
+    return parseInt(value, 10);
   }, [coverLetterNumValue]);
 
   // Custom hooks for polling and downloads
@@ -224,29 +211,20 @@ export default function Search() {
   });
 
   /**
-   * Handles form submission
-   *
-   * Process:
-   * 1. Prevents default form behavior and double submission
-   * 2. Filters form data to remove empty values
-   * 3. Sends POST request to backend API
-   * 4. Downloads the returned .docx file
-   * 5. Shows success/error messages
-   *
-   * @param {Event} e - Form submit event
+   * Handles form submission or button click
    */
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const handleSubmit = async (
+    e?: React.FormEvent<HTMLFormElement> | React.MouseEvent<HTMLButtonElement>
+  ): Promise<void> => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
 
     // If this is a "Find Again" click while submitting (e.g., during email delivery), just reset UI
-    // Do NOT cancel the running job - let it complete in the background
     if (isSubmitting) {
-      // Stop polling for the current job (but don't send cancel request)
       stopPolling();
-      // Reset UI state and allow new submission (including submission-specific state)
       resetFormState(true);
-      // Navigate to question set 1 (index 0)
       setActiveQuestionSetIndex(0);
       scrollToElement('[data-index="0"]');
       return;
@@ -254,9 +232,7 @@ export default function Search() {
 
     // If this is a "Find Again" click (from successful submission or cancellation), navigate to question set 1 and reset
     if (submissionState.current.hasSuccessfulSubmission || isCancelled) {
-      // Reset states (excluding submission-specific state as job is already complete)
       resetFormState(false);
-      // Navigate to question set 1 (index 0)
       setActiveQuestionSetIndex(0);
       scrollToElement('[data-index="0"]');
       return;
@@ -266,7 +242,6 @@ export default function Search() {
     setError(null);
     setSuccess(false);
     submissionState.current.justCompleted = false;
-    // Reset successful submission flag when starting a new submission
     submissionState.current.hasSuccessfulSubmission = false;
     setShowDownloadPrompt(false);
     setDownloadInfo(null);
@@ -286,10 +261,10 @@ export default function Search() {
       // Check if the current question set has any errors
       const currentSetHasErrors = (() => {
         if (currentQuestionSetIndex === 0) {
-          // Check if any general question has an error
-          return GENERAL_QUESTION_KEYS.some((key) => validation.errors[key]);
+          return GENERAL_QUESTION_KEYS.some(
+            (key) => validation.errors[key as string]
+          );
         } else if (currentQuestionSetIndex === 9) {
-          // Check if additional-info has an error
           return validation.errors["additional-info"] !== undefined;
         }
         return false;
@@ -301,24 +276,17 @@ export default function Search() {
         const firstErrorKey = errorKeys[0];
 
         // Only navigate if the current question set doesn't have errors
-        // If it does have errors, stay on the current set
         if (!currentSetHasErrors) {
-          // Map error keys to question set indices
-          // General questions (job-level, job-boards, deep-mode, cover-letter-num, cover-letter-style) -> index 0
-          // Additional info (additional-info) -> index 9
-          let targetIndex = 0; // Default to general questions
+          let targetIndex = 0;
           if (firstErrorKey === "additional-info") {
             targetIndex = 9;
           }
-          // All other errors are in general questions (index 0)
 
-          // Only navigate if the target index is different from the current visible one
           if (targetIndex !== currentQuestionSetIndex) {
             setActiveQuestionSetIndex(targetIndex);
           }
         }
 
-        // Scroll to the first error question after a short delay to ensure DOM is ready
         scrollToElement(
           `[data-question-key="${firstErrorKey}"]`,
           SCROLL_DELAY + 50
@@ -329,7 +297,7 @@ export default function Search() {
 
     // Clear validation errors if validation passes
     setValidationErrors({});
-    setActiveQuestionSetIndex(undefined); // Clear active index when validation passes
+    setActiveQuestionSetIndex(undefined);
 
     // Show delivery method selection prompt instead of starting pipeline immediately
     setShowDeliveryMethodPrompt(true);
@@ -343,34 +311,28 @@ export default function Search() {
   /**
    * Validates email address format
    */
-  const validateEmail = (email) => {
+  const validateEmail = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
   };
 
   /**
    * Handles the delivery method selection.
-   * For "download", starts the pipeline immediately.
-   * For "email", shows email input field.
    */
-  const handleDeliveryMethod = (method) => {
+  const handleDeliveryMethod = (method: "email" | "download"): void => {
     setDeliveryMethod(method);
     setEmailError(null);
 
     if (method === "download") {
-      // Start the pipeline immediately
       setShowDeliveryMethodPrompt(false);
       startPipeline();
-    } else if (method === "email") {
-      // Show email input - don't hide prompt yet
-      // User needs to enter email and click "Continue"
     }
   };
 
   /**
    * Handles email submission when user clicks "Continue" after entering email
    */
-  const handleEmailSubmit = async () => {
+  const handleEmailSubmit = async (): Promise<void> => {
     // Validate email
     if (!email || !email.trim()) {
       setEmailError("Email address is required");
@@ -390,9 +352,8 @@ export default function Search() {
 
   /**
    * Starts the pipeline after delivery method is selected.
-   * Extracted from handleSubmit to be reusable.
    */
-  const startPipeline = async () => {
+  const startPipeline = async (): Promise<void> => {
     setIsSubmitting(true);
     setError(null);
     setSuccess(false);
@@ -403,10 +364,10 @@ export default function Search() {
 
     // Add delivery method and email to payload
     if (deliveryMethod === "email") {
-      result.delivery_method = "email";
-      result.email = email;
+      (result as Record<string, unknown>).delivery_method = "email";
+      (result as Record<string, unknown>).email = email;
     } else {
-      result.delivery_method = "download";
+      (result as Record<string, unknown>).delivery_method = "download";
     }
 
     // Send to backend using new SSE-based flow
@@ -424,7 +385,6 @@ export default function Search() {
         // Check if this is a rate limit error (429) BEFORE parsing JSON
         if (startResponse.status === 429) {
           console.log("Rate limit detected: 429 status code");
-          // Use a single batch update to ensure all states are set together
           setIsRateLimited(true);
           setError(null);
           setIsSubmitting(false);
@@ -439,16 +399,16 @@ export default function Search() {
           setHasDownloaded(false);
           setHasRespondedToPrompt(false);
           setIsCancelled(false);
-          // Clear submission state flags
           submissionState.current.hasSuccessfulSubmission = false;
           submissionState.current.justCompleted = false;
           console.log("Rate limit state set, isRateLimited should be true");
-          // Don't parse JSON or throw error - just return
           return;
         }
         // For other errors, parse JSON and throw
-        const errorData = await startResponse.json().catch(() => ({}));
-        // Also check error message content in case status code check missed it
+        const errorData = (await startResponse.json().catch(() => ({}))) as {
+          error?: string;
+          detail?: string;
+        };
         if (
           errorData.error === "too_many_requests" ||
           errorData.detail?.includes("Rate limit exceeded")
@@ -471,7 +431,7 @@ export default function Search() {
         );
       }
 
-      const { job_id } = await startResponse.json();
+      const { job_id } = (await startResponse.json()) as { job_id: string };
       setJobId(job_id);
 
       // Step 2: Start polling for progress updates
@@ -504,14 +464,12 @@ export default function Search() {
 
   /**
    * Restores scroll position after component remounts and success message appears
-   * Prevents page from jumping to top when download completes
    */
   useEffect(() => {
     if (!isSubmitting && submissionState.current.savedScrollPosition !== null) {
       const targetScroll = submissionState.current.savedScrollPosition;
 
-      // Restore scroll position using requestAnimationFrame for smooth restoration
-      const restoreScroll = () => {
+      const restoreScroll = (): void => {
         if (window.scrollY !== targetScroll) {
           window.scrollTo({
             top: targetScroll,
@@ -520,7 +478,6 @@ export default function Search() {
         }
       };
 
-      // Restore in next animation frame and after a brief delay to catch late DOM updates
       requestAnimationFrame(restoreScroll);
       const timeoutId = setTimeout(restoreScroll, SCROLL_DELAY);
 
@@ -530,14 +487,12 @@ export default function Search() {
 
   /**
    * Resets the submission completion flag after QuestionSetList has remounted
-   * Ensures the skipInitialScroll prop is processed before resetting
    */
   useEffect(() => {
     if (!isSubmitting && submissionState.current.justCompleted) {
-      // Reset the flag after a brief delay to ensure QuestionSetList has processed it
       const timeoutId = setTimeout(() => {
         submissionState.current.justCompleted = false;
-        submissionState.current.savedScrollPosition = null; // Clear saved position
+        submissionState.current.savedScrollPosition = null;
       }, 200);
       return () => clearTimeout(timeoutId);
     }
@@ -545,10 +500,8 @@ export default function Search() {
 
   /**
    * Cleanup: Clear timeout and polling interval if component unmounts
-   * Prevents memory leaks by clearing any pending timeouts and connections
    */
   useEffect(() => {
-    // Capture refs in closure to avoid stale references
     const timeoutRef = successTimeoutRef;
     return () => {
       if (timeoutRef.current) {
@@ -560,14 +513,10 @@ export default function Search() {
 
   /**
    * Handles pipeline cancellation
-   * Sends cancel request to backend and stops polling
-   * Can be called even if jobId isn't set yet (cancels before pipeline starts)
    */
-  const handleCancel = async () => {
-    // Stop polling if it's running
+  const handleCancel = async (): Promise<void> => {
     stopPolling();
 
-    // If we have a jobId, send cancel request to backend
     if (jobId) {
       try {
         await fetch(`${API_ENDPOINTS.CANCEL}/${jobId}`, {
@@ -578,11 +527,10 @@ export default function Search() {
       }
     }
 
-    // Reset state regardless of whether jobId exists
     setIsSubmitting(false);
     setCurrentPhase(null);
     setJobId(null);
-    currentJobIdRef.current = null; // Clear ref to prevent stale updates
+    currentJobIdRef.current = null;
     setShowDeliveryMethodPrompt(false);
     setIsCancelled(true);
     setError(null);
@@ -592,7 +540,6 @@ export default function Search() {
     <section id="search">
       <h2>Search</h2>
       {isRateLimited ? (
-        // Rate limit exceeded: show only the rate limit message
         <>
           <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
             You've made too many searches lately
@@ -601,7 +548,6 @@ export default function Search() {
           </h3>
         </>
       ) : isSubmitting && deliveryMethod === "email" ? (
-        // Email delivery: show message instead of progress
         <>
           <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
             <i>Thank you very much for using JobsAI</i>
@@ -611,7 +557,6 @@ export default function Search() {
           </h3>
         </>
       ) : isSubmitting ? (
-        // Download delivery: show progress message
         <>
           <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
             {currentPhase && PHASE_MESSAGES[currentPhase]
@@ -623,10 +568,8 @@ export default function Search() {
           </h3>
         </>
       ) : showDeliveryMethodPrompt ? (
-        // Delivery method selection prompt
         <>
           {!deliveryMethod ? (
-            // Initial selection: choose delivery method
             <>
               <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
                 Choose delivery method for the cover{" "}
@@ -654,7 +597,6 @@ export default function Search() {
               </div>
             </>
           ) : deliveryMethod === "email" ? (
-            // Email input: user selected email, now need email address
             <>
               <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
                 Enter your email address
@@ -706,7 +648,6 @@ export default function Search() {
           ) : null}
         </>
       ) : showDownloadPrompt && downloadInfo ? (
-        // Download prompt state: show download prompt text
         <>
           <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
             All set! Generated {downloadInfo.filenames.length} cover letter
@@ -723,7 +664,6 @@ export default function Search() {
           </div>
         </>
       ) : isCancelled ? (
-        // Cancellation state: show cancellation message
         <>
           <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
             You cancelled the job search
@@ -732,11 +672,10 @@ export default function Search() {
       ) : submissionState.current.hasSuccessfulSubmission &&
         deliveryMethod === "email" &&
         hasRespondedToPrompt ? (
-        // Email delivery complete: show completion message
         <>
           <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
             Thank you very much for using JobsAI. Expect the cover{" "}
-            {parseInt(formData["cover-letter-num"] || "1", 10) === 1
+            {parseInt((formData["cover-letter-num"] as string) || "1", 10) === 1
               ? "letter"
               : "letters"}{" "}
             to drop in your inbox shortly
@@ -745,7 +684,6 @@ export default function Search() {
       ) : submissionState.current.hasSuccessfulSubmission &&
         hasRespondedToPrompt &&
         !hasDownloaded ? (
-        // User declined download: show message
         <>
           <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
             You turned down the{" "}
@@ -753,7 +691,6 @@ export default function Search() {
           </h3>
         </>
       ) : submissionState.current.hasSuccessfulSubmission && hasDownloaded ? (
-        // Success state: show completion message (only after user has downloaded)
         <>
           <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
             <i>Thank you very much for using JobsAI</i>
@@ -762,7 +699,6 @@ export default function Search() {
           </h3>
         </>
       ) : (
-        // Normal state: show full introductory text
         <>
           <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
             <i>We will find jobs for you.</i>
@@ -790,8 +726,7 @@ export default function Search() {
           </h3>
         </>
       )}
-      {/* Question sets component with blue/gray background - contains all question sets and manages all form inputs */}
-      {/* Only show question sets if not submitting AND not showing delivery method prompt AND not cancelled AND not successfully completed AND not rate limited */}
+      {/* Question sets component */}
       {!isSubmitting &&
         !showDeliveryMethodPrompt &&
         !isCancelled &&
@@ -807,12 +742,11 @@ export default function Search() {
             skipInitialScroll={submissionState.current.justCompleted}
           />
         )}
-      {/* Error message - displayed when submission fails (but not for rate limit errors) */}
+      {/* Error message */}
       {error && !isRateLimited && <ErrorMessage message={error} />}
-      {/* Submit button and cancel button - hide when rate limited */}
+      {/* Submit button and cancel button */}
       {!isRateLimited && (
         <div className="flex justify-center items-center gap-4 mt-6">
-          {/* Show "Find Again" button when cancelled */}
           {isCancelled && (
             <button
               id="submit-btn"
@@ -823,7 +757,6 @@ export default function Search() {
               Find Again
             </button>
           )}
-          {/* Show "Find Again" button immediately when email delivery is selected */}
           {isSubmitting && deliveryMethod === "email" && (
             <button
               id="submit-btn"
@@ -834,7 +767,6 @@ export default function Search() {
               Find Again
             </button>
           )}
-          {/* Show "Find Again" button when email delivery is complete */}
           {!isSubmitting &&
             submissionState.current.hasSuccessfulSubmission &&
             deliveryMethod === "email" &&
@@ -848,31 +780,30 @@ export default function Search() {
                 Find Again
               </button>
             )}
-          {/* Only show submit button when NOT submitting and NOT showing delivery method prompt and NOT cancelled */}
-          {/* Hide button entirely if there's a successful submission but user hasn't responded to download prompt yet */}
           {!isSubmitting &&
             !showDeliveryMethodPrompt &&
             !isCancelled &&
             (!submissionState.current.hasSuccessfulSubmission ||
               hasRespondedToPrompt) && (
-              <button
-                id="submit-btn"
-                onClick={handleSubmit}
-                className="text-lg sm:text-xl md:text-2xl lg:text-3xl px-4 sm:px-6 py-2 sm:py-3 border border-white bg-transparent text-white font-semibold rounded-lg shadow disabled:opacity-50 disabled:cursor-not-allowed"
-                aria-label={
-                  submissionState.current.hasSuccessfulSubmission &&
+              <form onSubmit={handleSubmit}>
+                <button
+                  id="submit-btn"
+                  type="submit"
+                  className="text-lg sm:text-xl md:text-2xl lg:text-3xl px-4 sm:px-6 py-2 sm:py-3 border border-white bg-transparent text-white font-semibold rounded-lg shadow disabled:opacity-50 disabled:cursor-not-allowed"
+                  aria-label={
+                    submissionState.current.hasSuccessfulSubmission &&
+                    hasRespondedToPrompt
+                      ? "Start a new job search"
+                      : "Submit form and generate job search document"
+                  }
+                >
+                  {submissionState.current.hasSuccessfulSubmission &&
                   hasRespondedToPrompt
-                    ? "Start a new job search"
-                    : "Submit form and generate job search document"
-                }
-              >
-                {submissionState.current.hasSuccessfulSubmission &&
-                hasRespondedToPrompt
-                  ? "Find Again"
-                  : "Find Jobs"}
-              </button>
+                    ? "Find Again"
+                    : "Find Jobs"}
+                </button>
+              </form>
             )}
-          {/* Cancel button - show immediately when submitting (only for download delivery) */}
           {isSubmitting && deliveryMethod !== "email" && (
             <button
               id="cancel-btn"

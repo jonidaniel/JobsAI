@@ -41,11 +41,16 @@ export const SLIDER_MAX = 7;
 export const SLIDER_DEFAULT = 0;
 
 /**
+ * Type for slider data - maps technology keys to display labels
+ */
+export type SliderData = Record<string, string>;
+
+/**
  * Raw JSON strings for slider data
  * Stored as strings for easier editing and version control
  * Parsed once at module load time for performance
  */
-const SLIDER_DATA_RAW = [
+const SLIDER_DATA_RAW: readonly string[] = [
   '{"javascript":"JavaScript","html-css":"HTML/CSS","sql":"SQL","python":"Python","bash-shell":"Bash/Shell","typescript":"TypeScript","csharp":"C#","java":"Java","powershell":"PowerShell","cplusplus":"C++","c":"C","php":"PHP","go":"Go","rust":"Rust","kotlin":"Kotlin","lua":"Lua","ruby":"Ruby","dart":"Dart","assembly":"Assembly","swift":"Swift","groovy":"Groovy","visual-basic-dotnet":"Visual Basic (.Net)","perl":"Perl","r":"R","vba":"VBA","gdscript":"GDScript","scala":"Scala","elixir":"Elixir","matlab":"MATLAB","delphi":"Delphi","lisp":"Lisp","zig":"Zig","micropython":"MicroPython","erlang":"Erlang","fsharp":"F#","ada":"Ada","gleam":"Gleam","fortran":"Fortran","ocaml":"OCaml","prolog":"Prolog","cobol":"COBOL","mojo":"Mojo"}',
   '{"postgresql":"PostgreSQL","mysql":"MySQL","sqlite":"SQLite","microsoft-sql-server":"Microsoft SQL Server","redis":"Redis","mongodb":"MongoDB","mariadb":"MariaDB","elasticsearch":"Elasticsearch","dynamodb":"Dynamodb","oracle":"Oracle","bigquery":"BigQuery","supabase1":"Supabase","cloud-firestore":"Cloud Firestore","h2":"H2","cosmos-db":"Cosmos DB","firebase-realtime-database":"Firebase Realtime Database","snowflake":"Snowflake","microsoft-access":"Microsoft Access","influxdb":"InfluxDB","duckdb":"DuckDB","databricks-sql":"Databricks SQL","cassandra":"Cassandra","neo4j":"Neo4J","clickhouse":"Clickhouse","valkey":"Valkey","amazon-redshift":"Amazon Redshift","ibm-db2":"IBM DB2","cockroachdb":"Cockroachdb","pocketbase":"Pocketbase","datomic":"Datomic"}',
   '{"docker":"Docker","npm":"npm","amazon-web-services-aws":"Amazon Web Services (AWS)","pip":"Pip","kubernetes":"Kubernetes","microsoft-azure":"Microsoft Azure","vite":"Vite","homebrew":"Homebrew","google-cloud":"Google Cloud","yarn":"Yarn","make":"Make","nuget":"NuGet","webpack":"Webpack","cloudflare":"Cloudflare","terraform":"Terraform","apt":"APT","maven-build-tool":"Maven (build tool)","gradle":"Gradle","pnpm":"pnpm","cargo":"Cargo","firebase":"Firebase","prometheus":"Prometheus","msbuild":"MSBuild","composer":"Composer","ansible":"Ansible","digital-ocean":"Digital Ocean","podman":"Podman","chocolatey":"Chocolatey","vercel":"Vercel","datadog":"Datadog","poetry":"Poetry","pacman":"Pacman","netlify":"Netlify","heroku":"Heroku","bun":"Bun","supabase2":"Supabase","ninja":"Ninja","splunk":"Splunk","new-relic":"New Relic","railway":"Railway","ibm-cloud":"IBM Cloud","yandex-cloud":"Yandex Cloud"}',
@@ -54,7 +59,7 @@ const SLIDER_DATA_RAW = [
   '{"openai-gpt":"OpenAI GPT","claude-sonnet":"Claude Sonnet","gemini-flash":"Gemini Flash","openai-reasoning":"OpenAI Reasoning","openai-image":"OpenAI Image","gemini-reasoning":"Gemini Reasoning","deepseek-reasoning":"DeepSeek Reasoning","meta-llama":"Meta Llama","deepseek-general":"DeepSeek General","x-grok":"X Grok","mistral":"Mistral","perplexity-sonar":"Perplexity Sonar","alibaba-qwen":"Alibaba Qwen","microsoft-phi-4-models":"Microsoft Phi-4 models","amazon-titan-models":"Amazon Titan models","cohere-command-a":"Cohere: Command A","reka-flash3-or-other-reka-models":"Reka (Flash 3 or other Reka models)"}',
   '{"github":"GitHub","jira":"Jira","gitlab":"GitLab","confluence":"Confluence","markdown-file":"Markdown File","azure-devops":"Azure Devops","notion":"Notion","obsidian":"Obsidian","miro":"Miro","google-workspace":"Google Workspace","trello":"Trello","wikis":"Wikis","lucid-includes-lucidchart":"Lucid (includes Lucidchart)","google-colab":"Google Colab","asana":"Asana","doxygen":"Doxygen","clickup":"Clickup","linear":"Linear","redmine":"Redmine","mondaydotcom":"Monday.com","youtrack":"YouTrack","airtable":"Airtable","stack-overflow-for-teams":"Stack Overflow for Teams","microsoft-planner":"Microsoft Planner","coda":"Coda"}',
   '{"windows":"Windows","macos":"MacOS","android":"Android","ubuntu":"Ubuntu","ios":"iOS","linux-non-wsl":"Linux (non-WSL)","windows-subsystem-for-linux-wsl":"Windows Subsystem for Linux (WSL)","debian":"Debian","arch":"Arch","ipados":"iPadOS","fedora":"Fedora","red-hat":"Red Hat","nixos":"NixOS","pop-os":"Pop!_OS","chromeos":"ChromeOS"}',
-];
+] as const;
 
 /**
  * Parsed slider data
@@ -68,6 +73,6 @@ const SLIDER_DATA_RAW = [
  * Usage: SLIDER_DATA[index - 1] gives the data for question set at index
  * (e.g., SLIDER_DATA[0] is for question set 1)
  */
-export const SLIDER_DATA = SLIDER_DATA_RAW.map((jsonStr) =>
-  JSON.parse(jsonStr)
+export const SLIDER_DATA: readonly SliderData[] = SLIDER_DATA_RAW.map(
+  (jsonStr) => JSON.parse(jsonStr) as SliderData
 );

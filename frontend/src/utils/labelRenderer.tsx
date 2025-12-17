@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 /**
  * Shared utility for rendering labels with formatting support
  * Used by MultipleChoice and SingleChoice components
@@ -9,13 +11,19 @@
  * - Small text ({small}text{/small})
  */
 
+interface SmallTextPart {
+  type: "normal" | "small";
+  text: string;
+  index: number;
+}
+
 /**
  * Renders italic text parts by parsing *text* markers
  *
- * @param {string} text - Text that may contain italic markers
- * @returns {Array<JSX.Element>} Array of span and em elements
+ * @param text - Text that may contain italic markers
+ * @returns Array of span and em elements
  */
-const renderItalicParts = (text) => {
+const renderItalicParts = (text: string): ReactNode[] => {
   const italicParts = text.split(/(\*[^*]+\*)/g);
   return italicParts.map((part, partIndex) => {
     if (part.startsWith("*") && part.endsWith("*") && part.length > 2) {
@@ -32,11 +40,11 @@ const renderItalicParts = (text) => {
 /**
  * Processes small text markers ({small}...{/small}) and returns parts array
  *
- * @param {string} str - Text that may contain small text markers
- * @returns {Array<Object>} Array of objects with type ("normal" or "small"), text, and index
+ * @param str - Text that may contain small text markers
+ * @returns Array of objects with type ("normal" or "small"), text, and index
  */
-const processSmallText = (str) => {
-  const parts = [];
+const processSmallText = (str: string): SmallTextPart[] => {
+  const parts: SmallTextPart[] = [];
   let remaining = str;
   let partIndex = 0;
 
@@ -70,10 +78,10 @@ const processSmallText = (str) => {
 /**
  * Renders label text with support for line breaks, italic text, red asterisk, and small text
  *
- * @param {string} text - The label text to render
- * @returns {Array<JSX.Element>} Array of span elements with formatted content
+ * @param text - The label text to render
+ * @returns Array of span elements with formatted content
  */
-export const renderLabel = (text) => {
+export const renderLabel = (text: string): ReactNode[] => {
   return text.split("\n").map((line, lineIndex, lineArray) => {
     const hasRedAsterisk = line.endsWith(" *");
     const lineWithoutAsterisk = hasRedAsterisk ? line.slice(0, -2) : line;

@@ -1,6 +1,40 @@
 import { API_ENDPOINTS } from "../config/api";
 import { downloadBlob } from "../utils/fileDownload";
 import { SUCCESS_MESSAGE_TIMEOUT } from "../config/constants";
+import type { DownloadInfo } from "../types";
+
+interface SubmissionState {
+  justCompleted: boolean;
+  savedScrollPosition: number | null;
+  hasSuccessfulSubmission: boolean;
+}
+
+interface UseDownloadOptions {
+  downloadInfo: DownloadInfo | null;
+  submissionState: React.MutableRefObject<SubmissionState>;
+  successTimeoutRef: React.MutableRefObject<NodeJS.Timeout | null>;
+  setShowDownloadPrompt: (show: boolean) => void;
+  setDownloadInfo: (info: DownloadInfo | null) => void;
+  setHasDownloaded: (downloaded: boolean) => void;
+  setHasRespondedToPrompt: (responded: boolean) => void;
+  setSuccess: (success: boolean) => void;
+  setError: (error: string | null) => void;
+}
+
+interface UseDownloadReturn {
+  downloadDocument: (
+    jobId: string,
+    filenameOrFilenames: string | string[]
+  ) => Promise<void>;
+  downloadFromS3: (s3Url: string, filename: string) => Promise<void>;
+  handleDownloadYes: () => Promise<void>;
+}
+
+interface DownloadResponse {
+  download_url?: string;
+  download_urls?: Array<{ url: string; filename: string }>;
+  filename?: string;
+}
 
 /**
  * Custom hook for handling document downloads.
@@ -10,22 +44,6 @@ import { SUCCESS_MESSAGE_TIMEOUT } from "../config/constants";
  * - S3 presigned URL handling
  * - Fallback to direct blob download
  * - Scroll position preservation
- *
- * @param {Object} options - Configuration object
- * @param {Object|null} options.downloadInfo - Download info object with jobId and filenames
- * @param {Object} options.submissionState - Ref object for submission state
- * @param {Object} options.successTimeoutRef - Ref for success message timeout
- * @param {Function} options.setShowDownloadPrompt - State setter for download prompt visibility
- * @param {Function} options.setDownloadInfo - State setter for download info
- * @param {Function} options.setHasDownloaded - State setter for downloaded state
- * @param {Function} options.setHasRespondedToPrompt - State setter for prompt response state
- * @param {Function} options.setSuccess - State setter for success state
- * @param {Function} options.setError - State setter for error messages
- *
- * @returns {Object} Object containing download functions
- *   - downloadDocument: Function to download document(s) by jobId
- *   - downloadFromS3: Function to download from S3 presigned URL
- *   - handleDownloadYes: Function to handle download button click
  */
 export function useDownload({
   downloadInfo,
@@ -37,14 +55,17 @@ export function useDownload({
   setHasRespondedToPrompt,
   setSuccess,
   setError,
-}) {
+}: UseDownloadOptions): UseDownloadReturn {
   /**
    * Downloads a single document from S3 using a presigned URL.
    *
-   * @param {string} s3Url - Presigned S3 URL
-   * @param {string} filename - Filename for the document
+   * @param s3Url - Presigned S3 URL
+   * @param filename - Filename for the document
    */
-  const downloadFromS3 = async (s3Url, filename) => {
+  const downloadFromS3 = async (
+    s3Url: string,
+    filename: string
+  ): Promise<void> => {
     const s3Response = await fetch(s3Url);
 
     // Ensure we get the binary data correctly
@@ -64,10 +85,13 @@ export function useDownload({
    * Handles both single document (backward compatibility) and multiple documents.
    * If multiple documents exist, downloads all of them sequentially.
    *
-   * @param {string} jobId - Job identifier
-   * @param {string|Array<string>} filenameOrFilenames - Single filename or array of filenames
+   * @param jobId - Job identifier
+   * @param filenameOrFilenames - Single filename or array of filenames
    */
-  const downloadDocument = async (jobId, filenameOrFilenames) => {
+  const downloadDocument = async (
+    jobId: string,
+    filenameOrFilenames: string | string[]
+  ): Promise<void> => {
     try {
       const response = await fetch(`${API_ENDPOINTS.DOWNLOAD}/${jobId}`);
 
@@ -82,7 +106,7 @@ export function useDownload({
       // Check if response contains presigned S3 URL(s)
       const contentType = response.headers.get("content-type");
       if (contentType && contentType.includes("application/json")) {
-        const data = await response.json();
+        const data = (await response.json()) as DownloadResponse;
 
         // Handle multiple documents
         if (data.download_urls && Array.isArray(data.download_urls)) {
@@ -92,7 +116,7 @@ export function useDownload({
             await downloadFromS3(item.url, item.filename);
             // Small delay between downloads to avoid browser blocking
             if (i < data.download_urls.length - 1) {
-              await new Promise((resolve) => setTimeout(resolve, 500));
+              await new Promise<void>((resolve) => setTimeout(resolve, 500));
             }
           }
           return;
@@ -102,7 +126,10 @@ export function useDownload({
         if (data.download_url) {
           await downloadFromS3(
             data.download_url,
-            data.filename || filenameOrFilenames
+            data.filename ||
+              (Array.isArray(filenameOrFilenames)
+                ? filenameOrFilenames[0]
+                : filenameOrFilenames)
           );
           return;
         }
@@ -124,7 +151,7 @@ export function useDownload({
    * Handles the download button click in the download prompt.
    * Triggers the download and closes the prompt.
    */
-  const handleDownloadYes = async () => {
+  const handleDownloadYes = async (): Promise<void> => {
     if (!downloadInfo) return;
 
     try {

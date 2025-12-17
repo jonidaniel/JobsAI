@@ -4,6 +4,7 @@ import {
   GENERAL_QUESTIONS_INDEX,
 } from "../config/generalQuestions";
 import { SLIDER_DATA } from "../config/sliders";
+import type { FormData, GroupedFormData } from "../types";
 
 /**
  * Transforms flat form data into grouped structure for backend API.
@@ -18,11 +19,11 @@ import { SLIDER_DATA } from "../config/sliders";
  * 3. Converts each field to single-key object format: [{key: value}, ...]
  * 4. Handles special cases (cover-letter-num conversion, required fields)
  *
- * @param {Object} formData - Flat form data object from QuestionSets component.
+ * @param formData - Flat form data object from QuestionSets component.
  *   Keys are question field names (e.g., "job-level", "javascript", "text-field1").
  *   Values can be strings, numbers, or arrays depending on question type.
  *
- * @returns {Object} Grouped data structure by question set:
+ * @returns Grouped data structure by question set:
  *   {
  *     "general": [{key: value}, ...],  // Always 5 items (required)
  *     "languages": [{key: value}, ...],  // Only if has data
@@ -41,7 +42,7 @@ import { SLIDER_DATA } from "../config/sliders";
  *   "languages": [{"javascript": 5}, {"text-field1": "TypeScript"}]
  * }
  */
-export function transformFormData(formData) {
+export function transformFormData(formData: FormData): GroupedFormData {
   /**
    * Filters form data to only include non-empty values for optional fields
    * - Strings: Include if trimmed value is not empty
@@ -63,31 +64,34 @@ export function transformFormData(formData) {
         key,
         typeof value === "string" ? value.trim() : value,
       ])
-  );
+  ) as FormData;
 
   /**
    * Group filtered data by question set
    * Structure: { "general": [{key: value}, ...], "languages": [...], ... }
    */
-  const result = {};
+  const result: GroupedFormData = {};
 
   // Group general questions (index 0)
   // Always include all 5 general questions (required by backend)
   // Use formData directly to ensure we have the values (validation ensures they're present)
   // Convert cover-letter-num to integer for backend
   const generalQuestions = GENERAL_QUESTION_KEYS.map((key) => {
-    let value = formData[key];
+    let value: FormDataValue = formData[key];
 
     // Convert cover-letter-num from string to integer
     // Radio buttons return strings, but backend expects integer
     if (key === "cover-letter-num") {
-      value = parseInt(value, 10);
+      const stringValue = typeof value === "string" ? value : String(value);
+      const intValue = parseInt(stringValue, 10);
       // Validate conversion was successful
-      if (isNaN(value) || value < 1 || value > 10) {
+      if (isNaN(intValue) || intValue < 1 || intValue > 10) {
         console.warn(
           `Invalid cover-letter-num value: ${formData[key]}, defaulting to 5`
         );
         value = 5;
+      } else {
+        value = intValue;
       }
     }
 
@@ -101,7 +105,7 @@ export function transformFormData(formData) {
   for (let i = 1; i < QUESTION_SET_NAMES.length - 1; i++) {
     const questionSetData = [
       // Include default sliders that have non-zero values
-      ...Object.keys(SLIDER_DATA[i - 1])
+      ...Object.keys(SLIDER_DATA[i - 1] ?? {})
         .filter((key) => filtered[key] !== undefined)
         .map((key) => ({ [key]: filtered[key] })),
       // Include custom "Other" fields if they have values

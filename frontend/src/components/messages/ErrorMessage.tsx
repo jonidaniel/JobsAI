@@ -3,10 +3,13 @@
  *
  * Displays an error message in a red alert box with an error icon.
  * Used to show user-friendly error messages when form submission fails.
- *
- * @param {string} message - The error message to display
  */
-export default function ErrorMessage({ message }) {
+
+interface ErrorMessageProps {
+  message: string;
+}
+
+export default function ErrorMessage({ message }: ErrorMessageProps) {
   return (
     <div className="flex justify-center mt-4">
       <div

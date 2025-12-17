@@ -31,7 +31,7 @@ export const TOTAL_QUESTION_SETS = 10;
  * 8: "operating-systems"
  * 9: "additional-info"
  */
-export const QUESTION_SET_NAMES = [
+export const QUESTION_SET_NAMES: readonly string[] = [
   "general",
   "languages",
   "databases",
@@ -42,7 +42,7 @@ export const QUESTION_SET_NAMES = [
   "doc-and-collab",
   "operating-systems",
   "additional-info",
-];
+] as const;
 
 /**
  * Question Set Titles
@@ -62,7 +62,7 @@ export const QUESTION_SET_NAMES = [
  * 8: Computer Operating Systems Experience
  * 9: Personal Description
  */
-export const QUESTION_SET_TITLES = [
+export const QUESTION_SET_TITLES: readonly string[] = [
   "General Questions",
   "Programming, Scripting, and Markup Languages Experience",
   "Databases Experience",
@@ -73,4 +73,4 @@ export const QUESTION_SET_TITLES = [
   "Code Documentation and Collaboration Experience",
   "Computer Operating Systems Experience",
   "Personal Description",
-];
+] as const;

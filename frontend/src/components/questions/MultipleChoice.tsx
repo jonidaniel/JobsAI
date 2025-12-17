@@ -1,5 +1,17 @@
 import { renderLabel } from "../../utils/labelRenderer";
 
+interface MultipleChoiceProps {
+  keyName: string;
+  label: string;
+  options: readonly string[];
+  value: string[];
+  onChange: (keyName: string, value: string[]) => void;
+  error?: string;
+  required?: boolean;
+  maxSelections?: number;
+  requireAdjacent?: boolean;
+}
+
 /**
  * MultipleChoice Component
  *
@@ -7,17 +19,6 @@ import { renderLabel } from "../../utils/labelRenderer";
  * Used for questions that allow selecting multiple options, such as:
  * - Job level (Expert, Intermediate, Entry, Intern)
  * - Job boards (Duunitori, Jobly)
- *
- * @param {string} keyName - Unique identifier for the checkbox group
- * @param {string} label - Display label for the question
- * @param {string[]} options - Array of option strings to display as checkboxes
- * @param {string[]} value - Array of currently selected options
- * @param {function} onChange - Callback function called when checkbox state changes
- *                              Receives (keyName, newArray) as parameters
- * @param {string} error - Optional error message to display
- * @param {boolean} required - Whether this field is required (default: false)
- * @param {number} maxSelections - Maximum number of options that can be selected (default: unlimited)
- * @param {boolean} requireAdjacent - If true and maxSelections is 2, selected options must be adjacent (default: false)
  */
 export default function MultipleChoice({
   keyName,
@@ -28,15 +29,11 @@ export default function MultipleChoice({
   error,
   maxSelections,
   requireAdjacent = false,
-}) {
+}: MultipleChoiceProps) {
   /**
    * Checks if two selected options are adjacent in the options array
-   *
-   * @param {string} option1 - First option
-   * @param {string} option2 - Second option
-   * @returns {boolean} True if options are adjacent, false otherwise
    */
-  const areAdjacent = (option1, option2) => {
+  const areAdjacent = (option1: string, option2: string): boolean => {
     const index1 = options.indexOf(option1);
     const index2 = options.indexOf(option2);
     if (index1 === -1 || index2 === -1) return false;
@@ -47,11 +44,8 @@ export default function MultipleChoice({
    * Handles checkbox change events
    * Adds option to array if checked, removes if unchecked
    * Respects maxSelections limit and adjacency requirement if provided
-   *
-   * @param {string} option - The option that was clicked
-   * @param {boolean} checked - Whether the checkbox is now checked
    */
-  const handleCheckboxChange = (option, checked) => {
+  const handleCheckboxChange = (option: string, checked: boolean): void => {
     const currentValues = value || [];
     if (checked) {
       // Check if we've reached the maximum selections
@@ -68,7 +62,7 @@ export default function MultipleChoice({
         maxSelections === 2 &&
         currentValues.length === 1
       ) {
-        if (!areAdjacent(currentValues[0], option)) {
+        if (!areAdjacent(currentValues[0]!, option)) {
           return; // Don't allow non-adjacent selection
         }
       }
@@ -107,7 +101,7 @@ export default function MultipleChoice({
           maxSelections === 2 &&
           currentValues.length === 1 &&
           !isChecked &&
-          !areAdjacent(currentValues[0], option);
+          !areAdjacent(currentValues[0]!, option);
 
         const shouldDisable = isDisabled || isNonAdjacentDisabled;
 

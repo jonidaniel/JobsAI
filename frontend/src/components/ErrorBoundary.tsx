@@ -1,4 +1,13 @@
-import { Component } from "react";
+import { Component, type ReactNode } from "react";
+
+interface ErrorBoundaryProps {
+  children: ReactNode;
+}
+
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+}
 
 /**
  * ErrorBoundary Component
@@ -17,8 +26,8 @@ import { Component } from "react";
  * - Server-side rendering
  * - Errors thrown in the error boundary itself
  */
-class ErrorBoundary extends Component {
-  constructor(props) {
+class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  constructor(props: ErrorBoundaryProps) {
     super(props);
     this.state = { hasError: false, error: null };
   }
@@ -26,11 +35,8 @@ class ErrorBoundary extends Component {
   /**
    * Updates state when an error is caught
    * Called during render phase, so side effects are not allowed
-   *
-   * @param {Error} error - The error that was thrown
-   * @returns {Object} New state with hasError flag and error object
    */
-  static getDerivedStateFromError(error) {
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
     // Update state so the next render will show the fallback UI
     return { hasError: true, error };
   }
@@ -38,16 +44,13 @@ class ErrorBoundary extends Component {
   /**
    * Called after an error has been thrown
    * Used for logging errors or sending error reports
-   *
-   * @param {Error} error - The error that was thrown
-   * @param {Object} errorInfo - Additional error information from React
    */
-  componentDidCatch(error, errorInfo) {
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo): void {
     // Log error to console for debugging
     console.error("ErrorBoundary caught an error:", error, errorInfo);
   }
 
-  render() {
+  render(): ReactNode {
     if (this.state.hasError) {
       // Render custom fallback UI
       return (

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, type ReactNode } from "react";
 import Slider from "./questions/Slider";
 import TextField from "./questions/TextField";
 import MultipleChoice from "./questions/MultipleChoice";
@@ -21,12 +21,18 @@ import {
 } from "../config/generalQuestions";
 import { SLIDER_DATA, SLIDER_DEFAULT } from "../config/sliders";
 import { PERSONAL_DESCRIPTION_MAX_LENGTH } from "../config/constants";
+import type { FormData, ValidationErrors, FormDataValue } from "../types";
+
+interface AddMoreButtonProps {
+  onClick: () => void;
+  warningMessage?: string | null;
+}
 
 /**
  * Shared button component for "Add more"
  * Declared outside component to avoid recreation on each render
  */
-const AddMoreButton = ({ onClick, warningMessage }) => (
+const AddMoreButton = ({ onClick, warningMessage }: AddMoreButtonProps) => (
   <div className="flex flex-col items-start">
     <button
       type="button"
@@ -44,18 +50,20 @@ const AddMoreButton = ({ onClick, warningMessage }) => (
   </div>
 );
 
+interface QuestionSetProps {
+  index: number;
+  isActive: boolean;
+  sectionRef: (el: HTMLElement | null) => void;
+  formData: FormData;
+  onFormChange: (key: string, value: FormDataValue) => void;
+  validationErrors?: ValidationErrors;
+}
+
 /**
  * QuestionSet Component
  *
  * Renders a single question set (one of 10 total sets).
  * Only the active question set is visible; others are hidden via CSS.
- *
- * @param {number} index - Index of the question set (0-9)
- * @param {boolean} isActive - Whether this question set is currently visible
- * @param {object} sectionRef - React ref callback to store DOM reference for scrolling
- * @param {object} formData - Current form data state (all question values)
- * @param {function} onFormChange - Callback to update form data when inputs change
- * @param {object} validationErrors - Object mapping question keys to error messages
  */
 export default function QuestionSet({
   index,
@@ -64,7 +72,7 @@ export default function QuestionSet({
   formData,
   onFormChange,
   validationErrors = {},
-}) {
+}: QuestionSetProps) {
   // Base key for "Other" field sets in slider question sets (indices 1-8)
   // Format: "text-field1", "text-field2", etc.
   const baseOtherFieldKey = `text-field${index}`;
@@ -89,26 +97,20 @@ export default function QuestionSet({
   /**
    * Generates field key for a given index
    * First field uses base key, subsequent fields append index (e.g., "text-field1-2")
-   *
-   * @param {number} fieldIndex - The field index (1-based)
-   * @returns {string} The field key
    */
-  const getFieldKey = (fieldIndex) =>
+  const getFieldKey = (fieldIndex: number): string =>
     fieldIndex === 1 ? baseOtherFieldKey : `${baseOtherFieldKey}-${fieldIndex}`;
 
   /**
    * Renders a general question based on its index
    * Uses configuration array to determine component type and props
-   *
-   * @param {number} j - Question index (0-4)
-   * @returns {JSX.Element|null} The rendered question component or null
    */
-  const renderGeneralQuestion = (j) => {
-    const keyName = GENERAL_QUESTION_KEYS[j];
+  const renderGeneralQuestion = (j: number): ReactNode => {
+    const keyName = GENERAL_QUESTION_KEYS[j] as string;
     const commonProps = {
       keyName,
-      label: GENERAL_QUESTION_LABELS[j],
-      value: formData[keyName] || (j < 2 ? [] : ""),
+      label: GENERAL_QUESTION_LABELS[j] as string,
+      value: (formData[keyName] || (j < 2 ? [] : "")) as string[] | string,
       onChange: onFormChange,
       error: validationErrors[keyName],
       required: true,
@@ -121,6 +123,7 @@ export default function QuestionSet({
         component: MultipleChoice,
         props: {
           ...commonProps,
+          value: commonProps.value as string[],
           options: NAME_OPTIONS,
           maxSelections: 2,
           requireAdjacent: true,
@@ -131,6 +134,7 @@ export default function QuestionSet({
         component: MultipleChoice,
         props: {
           ...commonProps,
+          value: commonProps.value as string[],
           options: JOB_BOARD_OPTIONS,
         },
       },
@@ -139,6 +143,7 @@ export default function QuestionSet({
         component: SingleChoice,
         props: {
           ...commonProps,
+          value: commonProps.value as string,
           options: DEEP_MODE_OPTIONS,
         },
       },
@@ -147,6 +152,7 @@ export default function QuestionSet({
         component: SingleChoice,
         props: {
           ...commonProps,
+          value: commonProps.value as string,
           options: JOB_COUNT_OPTIONS,
           splitAt: 5,
         },
@@ -156,6 +162,7 @@ export default function QuestionSet({
         component: MultipleChoice,
         props: {
           ...commonProps,
+          value: commonProps.value as string[],
           options: COVER_LETTER_STYLE_OPTIONS,
           maxSelections: 2,
         },
@@ -163,20 +170,25 @@ export default function QuestionSet({
     ];
 
     if (j >= 0 && j < questionConfig.length) {
-      const { component: Component, props } = questionConfig[j];
+      const { component: Component, props } = questionConfig[j]!;
       return <Component key={j} {...props} />;
     }
 
     return null;
   };
 
+  interface ValidationResult {
+    isFieldEmpty: boolean;
+    isSliderZero: boolean;
+    isDuplicate: boolean;
+    shouldShowWarning: boolean;
+  }
+
   /**
    * Memoized validation check for duplicate experiences
    * Only recalculates when relevant dependencies change
-   *
-   * @returns {Object} Validation result with isFieldEmpty, isSliderZero, isDuplicate, and shouldShowWarning
    */
-  const validationResult = useMemo(() => {
+  const validationResult = useMemo((): ValidationResult => {
     // Only calculate if we have fields to validate
     if (otherFieldCount === 0) {
       return {
@@ -192,9 +204,9 @@ export default function QuestionSet({
     const baseKey = `text-field${index}`;
     const lastFieldKey =
       otherFieldCount === 1 ? baseKey : `${baseKey}-${otherFieldCount}`;
-    const lastFieldValue = formData[lastFieldKey] || "";
+    const lastFieldValue = (formData[lastFieldKey] as string) || "";
     const lastSliderValue =
-      formData[`${lastFieldKey}-slider`] ?? SLIDER_DEFAULT;
+      (formData[`${lastFieldKey}-slider`] as number) ?? SLIDER_DEFAULT;
 
     // Validation checks
     const isFieldEmpty = !lastFieldValue.trim();
@@ -211,7 +223,7 @@ export default function QuestionSet({
           const fieldIndex = j + 1;
           const fieldKey =
             fieldIndex === 1 ? baseKey : `${baseKey}-${fieldIndex}`;
-          return formData[fieldKey]?.trim() || "";
+          return ((formData[fieldKey] as string) || "").trim();
         }
       ).filter(Boolean);
 
@@ -241,10 +253,8 @@ export default function QuestionSet({
    * - The last field is filled (not empty)
    * - The slider is not zero
    * - No duplicate experiences exist (case-insensitive)
-   *
-   * @returns {JSX.Element} The AddMoreButton component with appropriate props
    */
-  const renderAddMoreButtonWithValidation = () => {
+  const renderAddMoreButtonWithValidation = (): ReactNode => {
     const { isDuplicate, shouldShowWarning } = validationResult;
 
     // Reset the clicked state if validation conditions are no longer met
@@ -334,7 +344,7 @@ export default function QuestionSet({
             keyName="additional-info"
             label={label}
             label2={label2}
-            value={formData["additional-info"] || ""}
+            value={(formData["additional-info"] as string) || ""}
             onChange={onFormChange}
             error={validationErrors["additional-info"]}
             required={true}
@@ -351,15 +361,17 @@ export default function QuestionSet({
           <>
             {/* Render default sliders for this question set */}
             {/* SLIDER_DATA[index - 1] contains the key-value pairs for this set */}
-            {Object.entries(SLIDER_DATA[index - 1]).map(([key, label]) => (
-              <Slider
-                key={key}
-                keyName={key}
-                label={label}
-                value={formData[key] || SLIDER_DEFAULT}
-                onChange={onFormChange}
-              />
-            ))}
+            {Object.entries(SLIDER_DATA[index - 1] || {}).map(
+              ([key, label]) => (
+                <Slider
+                  key={key}
+                  keyName={key}
+                  label={label}
+                  value={(formData[key] as number) || SLIDER_DEFAULT}
+                  onChange={onFormChange}
+                />
+              )
+            )}
             {/* Custom "Other" text fields and sliders - shown only after clicking "Add more" */}
             {Array.from({ length: otherFieldCount }).map((_, i) => {
               const fieldIndex = i + 1;
@@ -368,7 +380,7 @@ export default function QuestionSet({
 
               // Check if this is the last (currently editable) field
               const isLastField = i === otherFieldCount - 1;
-              const fieldValue = formData[fieldKey] || "";
+              const fieldValue = (formData[fieldKey] as string) || "";
 
               return (
                 <div key={fieldKey} className="mt-4">
@@ -385,7 +397,9 @@ export default function QuestionSet({
                       <Slider
                         keyName={sliderKey}
                         label=""
-                        value={formData[sliderKey] || SLIDER_DEFAULT}
+                        value={
+                          (formData[sliderKey] as number) || SLIDER_DEFAULT
+                        }
                         onChange={onFormChange}
                       />
                     </>
@@ -396,7 +410,9 @@ export default function QuestionSet({
                         <Slider
                           keyName={sliderKey}
                           label={fieldValue}
-                          value={formData[sliderKey] || SLIDER_DEFAULT}
+                          value={
+                            (formData[sliderKey] as number) || SLIDER_DEFAULT
+                          }
                           onChange={() => {}} // No-op, field is read-only
                           disabled={true}
                         />

@@ -6,6 +6,16 @@ import { TOTAL_QUESTION_SETS } from "../config/questionSet";
 import { GENERAL_QUESTION_KEYS } from "../config/generalQuestions";
 import { SLIDER_DATA } from "../config/sliders";
 import { SCROLL_OFFSET, SCROLL_DELAY } from "../config/constants";
+import type { FormData, ValidationErrors } from "../types";
+
+interface QuestionSetListProps {
+  onFormDataChange: (formData: FormData) => void;
+  validationErrors?: ValidationErrors;
+  activeIndex?: number;
+  onActiveIndexChange?: (index: number | undefined) => void;
+  onCurrentIndexChange?: (index: number) => void;
+  skipInitialScroll?: boolean;
+}
 
 /**
  * QuestionSets Component
@@ -16,13 +26,6 @@ import { SCROLL_OFFSET, SCROLL_DELAY } from "../config/constants";
  * - Form state management for all inputs
  * - Synchronizing form data with parent component
  * - Smooth scrolling to active question set
- *
- * @param {function} onFormDataChange - Callback to notify parent when form data changes
- *                                      Receives the complete formData object
- * @param {object} validationErrors - Object mapping question keys to error messages
- * @param {number} activeIndex - Optional external control of active question set index
- * @param {function} onCurrentIndexChange - Optional callback to report current question set index
- * @param {boolean} skipInitialScroll - If true, skip scrolling to top on initial mount (used when remounting after submission)
  */
 export default function QuestionSetList({
   onFormDataChange,
@@ -31,7 +34,7 @@ export default function QuestionSetList({
   onActiveIndexChange,
   onCurrentIndexChange,
   skipInitialScroll = false,
-}) {
+}: QuestionSetListProps) {
   // Current active question set index (0-9)
   // Use activeIndex prop if provided (external control), otherwise use internal state
   const [internalIndex, setInternalIndex] = useState(0);
@@ -51,7 +54,7 @@ export default function QuestionSetList({
   }, [currentIndex, onCurrentIndexChange]);
 
   // Refs to DOM elements for each question set section (used for scrolling)
-  const sectionRefs = useRef({});
+  const sectionRefs = useRef<Record<number, HTMLElement>>({});
   // Track if this is the initial mount (page refresh vs remount after submission)
   const isInitialMount = useRef(true);
   // Track if navigation was triggered by user action (arrow click vs external control)
@@ -66,16 +69,16 @@ export default function QuestionSetList({
    * - First 3 sliders in each technology set (sets 1-8)
    * - Additional info text field
    */
-  const [formData, setFormData] = useState(() => {
-    const initial = {};
+  const [formData, setFormData] = useState<FormData>(() => {
+    const initial: FormData = {};
 
     // Set default values for general questions (question set 0)
     // All 5 questions are mandatory and have default values
-    initial[GENERAL_QUESTION_KEYS[0]] = ["Expert-level"]; // job-level
-    initial[GENERAL_QUESTION_KEYS[1]] = ["Duunitori"]; // job-boards
-    initial[GENERAL_QUESTION_KEYS[2]] = "Yes"; // deep-mode
-    initial[GENERAL_QUESTION_KEYS[3]] = "1"; // cover-letter-num
-    initial[GENERAL_QUESTION_KEYS[4]] = ["Professional"]; // cover-letter-style
+    initial[GENERAL_QUESTION_KEYS[0] as string] = ["Expert-level"]; // job-level
+    initial[GENERAL_QUESTION_KEYS[1] as string] = ["Duunitori"]; // job-boards
+    initial[GENERAL_QUESTION_KEYS[2] as string] = "Yes"; // deep-mode
+    initial[GENERAL_QUESTION_KEYS[3] as string] = "1"; // cover-letter-num
+    initial[GENERAL_QUESTION_KEYS[4] as string] = ["Professional"]; // cover-letter-style
 
     // Set default values for the first 3 sliders in each technology set (question sets 1-8)
     // SLIDER_DATA[0] = languages, SLIDER_DATA[1] = databases, etc.
@@ -113,11 +116,8 @@ export default function QuestionSetList({
   /**
    * Handles form input changes
    * Updates formData state and triggers parent notification via useEffect
-   *
-   * @param {string} key - The form field key (e.g., "javascript", "job-level", "text-field1")
-   * @param {string|number|string[]} value - The new value (string, number, or array for checkboxes)
    */
-  const handleFormChange = (key, value) => {
+  const handleFormChange = (key: string, value: FormDataValue): void => {
     setFormData((prev) => ({ ...prev, [key]: value }));
   };
 
@@ -167,7 +167,7 @@ export default function QuestionSetList({
    * Navigates to previous question set
    * Wraps around to last question set if currently at first (0)
    */
-  const handlePrevious = () => {
+  const handlePrevious = (): void => {
     const newIndex =
       currentIndex === 0 ? TOTAL_QUESTION_SETS - 1 : currentIndex - 1;
     isUserNavigation.current = true; // Mark as user navigation for scroll behavior
@@ -182,7 +182,7 @@ export default function QuestionSetList({
    * Navigates to next question set
    * Wraps around to first question set (0) if currently at last
    */
-  const handleNext = () => {
+  const handleNext = (): void => {
     const newIndex = (currentIndex + 1) % TOTAL_QUESTION_SETS;
     isUserNavigation.current = true; // Mark as user navigation for scroll behavior
     setInternalIndex(newIndex);

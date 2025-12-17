@@ -13,10 +13,10 @@
  * - Other server errors: Generic server error with details
  * - Unknown errors: Generic unexpected error message
  *
- * @param {Error} error - The error object from fetch, validation, or other operations.
+ * @param error - The error object from fetch, validation, or other operations.
  *   Should have a message property that may contain status codes or error types.
  *
- * @returns {string} User-friendly error message suitable for display in UI.
+ * @returns User-friendly error message suitable for display in UI.
  *
  * @example
  * try {
@@ -26,7 +26,12 @@
  *   setError(message); // Display to user
  * }
  */
-export function getErrorMessage(error) {
+export function getErrorMessage(error: Error | unknown): string {
+  // Handle non-Error objects
+  if (!(error instanceof Error)) {
+    return "An unexpected error occurred. Please try again.";
+  }
+
   // Check for rate limit errors first
   if (
     error.message.includes("Server error: 429") ||

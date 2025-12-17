@@ -1,20 +1,21 @@
 import { renderLabel } from "../../utils/labelRenderer";
 
+interface SingleChoiceProps {
+  keyName: string;
+  label: string;
+  options: readonly string[];
+  value: string;
+  onChange: (keyName: string, value: string) => void;
+  error?: string;
+  required?: boolean;
+  splitAt?: number;
+}
+
 /**
  * SingleChoice Component
  *
  * Renders a group of radio buttons allowing only one selection.
  * Used for questions that require a single answer.
- *
- * @param {string} keyName - Unique identifier for the radio button group
- * @param {string} label - Display label for the question
- * @param {string[]} options - Array of option strings to display as radio buttons
- * @param {string} value - Currently selected option (single value, not array)
- * @param {function} onChange - Callback function called when radio button state changes
- *                              Receives (keyName, selectedValue) as parameters
- * @param {string} error - Optional error message to display
- * @param {boolean} required - Whether this field is required (default: false)
- * @param {number} splitAt - Optional index to split options into two columns (left and right)
  */
 export default function SingleChoice({
   keyName,
@@ -24,14 +25,11 @@ export default function SingleChoice({
   onChange,
   error,
   splitAt,
-}) {
+}: SingleChoiceProps) {
   /**
    * Renders a single radio button option
-   *
-   * @param {string} option - The option text to display
-   * @returns {JSX.Element} The radio button and label elements
    */
-  const renderRadioOption = (option) => {
+  const renderRadioOption = (option: string) => {
     const optionKey = option.toLowerCase().replace(/\s+/g, "-");
     const isChecked = value === option;
     return (
