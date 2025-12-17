@@ -287,11 +287,12 @@ def update_job_progress(job_id: str, progress: Dict) -> None:
 
         table = dynamodb.Table(TABLE_NAME)
 
+        progress_json = json.dumps(progress)
         table.update_item(
             Key={"job_id": job_id},
             UpdateExpression="SET #progress = :progress",
             ExpressionAttributeNames={"#progress": "progress"},
-            ExpressionAttributeValues={":progress": json.dumps(progress)},
+            ExpressionAttributeValues={":progress": progress_json},
         )
 
         logger.info(
@@ -301,6 +302,7 @@ def update_job_progress(job_id: str, progress: Dict) -> None:
                     "job_id": job_id,
                     "phase": progress.get("phase"),
                     "message": progress.get("message"),
+                    "progress_json": progress_json,
                 }
             },
         )

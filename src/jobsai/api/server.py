@@ -539,7 +539,14 @@ async def get_progress(job_id: str) -> JSONResponse:
 
     logger.info(
         "Retrieved job state",
-        extra={"extra_fields": {"job_id": job_id, "status": state.get("status")}},
+        extra={
+            "extra_fields": {
+                "job_id": job_id,
+                "status": state.get("status"),
+                "has_progress": bool(state.get("progress")),
+                "progress": state.get("progress"),
+            }
+        },
     )
 
     # Build response based on current state
@@ -550,6 +557,16 @@ async def get_progress(job_id: str) -> JSONResponse:
     # Add progress if available
     if state.get("progress"):
         response_data["progress"] = state["progress"]
+        logger.info(
+            "Including progress in response",
+            extra={
+                "extra_fields": {
+                    "job_id": job_id,
+                    "progress_phase": state["progress"].get("phase"),
+                    "progress_message": state["progress"].get("message"),
+                }
+            },
+        )
 
     # Add result if complete
     if state["status"] == "complete":
