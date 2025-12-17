@@ -35,7 +35,6 @@ npm run test:coverage
   - `TextField.test.jsx`: Text input component tests
 - `components/messages/__tests__/`: Message component tests
   - `ErrorMessage.test.jsx`: Error message display tests
-  - `SuccessMessage.test.jsx`: Success message display tests
 - `components/__tests__/`: Main component tests
   - `Search.test.jsx`: Main search/pipeline component tests
   - `ErrorBoundary.test.jsx`: Error boundary tests

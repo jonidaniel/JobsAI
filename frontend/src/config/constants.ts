@@ -9,9 +9,6 @@
  * Timeouts (in milliseconds)
  */
 
-/** Auto-dismiss success message after this many milliseconds */
-export const SUCCESS_MESSAGE_TIMEOUT = 5000;
-
 /** Delay for scroll operations to ensure DOM is ready before scrolling */
 export const SCROLL_DELAY = 100;
 

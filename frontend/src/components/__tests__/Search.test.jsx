@@ -31,10 +31,6 @@ vi.mock("../../components/QuestionSetList", () => ({
   ),
 }));
 
-vi.mock("../../components/messages/SuccessMessage", () => ({
-  default: () => <div data-testid="success-message">Success!</div>,
-}));
-
 vi.mock("../../components/messages/ErrorMessage", () => ({
   default: ({ message }) => <div data-testid="error-message">{message}</div>,
 }));
@@ -311,9 +307,10 @@ describe("Search Component", () => {
       expect(submitButton).toBeInTheDocument();
       await user.click(submitButton);
 
+      // Wait for download to complete and download prompt to appear
       await waitFor(
         () => {
-          expect(screen.getByTestId("success-message")).toBeInTheDocument();
+          expect(screen.getByText(/All set! Generated/)).toBeInTheDocument();
         },
         { timeout: 10000 }
       );

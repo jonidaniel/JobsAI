@@ -1,6 +1,5 @@
 import { API_ENDPOINTS } from "../config/api";
 import { downloadBlob } from "../utils/fileDownload";
-import { SUCCESS_MESSAGE_TIMEOUT } from "../config/constants";
 import type { DownloadInfo } from "../types";
 
 interface SubmissionState {
@@ -12,12 +11,10 @@ interface SubmissionState {
 interface UseDownloadOptions {
   downloadInfo: DownloadInfo | null;
   submissionState: React.MutableRefObject<SubmissionState>;
-  successTimeoutRef: React.MutableRefObject<NodeJS.Timeout | null>;
   setShowDownloadPrompt: (show: boolean) => void;
   setDownloadInfo: (info: DownloadInfo | null) => void;
   setHasDownloaded: (downloaded: boolean) => void;
   setHasRespondedToPrompt: (responded: boolean) => void;
-  setSuccess: (success: boolean) => void;
   setError: (error: string | null) => void;
 }
 
@@ -48,12 +45,10 @@ interface DownloadResponse {
 export function useDownload({
   downloadInfo,
   submissionState,
-  successTimeoutRef,
   setShowDownloadPrompt,
   setDownloadInfo,
   setHasDownloaded,
   setHasRespondedToPrompt,
-  setSuccess,
   setError,
 }: UseDownloadOptions): UseDownloadReturn {
   /**
@@ -113,10 +108,12 @@ export function useDownload({
           // Download all documents sequentially
           for (let i = 0; i < data.download_urls.length; i++) {
             const item = data.download_urls[i];
-            await downloadFromS3(item.url, item.filename);
-            // Small delay between downloads to avoid browser blocking
-            if (i < data.download_urls.length - 1) {
-              await new Promise<void>((resolve) => setTimeout(resolve, 500));
+            if (item) {
+              await downloadFromS3(item.url, item.filename);
+              // Small delay between downloads to avoid browser blocking
+              if (i < data.download_urls.length - 1) {
+                await new Promise<void>((resolve) => setTimeout(resolve, 500));
+              }
             }
           }
           return;
@@ -124,13 +121,13 @@ export function useDownload({
 
         // Handle single document
         if (data.download_url) {
-          await downloadFromS3(
-            data.download_url,
+          const filename =
             data.filename ||
-              (Array.isArray(filenameOrFilenames)
-                ? filenameOrFilenames[0]
-                : filenameOrFilenames)
-          );
+            (Array.isArray(filenameOrFilenames)
+              ? filenameOrFilenames[0]
+              : filenameOrFilenames) ||
+            "cover_letter.docx";
+          await downloadFromS3(data.download_url, filename);
           return;
         }
       }
@@ -163,7 +160,10 @@ export function useDownload({
       if (downloadInfo.filenames.length > 1) {
         // Multiple documents
         await downloadDocument(downloadInfo.jobId, downloadInfo.filenames);
-      } else {
+      } else if (
+        downloadInfo.filenames.length === 1 &&
+        downloadInfo.filenames[0]
+      ) {
         // Single document
         await downloadDocument(downloadInfo.jobId, downloadInfo.filenames[0]);
       }
@@ -173,15 +173,6 @@ export function useDownload({
       setDownloadInfo(null);
       setHasDownloaded(true);
       setHasRespondedToPrompt(true);
-
-      // Auto-dismiss success message after timeout
-      if (successTimeoutRef.current) {
-        clearTimeout(successTimeoutRef.current);
-      }
-      successTimeoutRef.current = setTimeout(() => {
-        setSuccess(false);
-        successTimeoutRef.current = null;
-      }, SUCCESS_MESSAGE_TIMEOUT);
     } catch (error) {
       console.error("Error downloading document:", error);
       setError("Failed to download documents. Please try again.");

@@ -15,7 +15,6 @@ interface UsePipelinePollingOptions {
   setJobId: (jobId: string | null) => void;
   setDownloadInfo: (info: DownloadInfo | null) => void;
   setShowDownloadPrompt: (show: boolean) => void;
-  setSuccess: (success: boolean) => void;
   submissionState: React.MutableRefObject<SubmissionState>;
   currentJobIdRef: React.MutableRefObject<string | null>;
 }
@@ -40,7 +39,6 @@ export function usePipelinePolling({
   setJobId,
   setDownloadInfo,
   setShowDownloadPrompt,
-  setSuccess,
   submissionState,
   currentJobIdRef,
 }: UsePipelinePollingOptions): UsePipelinePollingReturn {
@@ -132,7 +130,6 @@ export function usePipelinePolling({
           setShowDownloadPrompt(true);
 
           // Update submission state
-          setSuccess(true);
           setError(null);
           submissionState.current.justCompleted = true;
           submissionState.current.hasSuccessfulSubmission = true;

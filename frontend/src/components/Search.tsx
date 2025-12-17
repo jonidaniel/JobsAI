@@ -9,11 +9,7 @@ import { transformFormData } from "../utils/formDataTransform";
 import { getErrorMessage } from "../utils/errorMessages";
 import { validateGeneralQuestions } from "../utils/validation";
 import { GENERAL_QUESTION_KEYS } from "../config/generalQuestions";
-import {
-  SUCCESS_MESSAGE_TIMEOUT,
-  SCROLL_OFFSET,
-  SCROLL_DELAY,
-} from "../config/constants";
+import { SCROLL_OFFSET, SCROLL_DELAY } from "../config/constants";
 import { usePipelinePolling } from "../hooks/usePipelinePolling";
 import { useDownload } from "../hooks/useDownload";
 
@@ -52,7 +48,6 @@ export default function Search() {
   // Submission state management
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
   // Progress tracking with polling
   const [currentPhase, setCurrentPhase] = useState<PipelinePhase | null>(null);
   const [jobId, setJobId] = useState<string | null>(null);
@@ -69,9 +64,6 @@ export default function Search() {
   // Download prompt state
   const [showDownloadPrompt, setShowDownloadPrompt] = useState(false);
   const [downloadInfo, setDownloadInfo] = useState<DownloadInfo | null>(null);
-  const [declinedDocumentCount, setDeclinedDocumentCount] = useState<
-    number | null
-  >(null);
   const [hasDownloaded, setHasDownloaded] = useState(false);
   const [hasRespondedToPrompt, setHasRespondedToPrompt] = useState(false);
   const [isRateLimited, setIsRateLimited] = useState(false);
@@ -122,12 +114,10 @@ export default function Search() {
    */
   const resetFormState = useCallback((includeSubmissionState = false): void => {
     setError(null);
-    setSuccess(false);
     submissionState.current.justCompleted = false;
     submissionState.current.hasSuccessfulSubmission = false;
     setShowDownloadPrompt(false);
     setDownloadInfo(null);
-    setDeclinedDocumentCount(null);
     setHasDownloaded(false);
     setHasRespondedToPrompt(false);
     setShowDeliveryMethodPrompt(false);
@@ -172,9 +162,6 @@ export default function Search() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData]);
 
-  // Ref to track timeout for auto-dismissing success message after download
-  const successTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
   // Memoize cover letter count to avoid repeated parseInt calls
   const coverLetterNumValue = formData["cover-letter-num"];
   const coverLetterCount = useMemo(() => {
@@ -193,7 +180,6 @@ export default function Search() {
     setJobId,
     setDownloadInfo,
     setShowDownloadPrompt,
-    setSuccess,
     submissionState,
     currentJobIdRef,
   });
@@ -201,12 +187,10 @@ export default function Search() {
   const { handleDownloadYes } = useDownload({
     downloadInfo,
     submissionState,
-    successTimeoutRef,
     setShowDownloadPrompt,
     setDownloadInfo,
     setHasDownloaded,
     setHasRespondedToPrompt,
-    setSuccess,
     setError,
   });
 
@@ -238,14 +222,12 @@ export default function Search() {
       return;
     }
 
-    // Clear previous errors and success messages
+    // Clear previous errors
     setError(null);
-    setSuccess(false);
     submissionState.current.justCompleted = false;
     submissionState.current.hasSuccessfulSubmission = false;
     setShowDownloadPrompt(false);
     setDownloadInfo(null);
-    setDeclinedDocumentCount(null);
     setHasDownloaded(false);
     setDeliveryMethod(null);
     setEmail("");
@@ -305,7 +287,6 @@ export default function Search() {
     setEmail("");
     setEmailError(null);
     setError(null);
-    setSuccess(false);
   };
 
   /**
@@ -356,7 +337,6 @@ export default function Search() {
   const startPipeline = async (): Promise<void> => {
     setIsSubmitting(true);
     setError(null);
-    setSuccess(false);
     setCurrentPhase(null);
 
     // Transform form data into grouped structure for backend API
@@ -495,7 +475,6 @@ export default function Search() {
       } else if (!isRateLimited) {
         setError(errorMessage);
       }
-      setSuccess(false);
       setIsSubmitting(false);
       setCurrentPhase(null);
       setJobId(null);
@@ -505,7 +484,7 @@ export default function Search() {
   };
 
   /**
-   * Restores scroll position after component remounts and success message appears
+   * Restores scroll position after component remounts
    */
   useEffect(() => {
     if (!isSubmitting && submissionState.current.savedScrollPosition !== null) {
@@ -525,7 +504,7 @@ export default function Search() {
 
       return () => clearTimeout(timeoutId);
     }
-  }, [isSubmitting, success]);
+  }, [isSubmitting]);
 
   /**
    * Resets the submission completion flag after QuestionSetList has remounted
@@ -541,14 +520,10 @@ export default function Search() {
   }, [isSubmitting]);
 
   /**
-   * Cleanup: Clear timeout and polling interval if component unmounts
+   * Cleanup: Stop polling if component unmounts
    */
   useEffect(() => {
-    const timeoutRef = successTimeoutRef;
     return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
       stopPolling();
     };
   }, [stopPolling]);
@@ -711,27 +686,6 @@ export default function Search() {
             You cancelled the job search
           </h3>
         </>
-      ) : submissionState.current.hasSuccessfulSubmission &&
-        deliveryMethod === "email" &&
-        hasRespondedToPrompt ? (
-        <>
-          <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
-            Thank you very much for using JobsAI. Expect the cover{" "}
-            {parseInt((formData["cover-letter-num"] as string) || "1", 10) === 1
-              ? "letter"
-              : "letters"}{" "}
-            to drop in your inbox shortly
-          </h3>
-        </>
-      ) : submissionState.current.hasSuccessfulSubmission &&
-        hasRespondedToPrompt &&
-        !hasDownloaded ? (
-        <>
-          <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
-            You turned down the{" "}
-            {declinedDocumentCount === 1 ? "document" : "documents"}
-          </h3>
-        </>
       ) : submissionState.current.hasSuccessfulSubmission && hasDownloaded ? (
         <>
           <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
@@ -772,7 +726,6 @@ export default function Search() {
       {!isSubmitting &&
         !showDeliveryMethodPrompt &&
         !isCancelled &&
-        !success &&
         !isRateLimited &&
         !submissionState.current.hasSuccessfulSubmission && (
           <QuestionSetList
@@ -809,19 +762,6 @@ export default function Search() {
               Find Again
             </button>
           )}
-          {!isSubmitting &&
-            submissionState.current.hasSuccessfulSubmission &&
-            deliveryMethod === "email" &&
-            hasRespondedToPrompt && (
-              <button
-                id="submit-btn"
-                onClick={handleSubmit}
-                className="text-lg sm:text-xl md:text-2xl lg:text-3xl px-4 sm:px-6 py-2 sm:py-3 border border-white bg-transparent text-white font-semibold rounded-lg shadow disabled:opacity-50 disabled:cursor-not-allowed"
-                aria-label="Start a new job search"
-              >
-                Find Again
-              </button>
-            )}
           {!isSubmitting &&
             !showDeliveryMethodPrompt &&
             !isCancelled &&
