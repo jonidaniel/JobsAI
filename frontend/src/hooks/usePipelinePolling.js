@@ -171,6 +171,5 @@ export function usePipelinePolling({
   return {
     startPolling,
     stopPolling,
-    pollingIntervalRef, // Expose ref for cleanup in parent component
   };
 }

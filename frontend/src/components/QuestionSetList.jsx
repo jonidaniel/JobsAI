@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 
 import QuestionSet from "./QuestionSet";
 
@@ -192,15 +192,21 @@ export default function QuestionSetList({
     }
   };
 
-  // Shared arrow button container styles
-  const arrowContainerStyle = {
-    top: "clamp(450px, 20vh, 250px)",
-    maxHeight: "calc(100vh - 100px)",
-  };
-  const arrowButtonStyle = {
-    fontSize: "clamp(1rem, 3vw, 1.5rem)",
-    padding: "clamp(0.5rem, 1.5vw, 0.75rem) clamp(0.75rem, 2vw, 1rem)",
-  };
+  // Shared arrow button container styles - memoized to avoid recreation on each render
+  const arrowContainerStyle = useMemo(
+    () => ({
+      top: "clamp(450px, 20vh, 250px)",
+      maxHeight: "calc(100vh - 100px)",
+    }),
+    []
+  );
+  const arrowButtonStyle = useMemo(
+    () => ({
+      fontSize: "clamp(1rem, 3vw, 1.5rem)",
+      padding: "clamp(0.5rem, 1.5vw, 0.75rem) clamp(0.75rem, 2vw, 1rem)",
+    }),
+    []
+  );
 
   return (
     <div

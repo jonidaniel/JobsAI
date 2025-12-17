@@ -19,6 +19,15 @@ import { useDownload } from "../hooks/useDownload";
 
 import "../styles/search.css";
 
+// Phase messages mapping - moved outside component to avoid recreation on each render
+const PHASE_MESSAGES = {
+  profiling: "2/6 Creating your profile...",
+  searching: "3/6 Searching for jobs...",
+  scoring: "4/6 Scoring the jobs...",
+  analyzing: "5/6 Doing analysis...",
+  generating: "6/6 Generating cover letters...",
+};
+
 /**
  * Search Component - Main Questionnaire and Pipeline Interface.
  *
@@ -87,15 +96,6 @@ export default function Search() {
     hasSuccessfulSubmission: false, // Track if we've had a successful submission (to keep question sets hidden)
   });
 
-  // Phase messages mapping
-  const phaseMessages = {
-    profiling: "2/6 Creating your profile...",
-    searching: "3/6 Searching for jobs...",
-    scoring: "4/6 Scoring the jobs...",
-    analyzing: "5/6 Doing analysis...",
-    generating: "6/6 Generating cover letters...",
-  };
-
   // Form data received from QuestionSets component via callback
   const [formData, setFormData] = useState({});
 
@@ -107,6 +107,53 @@ export default function Search() {
     useState(undefined);
   // Current question set index (tracked from QuestionSetList)
   const [currentQuestionSetIndex, setCurrentQuestionSetIndex] = useState(0);
+
+  /**
+   * Scrolls to an element by selector with offset
+   * @param {string} selector - CSS selector for the element to scroll to
+   * @param {number} delay - Delay in milliseconds before scrolling (default: SCROLL_DELAY)
+   */
+  const scrollToElement = useCallback((selector, delay = SCROLL_DELAY) => {
+    setTimeout(() => {
+      const element = document.querySelector(selector);
+      if (element) {
+        const rect = element.getBoundingClientRect();
+        const targetPosition = window.scrollY + rect.top - SCROLL_OFFSET;
+        window.scrollTo({
+          top: targetPosition,
+          behavior: "smooth",
+        });
+      }
+    }, delay);
+  }, []);
+
+  /**
+   * Resets all form and submission state
+   * @param {boolean} includeSubmissionState - Whether to reset submission-specific state (isSubmitting, jobId, etc.)
+   */
+  const resetFormState = useCallback((includeSubmissionState = false) => {
+    setError(null);
+    setSuccess(false);
+    submissionState.current.justCompleted = false;
+    submissionState.current.hasSuccessfulSubmission = false;
+    setShowDownloadPrompt(false);
+    setDownloadInfo(null);
+    setDeclinedDocumentCount(null);
+    setHasDownloaded(false);
+    setHasRespondedToPrompt(false);
+    setShowDeliveryMethodPrompt(false);
+    setDeliveryMethod(null);
+    setEmail("");
+    setEmailError(null);
+    setIsCancelled(false);
+    setIsRateLimited(false);
+    if (includeSubmissionState) {
+      setIsSubmitting(false);
+      setCurrentPhase(null);
+      setJobId(null);
+      currentJobIdRef.current = null;
+    }
+  }, []);
 
   /**
    * Handles form data changes from QuestionSetList component
@@ -197,75 +244,21 @@ export default function Search() {
     if (isSubmitting) {
       // Stop polling for the current job (but don't send cancel request)
       stopPolling();
-      // Reset UI state and allow new submission
-      setError(null);
-      setSuccess(false);
-      submissionState.current.justCompleted = false;
-      submissionState.current.hasSuccessfulSubmission = false;
-      setShowDownloadPrompt(false);
-      setDownloadInfo(null);
-      setDeclinedDocumentCount(null);
-      setHasDownloaded(false);
-      setHasRespondedToPrompt(false);
-      setShowDeliveryMethodPrompt(false);
-      setDeliveryMethod(null);
-      setEmail("");
-      setEmailError(null);
-      setIsCancelled(false);
-      setIsRateLimited(false);
-      setIsSubmitting(false);
-      setCurrentPhase(null);
-      setJobId(null); // Clear jobId but don't cancel the job
-      currentJobIdRef.current = null; // Clear ref to prevent stale updates
+      // Reset UI state and allow new submission (including submission-specific state)
+      resetFormState(true);
       // Navigate to question set 1 (index 0)
       setActiveQuestionSetIndex(0);
-      // Scroll to question set 1 after a brief delay to ensure DOM is ready
-      setTimeout(() => {
-        const questionSetSection = document.querySelector('[data-index="0"]');
-        if (questionSetSection) {
-          const rect = questionSetSection.getBoundingClientRect();
-          const targetPosition = window.scrollY + rect.top - SCROLL_OFFSET;
-          window.scrollTo({
-            top: targetPosition,
-            behavior: "smooth",
-          });
-        }
-      }, SCROLL_DELAY);
+      scrollToElement('[data-index="0"]');
       return;
     }
 
     // If this is a "Find Again" click (from successful submission or cancellation), navigate to question set 1 and reset
     if (submissionState.current.hasSuccessfulSubmission || isCancelled) {
-      // Reset states
-      setError(null);
-      setSuccess(false);
-      submissionState.current.justCompleted = false;
-      submissionState.current.hasSuccessfulSubmission = false;
-      setShowDownloadPrompt(false);
-      setDownloadInfo(null);
-      setDeclinedDocumentCount(null);
-      setHasDownloaded(false);
-      setHasRespondedToPrompt(false);
-      setShowDeliveryMethodPrompt(false);
-      setDeliveryMethod(null);
-      setEmail("");
-      setEmailError(null);
-      setIsCancelled(false);
-      setIsRateLimited(false);
+      // Reset states (excluding submission-specific state as job is already complete)
+      resetFormState(false);
       // Navigate to question set 1 (index 0)
       setActiveQuestionSetIndex(0);
-      // Scroll to question set 1 after a brief delay to ensure DOM is ready
-      setTimeout(() => {
-        const questionSetSection = document.querySelector('[data-index="0"]');
-        if (questionSetSection) {
-          const rect = questionSetSection.getBoundingClientRect();
-          const targetPosition = window.scrollY + rect.top - SCROLL_OFFSET;
-          window.scrollTo({
-            top: targetPosition,
-            behavior: "smooth",
-          });
-        }
-      }, SCROLL_DELAY);
+      scrollToElement('[data-index="0"]');
       return;
     }
 
@@ -326,20 +319,10 @@ export default function Search() {
         }
 
         // Scroll to the first error question after a short delay to ensure DOM is ready
-        setTimeout(() => {
-          const errorQuestion = document.querySelector(
-            `[data-question-key="${firstErrorKey}"]`
-          );
-          if (errorQuestion) {
-            const rect = errorQuestion.getBoundingClientRect();
-            const targetPosition = window.scrollY + rect.top - SCROLL_OFFSET;
-
-            window.scrollTo({
-              top: targetPosition,
-              behavior: "smooth",
-            });
-          }
-        }, SCROLL_DELAY + 50);
+        scrollToElement(
+          `[data-question-key="${firstErrorKey}"]`,
+          SCROLL_DELAY + 50
+        );
       }
       return;
     }
@@ -631,8 +614,8 @@ export default function Search() {
         // Download delivery: show progress message
         <>
           <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
-            {currentPhase && phaseMessages[currentPhase]
-              ? phaseMessages[currentPhase]
+            {currentPhase && PHASE_MESSAGES[currentPhase]
+              ? PHASE_MESSAGES[currentPhase]
               : "1/6 Starting search..."}
           </h3>
           <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
