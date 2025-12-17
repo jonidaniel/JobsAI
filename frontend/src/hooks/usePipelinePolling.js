@@ -86,12 +86,6 @@ export function usePipelinePolling({
         }
 
         const data = await response.json();
-        console.log("Poll response:", {
-          job_id,
-          status: data.status,
-          progress: data.progress,
-          has_progress: !!data.progress,
-        });
 
         // Only update state if this is still the current job
         if (currentJobIdRef.current !== job_id) {
@@ -100,7 +94,6 @@ export function usePipelinePolling({
 
         // Handle progress updates
         if (data.progress && data.progress.phase) {
-          console.log("Updating phase:", data.progress.phase);
           setCurrentPhase(data.progress.phase);
         }
 
