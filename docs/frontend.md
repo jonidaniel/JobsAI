@@ -8,10 +8,11 @@ The JobsAI frontend is a React application built with Vite that provides a user-
 
 - **Framework**: React 19.2.0
 - **Build Tool**: Vite 7.2.4
+- **Language**: TypeScript 5.9.3 (fully migrated from JavaScript)
 - **Styling**:
   - Tailwind CSS 3.4.18 (utility-first CSS)
   - Custom CSS files for component-specific styles
-- **Language**: JavaScript (ES6+)
+- **Testing**: Vitest 1.0.4 with React Testing Library
 - **Package Manager**: npm
 
 ## Project Structure
@@ -30,43 +31,53 @@ frontend/
 │   │       └── face.png
 │   ├── components/          # React components
 │   │   ├── messages/        # Message/alert components
-│   │   │   ├── ErrorMessage.jsx
-│   │   │   └── SuccessMessage.jsx
+│   │   │   └── ErrorMessage.tsx
 │   │   ├── questions/       # Form input components
-│   │   │   ├── MultipleChoice.jsx
-│   │   │   ├── SingleChoice.jsx
-│   │   │   ├── Slider.jsx
-│   │   │   └── TextField.jsx
-│   │   ├── Contact.jsx
-│   │   ├── Hero.jsx
-│   │   ├── NavBar.jsx
-│   │   ├── QuestionSet.jsx
-│   │   ├── QuestionSets.jsx
-│   │   └── Search.jsx
+│   │   │   ├── MultipleChoice.tsx
+│   │   │   ├── SingleChoice.tsx
+│   │   │   ├── Slider.tsx
+│   │   │   └── TextField.tsx
+│   │   ├── Contact.tsx
+│   │   ├── ErrorBoundary.tsx
+│   │   ├── Hero.tsx
+│   │   ├── NavBar.tsx
+│   │   ├── QuestionSet.tsx
+│   │   ├── QuestionSetList.tsx
+│   │   └── Search.tsx
 │   ├── config/              # Configuration files
-│   │   ├── api.js
-│   │   ├── generalQuestions.js
-│   │   ├── questionSet.js
-│   │   └── sliders.js
+│   │   ├── api.ts
+│   │   ├── constants.ts
+│   │   ├── generalQuestions.ts
+│   │   ├── questionSet.ts
+│   │   └── sliders.ts
+│   ├── hooks/               # Custom React hooks
+│   │   ├── useDownload.ts
+│   │   └── usePipelinePolling.ts
 │   ├── styles/              # CSS stylesheets
 │   │   ├── App.css
 │   │   ├── contact.css
+│   │   ├── font.css
 │   │   ├── hero.css
 │   │   ├── index.css
 │   │   ├── nav.css
 │   │   └── search.css
+│   ├── types/               # TypeScript type definitions
+│   │   └── index.ts
 │   ├── utils/               # Utility functions
-│   │   ├── errorMessages.js
-│   │   ├── fileDownload.js
-│   │   └── formDataTransform.js
-│   ├── App.jsx              # Root component
-│   └── main.jsx             # Application entry point
+│   │   ├── errorMessages.ts
+│   │   ├── fileDownload.ts
+│   │   ├── formDataTransform.ts
+│   │   ├── labelRenderer.tsx
+│   │   └── validation.ts
+│   ├── App.tsx              # Root component
+│   └── main.tsx             # Application entry point
 ├── eslint.config.js         # ESLint configuration
 ├── index.html               # HTML template
 ├── package.json             # Dependencies and scripts
 ├── postcss.config.js        # PostCSS configuration
 ├── tailwind.config.js       # Tailwind CSS configuration
-└── vite.config.js           # Vite configuration
+├── tsconfig.json            # TypeScript configuration
+└── vite.config.ts           # Vite configuration
 ```
 
 ## Directory Organization
@@ -76,13 +87,15 @@ frontend/
 React components organized by purpose:
 
 #### Main Components
-- **`App.jsx`**: Root component that orchestrates all page sections
-- **`NavBar.jsx`**: Fixed navigation bar with links to page sections
-- **`Hero.jsx`**: Landing section with main title and tagline
-- **`Search.jsx`**: Main questionnaire component that handles form submission
-- **`QuestionSets.jsx`**: Manages 10 question sets with navigation and form state
-- **`QuestionSet.jsx`**: Renders a single question set (one of 10)
-- **`Contact.jsx`**: Contact information section with links
+
+- **`App.tsx`**: Root component that orchestrates all page sections with error boundaries
+- **`NavBar.tsx`**: Fixed navigation bar with links to page sections
+- **`Hero.tsx`**: Landing section with main title and tagline
+- **`Search.tsx`**: Main questionnaire component that handles form submission, pipeline execution, and document delivery (email/download)
+- **`QuestionSetList.tsx`**: Manages 10 question sets with navigation and form state
+- **`QuestionSet.tsx`**: Renders a single question set (one of 10) with validation
+- **`ErrorBoundary.tsx`**: React error boundary for graceful error handling
+- **`Contact.tsx`**: Contact information section with links
 
 #### `/src/components/questions/`
 
@@ -97,7 +110,7 @@ Reusable form input components:
 
 User feedback components:
 
-- **`ErrorMessage.jsx`**: Displays error messages in a red alert box
+- **`ErrorMessage.tsx`**: Displays error messages in a red alert box
 - **`SuccessMessage.jsx`**: Displays success messages in a green alert box
 
 ### `/src/config/`
@@ -168,6 +181,7 @@ The main orchestrator for the questionnaire:
 - **Smooth scrolling** to active question set
 
 **Responsibilities:**
+
 - Initializes form data with default values
 - Manages current question set index (0-9)
 - Handles navigation between question sets
@@ -183,6 +197,7 @@ Renders a single question set based on its index:
 - **Index 9**: Text-only question set (single text input for additional information)
 
 **Dynamic Rendering:**
+
 - Conditionally renders different input types based on question set index
 - Uses appropriate components (`MultipleChoice`, `SingleChoice`, `Slider`, `TextField`)
 - Only the active question set is visible (others hidden via CSS)
@@ -199,27 +214,37 @@ Orchestrates form submission and API communication:
 6. Manages submission state to prevent double-submission
 
 **State Management:**
+
 - `formData`: Complete form data from all question sets
-- `isSubmitting`: Prevents double-submission
+- `isSubmitting`: Prevents double-submission, tracks pipeline execution
 - `error`: Error message state
-- `success`: Success message state
-- `successTimeoutRef`: Ref for auto-dismissing success message
+- `currentPhase`: Current pipeline phase (profiling, searching, scoring, analyzing, generating)
+- `jobId`: Current job ID for polling progress
+- `deliveryMethod`: Selected delivery method ("email" | "download" | null)
+- `email`: User email address for email delivery
+- `downloadInfo`: Information about generated documents (jobId, filenames)
+- `showDownloadPrompt`: Whether to show download prompt after completion
+- `isRateLimited`: Rate limit error state
+- `submissionState`: Ref object tracking submission completion and scroll position
 
 ## Configuration Files
 
-### `api.js`
+### `api.ts`
 
-```javascript
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
-
+```typescript
 export const API_ENDPOINTS = {
-  SUBMIT_FORM: `${API_BASE_URL}/api/endpoint`,
+  SUBMIT_FORM: `${API_BASE_URL}/api/endpoint`, // Legacy endpoint
+  START: `${API_BASE_URL}/api/start`, // Start async pipeline
+  PROGRESS: `${API_BASE_URL}/api/progress`, // Poll for progress
+  CANCEL: `${API_BASE_URL}/api/cancel`, // Cancel pipeline
+  DOWNLOAD: `${API_BASE_URL}/api/download`, // Get download URL
 };
 ```
 
-- Configures API base URL (defaults to `http://localhost:8000`)
-- Supports environment variable `VITE_API_BASE_URL`
+- Configures API base URL (defaults to `http://localhost:8000` in development)
+- Supports environment variable `VITE_API_BASE_URL` (required in production)
 - Centralizes all API endpoints
+- Fails fast in production if `VITE_API_BASE_URL` is missing
 
 ### `questionSet.js`
 
@@ -283,19 +308,26 @@ Component-specific styles in separate files:
 
 ## Data Flow
 
-### Form Data Collection
+### Form Data Collection and Pipeline Execution
 
 1. **User Input**: User fills out questions across 10 question sets
-2. **State Management**: `QuestionSets` component manages form state locally
+2. **State Management**: `QuestionSetList` component manages form state locally
 3. **Callback**: `onFormDataChange` callback updates `Search` component state
-4. **Submission**: User clicks "Find Jobs" button
-5. **Processing**: `Search.handleSubmit()`:
+4. **Validation**: Client-side validation of required fields before submission
+5. **Delivery Method Selection**: User chooses email or browser download
+6. **Submission**: User clicks "Find Jobs" button or selects delivery method
+7. **Processing**: `Search.startPipeline()`:
    - Calls `transformFormData()` to filter empty values and group by question set
    - Transforms flat data structure to grouped backend format
-6. **API Request**: POST to `/api/endpoint` with grouped data
-7. **Response**: Backend returns `.docx` file as blob
-8. **Download**: `downloadBlob()` programmatically triggers file download
-9. **Feedback**: Success or error message displayed to user
+   - Adds delivery method and email (if applicable) to payload
+8. **API Request**: POST to `/api/start` with grouped data
+9. **Response**: Backend returns `job_id` for async pipeline execution
+10. **Progress Polling** (download only): `usePipelinePolling` hook polls `/api/progress/{job_id}` every 2 seconds
+11. **Completion**:
+    - **Email delivery**: Fire-and-forget, shows "Thank you" message
+    - **Download delivery**: Shows download prompt when complete
+12. **Download**: `useDownload` hook handles S3 presigned URL download or direct blob download
+13. **Feedback**: Error messages displayed via `ErrorMessage` component
 
 ### Data Structure
 
@@ -401,6 +433,7 @@ npm run dev
 Starts Vite dev server at `http://localhost:5173` (default port).
 
 **Features:**
+
 - Hot Module Replacement (HMR)
 - Fast refresh
 - Source maps
@@ -457,14 +490,17 @@ VITE_API_BASE_URL=https://api.yourdomain.com
 ### Adding a New Question Set
 
 1. **Update `config/questionSet.js`**:
+
    - Increment `TOTAL_QUESTION_SETS`
    - Add name to `QUESTION_SET_NAMES` array
    - Add title to `QUESTION_SET_TITLES` array
 
 2. **Add data to `config/sliders.js`** (if slider-based):
+
    - Add new object to `SLIDER_DATA` array with technology key-value pairs
 
 3. **Update `components/QuestionSets.jsx`**:
+
    - Add initialization logic for new question set in `formData` state (if needed)
 
 4. **Update `components/QuestionSet.jsx`**:
@@ -473,6 +509,7 @@ VITE_API_BASE_URL=https://api.yourdomain.com
 ### Adding a New General Question
 
 1. **Update `config/generalQuestions.js`**:
+
    - Add label to `GENERAL_QUESTION_LABELS` array
    - Add key to `GENERAL_QUESTION_KEYS` array
    - Add options array (e.g., `NEW_QUESTION_OPTIONS`)
@@ -484,6 +521,7 @@ VITE_API_BASE_URL=https://api.yourdomain.com
 ### Adding a New Component
 
 1. Create component file in appropriate `src/components/` subdirectory:
+
    - Main components: `src/components/`
    - Form inputs: `src/components/questions/`
    - Messages: `src/components/messages/`
@@ -502,18 +540,18 @@ VITE_API_BASE_URL=https://api.yourdomain.com
 
 ### Adding a New API Endpoint
 
-1. **Update `config/api.js`**:
+1. **Update `config/api.ts`**:
 
-   ```javascript
+   ```typescript
    export const API_ENDPOINTS = {
      SUBMIT_FORM: `${API_BASE_URL}/api/endpoint`,
      NEW_ENDPOINT: `${API_BASE_URL}/api/new-endpoint`,
-   };
+   } as const;
    ```
 
 2. **Use in component**:
 
-   ```javascript
+   ```typescript
    import { API_ENDPOINTS } from "../config/api";
 
    const response = await fetch(API_ENDPOINTS.NEW_ENDPOINT, {...});
@@ -523,23 +561,48 @@ VITE_API_BASE_URL=https://api.yourdomain.com
 
 ### Backend Communication
 
-The frontend communicates with the FastAPI backend:
+The frontend communicates with the FastAPI backend using async pipeline execution:
 
-- **Endpoint**: `/api/endpoint` (configurable via `VITE_API_BASE_URL`)
-- **Method**: POST
-- **Content-Type**: `application/json`
-- **Request Body**: Grouped form data (see Data Flow section)
-- **Response**: `.docx` file as blob with `Content-Disposition` header
+#### Async Pipeline Endpoints
+
+1. **`POST /api/start`** - Start pipeline
+
+   - **Request Body**: Grouped form data + `delivery_method` ("email" | "download") + optional `email`
+   - **Response**: `{ job_id: string }`
+   - **Purpose**: Initiates async pipeline execution, returns job ID for tracking
+
+2. **`GET /api/progress/{job_id}`** - Poll for progress
+
+   - **Response**: `ProgressResponse` with status, phase, and optional filenames
+   - **Purpose**: Polled every 2 seconds to track pipeline execution progress
+   - **Status Values**: "running", "complete", "error", "cancelled"
+
+3. **`GET /api/download/{job_id}`** - Get download URL(s)
+
+   - **Response**: JSON with `download_url` (single) or `download_urls` (multiple) + `filename`/`filenames`
+   - **Purpose**: Returns S3 presigned URLs for document download
+   - **Alternative**: Can return blob directly (Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document)
+
+4. **`POST /api/cancel/{job_id}`** - Cancel pipeline
+   - **Purpose**: Cancels a running pipeline execution
+
+#### Legacy Synchronous Endpoint
+
+- **`POST /api/endpoint`** - Legacy synchronous endpoint (kept for backward compatibility)
+  - **Request Body**: Grouped form data
+  - **Response**: `.docx` file as blob with `Content-Disposition` header
 
 ### Error Handling
 
 The `Search` component includes comprehensive error handling:
 
-- **Network errors**: Connection failures (handled by `getErrorMessage()`)
-- **HTTP errors**: 400, 404, 500 status codes (mapped to user-friendly messages)
-- **User-friendly messages**: Technical errors converted to readable messages
-- **Success feedback**: Auto-dismissing success message after 5 seconds
+- **Network errors**: Connection failures (handled by `getErrorMessage()` utility)
+- **HTTP errors**: 400, 404, 429, 500 status codes (mapped to user-friendly messages)
+- **Rate limiting**: Special handling for 429 errors with persistent UI message
+- **User-friendly messages**: Technical errors converted to readable messages via `getErrorMessage()`
 - **Error display**: `ErrorMessage` component shows errors in red alert box
+- **Email delivery errors**: Silent failure (except rate limits) - user sees "Thank you" message
+- **Download delivery errors**: All errors shown to user with recovery options
 
 ### File Download
 
@@ -633,24 +696,28 @@ export default function ComponentName({ prop1, prop2 }) {
 ### Common Issues
 
 1. **API Connection Failed**
+
    - Check `VITE_API_BASE_URL` in `.env`
    - Verify backend server is running
    - Check CORS settings on backend
    - Check browser console for network errors
 
 2. **Styles Not Loading**
+
    - Verify CSS imports in components
    - Check Tailwind configuration
    - Ensure PostCSS is configured correctly
    - Verify `index.css` imports Tailwind directives
 
 3. **Form Data Not Submitting**
+
    - Check browser console for errors
    - Verify API endpoint is correct
    - Check network tab for request details
    - Verify form data transformation is working
 
 4. **Build Errors**
+
    - Clear `node_modules` and reinstall: `rm -rf node_modules && npm install`
    - Check for syntax errors
    - Verify all imports are correct
@@ -661,22 +728,88 @@ export default function ComponentName({ prop1, prop2 }) {
    - Check `QUESTION_SET_NAMES` and `QUESTION_SET_TITLES` arrays
    - Verify question set rendering logic in `QuestionSet.jsx`
 
+## Custom Hooks
+
+### `usePipelinePolling`
+
+Custom hook for polling pipeline progress updates.
+
+**Features:**
+
+- Starts/stops polling intervals automatically
+- Prevents stale polling updates when jobs are replaced
+- Handles progress updates, completion, errors, and cancellation
+- Manages job ID tracking via refs to prevent race conditions
+
+**Usage:**
+
+```typescript
+const { startPolling, stopPolling } = usePipelinePolling({
+  setCurrentPhase,
+  setIsSubmitting,
+  setError,
+  setJobId,
+  setDownloadInfo,
+  setShowDownloadPrompt,
+  submissionState,
+  currentJobIdRef,
+});
+```
+
+### `useDownload`
+
+Custom hook for handling document downloads.
+
+**Features:**
+
+- Downloads single or multiple documents from S3 presigned URLs
+- Handles fallback to direct blob download
+- Preserves scroll position during download
+- Manages download prompt state
+
+**Usage:**
+
+```typescript
+const { handleDownloadYes } = useDownload({
+  downloadInfo,
+  submissionState,
+  setShowDownloadPrompt,
+  setDownloadInfo,
+  setHasDownloaded,
+  setHasRespondedToPrompt,
+  setError,
+});
+```
+
+## Type Definitions
+
+All TypeScript types are centralized in `src/types/index.ts`:
+
+- **`FormData`**: Flat key-value form data structure
+- **`FormDataValue`**: Union type for form values (string | number | string[])
+- **`GroupedFormData`**: Backend-expected nested structure
+- **`PipelinePhase`**: Pipeline execution phases
+- **`PipelineStatus`**: Pipeline status states
+- **`ProgressResponse`**: API progress response structure
+- **`DownloadInfo`**: Document download information
+- **`ValidationErrors`**: Form validation error mapping
+
 ## Future Improvements
 
 Potential enhancements:
 
-1. **TypeScript**: Add type safety for better developer experience
-2. **State Management**: Consider Redux/Zustand for complex state if needed
-3. **Testing**: Add unit and integration tests (Jest, React Testing Library)
+1. **State Management**: Consider Redux/Zustand for complex state management
+2. **Component Splitting**: Break down `Search.tsx` (802 lines) into smaller components
+3. **Testing**: Expand integration and E2E test coverage
 4. **Accessibility**: Improve ARIA labels and keyboard navigation
 5. **Internationalization**: Add i18n support for multiple languages
 6. **Progressive Web App**: Add PWA capabilities for offline support
-7. **Error Boundaries**: Add React error boundaries for better error handling
-8. **Loading States**: Improve loading indicators during API calls
-9. **Form Validation**: Client-side validation before submission
-10. **Responsive Design**: Enhanced mobile experience
-11. **Animation**: Add smooth transitions between question sets
-12. **Progress Indicator**: Show progress through question sets
+7. **Loading States**: Enhanced loading indicators during API calls
+8. **Responsive Design**: Enhanced mobile experience
+9. **Animation**: Add smooth transitions between question sets
+10. **Progress Indicator**: Show progress through question sets
+11. **Error Recovery**: Better error recovery and retry mechanisms
+12. **Code Splitting**: Implement route-based code splitting for better performance
 
 ## Related Documentation
 

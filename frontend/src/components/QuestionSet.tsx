@@ -64,6 +64,23 @@ interface QuestionSetProps {
  *
  * Renders a single question set (one of 10 total sets).
  * Only the active question set is visible; others are hidden via CSS.
+ *
+ * Features:
+ * - Renders different question types based on index:
+ *   - Index 0: General questions (job level, boards, deep mode, etc.)
+ *   - Index 1-8: Technology experience sliders with optional "Add more" fields
+ *   - Index 9: Personal description text field
+ * - Validates duplicate experiences (case-insensitive)
+ * - Shows validation warnings for empty fields, zero sliders, and duplicates
+ * - Memoized validation to prevent unnecessary recalculations
+ *
+ * Props:
+ * - index: Question set index (0-9)
+ * - isActive: Whether this question set is currently visible
+ * - sectionRef: Ref callback for scroll positioning
+ * - formData: Complete form data object
+ * - onFormChange: Callback when form values change
+ * - validationErrors: Validation errors to display
  */
 export default function QuestionSet({
   index,
@@ -171,7 +188,12 @@ export default function QuestionSet({
 
     if (j >= 0 && j < questionConfig.length) {
       const { component: Component, props } = questionConfig[j]!;
-      return <Component key={j} {...props} />;
+      // Type assertion needed because questionConfig contains different component types
+      // with different prop interfaces (MultipleChoice vs SingleChoice).
+      // At runtime, the props are correctly typed for each component, but TypeScript
+      // can't narrow the union type here. The props will always match the component type.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return <Component key={j} {...(props as any)} />;
     }
 
     return null;

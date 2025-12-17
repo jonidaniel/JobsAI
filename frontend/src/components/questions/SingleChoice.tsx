@@ -16,6 +16,26 @@ interface SingleChoiceProps {
  *
  * Renders a group of radio buttons allowing only one selection.
  * Used for questions that require a single answer.
+ *
+ * Features:
+ * - Single selection enforced (radio button behavior)
+ * - Supports option splitting (display options in multiple columns)
+ * - Displays validation errors
+ * - Supports rich label formatting (line breaks, italic, small text)
+ *
+ * Usage:
+ * - Deep mode selection (Yes/No)
+ * - Cover letter count selection (1-10)
+ * - Cover letter style selection (Professional, Friendly, Confident)
+ *
+ * @param keyName - Form data key for this field
+ * @param label - Question label (supports formatting via renderLabel)
+ * @param options - Array of option strings to display
+ * @param value - Current selected value (single string)
+ * @param onChange - Callback when selection changes
+ * @param error - Validation error message (optional)
+ * @param required - Whether field is required
+ * @param splitAt - Number of options before splitting into new row (optional)
  */
 export default function SingleChoice({
   keyName,

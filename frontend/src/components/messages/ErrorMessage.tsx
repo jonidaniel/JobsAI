@@ -2,7 +2,15 @@
  * ErrorMessage Component
  *
  * Displays an error message in a red alert box with an error icon.
- * Used to show user-friendly error messages when form submission fails.
+ * Used to show user-friendly error messages when form submission fails
+ * or API errors occur.
+ *
+ * Features:
+ * - Accessible: Uses `role="alert"` for screen readers
+ * - Visual: Red color scheme with error icon
+ * - Responsive: Centered with max-width constraint
+ *
+ * @param message - User-friendly error message to display
  */
 
 interface ErrorMessageProps {

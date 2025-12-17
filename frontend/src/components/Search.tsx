@@ -43,6 +43,38 @@ type DeliveryMethod = "email" | "download" | null;
  *
  * This is the primary component for the JobsAI application. It manages the complete
  * user flow from questionnaire completion through pipeline execution to document download.
+ *
+ * Responsibilities:
+ * - Form validation and submission
+ * - Delivery method selection (email vs browser download)
+ * - Pipeline initiation and progress tracking
+ * - Error handling and user feedback
+ * - Document download management
+ * - UI state management for all submission states
+ *
+ * State Management:
+ * This component manages extensive state (15+ useState hooks) including:
+ * - Submission state (isSubmitting, error, currentPhase, jobId)
+ * - Delivery method state (deliveryMethod, email, emailError)
+ * - Download state (downloadInfo, showDownloadPrompt, hasDownloaded)
+ * - Form state (formData, validationErrors)
+ * - UI state (showDeliveryMethodPrompt, isRateLimited, isCancelled)
+ * - Submission state ref (justCompleted, savedScrollPosition, hasSuccessfulSubmission)
+ *
+ * Key Features:
+ * - Client-side form validation before submission
+ * - Async pipeline execution with progress polling (download delivery)
+ * - Fire-and-forget email delivery (no polling, persistent UI message)
+ * - Scroll position preservation during downloads
+ * - Rate limit detection and user feedback
+ * - Pipeline cancellation support
+ *
+ * Custom Hooks Used:
+ * - usePipelinePolling: Polls backend for pipeline progress
+ * - useDownload: Handles document downloads from S3
+ *
+ * Note: This component is large (800+ lines) and could benefit from being split
+ * into smaller components (FormSubmission, DeliveryMethodSelector, ProgressTracker, etc.)
  */
 export default function Search() {
   // Submission state management

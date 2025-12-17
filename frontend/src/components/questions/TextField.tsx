@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { DEFAULT_TEXT_FIELD_MAX_LENGTH } from "../../config/constants";
 
 interface TextFieldProps {
   keyName: string;
-  label?: string;
-  label2?: string;
+  label?: string | ReactNode;
+  label2?: string | ReactNode;
   value: string;
   onChange: (keyName: string, value: string) => void;
   error?: string;
@@ -18,6 +18,29 @@ interface TextFieldProps {
  * TextField Component
  *
  * Renders a controlled text input field for user text responses.
+ *
+ * Features:
+ * - Single-line or multi-line (textarea) support
+ * - Character limit enforcement
+ * - Validation error display
+ * - Character count display (optional)
+ * - Custom height support
+ * - Required field indicator
+ *
+ * Usage:
+ * - Personal description (question set 9, multi-line, 3000 char limit)
+ * - Additional technology experience fields (single-line, 50 char limit)
+ *
+ * @param keyName - Form data key for this field
+ * @param label - Primary label text (optional)
+ * @param label2 - Secondary label text (optional)
+ * @param value - Current text value
+ * @param onChange - Callback when text changes
+ * @param error - Validation error message (optional)
+ * @param required - Whether field is required
+ * @param height - Custom height for textarea (optional)
+ * @param maxLength - Maximum character length (default: 50)
+ * @param showValidation - Whether to show character count (optional)
  */
 export default function TextField({
   keyName,
@@ -101,7 +124,7 @@ export default function TextField({
           onChange={handleChange}
           onBlur={handleBlur}
           data-key={keyName}
-          aria-label={label}
+          aria-label={typeof label === "string" ? label : undefined}
           style={{ height }}
           rows={3}
           maxLength={showValidation ? undefined : maxLength}
@@ -115,7 +138,7 @@ export default function TextField({
           onChange={handleChange}
           onBlur={handleBlur}
           data-key={keyName}
-          aria-label={label}
+          aria-label={typeof label === "string" ? label : undefined}
           maxLength={showValidation ? undefined : maxLength}
         />
       )}

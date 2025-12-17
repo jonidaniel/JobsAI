@@ -13,6 +13,22 @@ interface SliderProps {
  *
  * Renders a range input slider for experience level selection (0-7 years).
  * The slider includes visual notch labels showing years of experience ranges.
+ *
+ * Features:
+ * - Range: 0-7 years of experience
+ * - Visual notches: Shows experience ranges (0, 1-2, 3-4, 5-7)
+ * - Accessible: Proper label association
+ * - Disabled state support
+ *
+ * Usage:
+ * - Technology experience levels (languages, databases, frameworks, etc.)
+ * - Question sets 1-8 (technology-related question sets)
+ *
+ * @param keyName - Form data key for this field
+ * @param label - Technology/tool name to display
+ * @param value - Current slider value (0-7)
+ * @param onChange - Callback when slider value changes
+ * @param disabled - Whether slider is disabled (optional)
  */
 export default function Slider({
   keyName,

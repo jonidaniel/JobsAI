@@ -27,10 +27,45 @@ interface UsePipelinePollingReturn {
 /**
  * Custom hook for polling pipeline progress updates.
  *
- * Handles polling logic for job progress, including:
- * - Starting/stopping polling intervals
- * - Handling progress updates, completion, errors, and cancellation
- * - Preventing stale polling updates when jobs are replaced
+ * This hook manages the polling mechanism for tracking async pipeline execution.
+ * It prevents race conditions by checking job IDs before updating state and
+ * automatically stops polling when jobs complete, error, or are cancelled.
+ *
+ * Features:
+ * - Starts/stops polling intervals automatically
+ * - Polls `/api/progress/{job_id}` every 2 seconds
+ * - Prevents stale polling updates when jobs are replaced (via currentJobIdRef)
+ * - Handles progress updates, completion, errors, and cancellation
+ * - Updates UI state (phase, error, download info) based on API responses
+ * - Automatically stops polling on completion, error, or 404 (job not found)
+ *
+ * Race Condition Prevention:
+ * - Uses `currentJobIdRef` to track the current job ID
+ * - Checks `currentJobIdRef.current !== job_id` before updating state
+ * - Stops polling if job ID has changed (new job started)
+ *
+ * @param options - Configuration object with state setters and refs
+ * @returns Object with `startPolling` and `stopPolling` functions
+ *
+ * @example
+ * ```typescript
+ * const { startPolling, stopPolling } = usePipelinePolling({
+ *   setCurrentPhase,
+ *   setIsSubmitting,
+ *   setError,
+ *   setJobId,
+ *   setDownloadInfo,
+ *   setShowDownloadPrompt,
+ *   submissionState,
+ *   currentJobIdRef,
+ * });
+ *
+ * // Start polling after getting job_id from API
+ * startPolling(job_id);
+ *
+ * // Stop polling manually (e.g., on cancel)
+ * stopPolling();
+ * ```
  */
 export function usePipelinePolling({
   setCurrentPhase,

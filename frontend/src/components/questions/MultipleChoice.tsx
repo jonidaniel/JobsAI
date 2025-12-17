@@ -16,9 +16,27 @@ interface MultipleChoiceProps {
  * MultipleChoice Component
  *
  * Renders a group of checkboxes allowing multiple selections.
- * Used for questions that allow selecting multiple options, such as:
- * - Job level (Expert, Intermediate, Entry, Intern)
- * - Job boards (Duunitori, Jobly)
+ * Used for questions that allow selecting multiple options.
+ *
+ * Features:
+ * - Supports max selections limit (e.g., max 2 for job level)
+ * - Supports adjacent selection requirement (e.g., job level must be adjacent)
+ * - Displays validation errors
+ * - Supports rich label formatting (line breaks, italic, small text)
+ *
+ * Usage:
+ * - Job level selection (max 2, must be adjacent)
+ * - Job boards selection (multiple allowed)
+ *
+ * @param keyName - Form data key for this field
+ * @param label - Question label (supports formatting via renderLabel)
+ * @param options - Array of option strings to display
+ * @param value - Current selected values (array of strings)
+ * @param onChange - Callback when selection changes
+ * @param error - Validation error message (optional)
+ * @param required - Whether field is required
+ * @param maxSelections - Maximum number of selections allowed
+ * @param requireAdjacent - Whether selected options must be adjacent in options array
  */
 export default function MultipleChoice({
   keyName,

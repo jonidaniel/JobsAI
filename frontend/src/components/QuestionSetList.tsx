@@ -18,14 +18,31 @@ interface QuestionSetListProps {
 }
 
 /**
- * QuestionSets Component
+ * QuestionSetList Component
  *
  * Main component for managing and displaying question sets.
- * Handles:
+ *
+ * Responsibilities:
  * - Navigation between 10 question sets (prev/next buttons)
- * - Form state management for all inputs
- * - Synchronizing form data with parent component
- * - Smooth scrolling to active question set
+ * - Form state management for all inputs across all question sets
+ * - Synchronizing form data with parent component via callback
+ * - Smooth scrolling to active question set with offset
+ * - Handling initial mount scroll behavior (skip on remount after submission)
+ * - Managing user navigation vs programmatic navigation
+ *
+ * Props:
+ * - onFormDataChange: Callback to sync form data with parent
+ * - validationErrors: Validation errors from parent for display
+ * - activeIndex: External control of active question set (optional)
+ * - onActiveIndexChange: Callback when active index changes externally
+ * - onCurrentIndexChange: Callback to notify parent of current index
+ * - skipInitialScroll: Skip scroll on initial mount (used after submission)
+ *
+ * State:
+ * - formData: Complete form data object for all question sets
+ * - currentIndex: Currently visible question set index (0-9)
+ * - isInitialMount: Tracks if this is the first render
+ * - isUserNavigation: Tracks if navigation was user-initiated (for scroll behavior)
  */
 export default function QuestionSetList({
   onFormDataChange,

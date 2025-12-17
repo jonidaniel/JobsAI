@@ -36,11 +36,47 @@ interface DownloadResponse {
 /**
  * Custom hook for handling document downloads.
  *
- * Handles downloading documents from S3 using presigned URLs, including:
- * - Single and multiple document downloads
- * - S3 presigned URL handling
- * - Fallback to direct blob download
- * - Scroll position preservation
+ * This hook manages the download flow for generated cover letters, supporting
+ * both single and multiple document downloads. It handles S3 presigned URLs
+ * and falls back to direct blob downloads when needed.
+ *
+ * Features:
+ * - Downloads single or multiple documents from S3 presigned URLs
+ * - Handles both `/api/download/{job_id}` (presigned URLs) and direct blob responses
+ * - Preserves scroll position during download (saves before, restores after)
+ * - Manages download prompt state and user responses
+ * - Updates submission state after successful download
+ * - Handles errors gracefully with user-friendly messages
+ *
+ * Download Flow:
+ * 1. User clicks "Download" button
+ * 2. Fetches download URL(s) from `/api/download/{job_id}`
+ * 3. If JSON response: extracts presigned S3 URLs and downloads each
+ * 4. If blob response: downloads directly
+ * 5. Preserves scroll position throughout
+ * 6. Updates UI state after completion
+ *
+ * @param options - Configuration object with state setters and refs
+ * @returns Object with download functions:
+ *   - downloadDocument: Download from API endpoint
+ *   - downloadFromS3: Download from S3 presigned URL
+ *   - handleDownloadYes: Handler for "Download" button click
+ *
+ * @example
+ * ```typescript
+ * const { handleDownloadYes } = useDownload({
+ *   downloadInfo,
+ *   submissionState,
+ *   setShowDownloadPrompt,
+ *   setDownloadInfo,
+ *   setHasDownloaded,
+ *   setHasRespondedToPrompt,
+ *   setError,
+ * });
+ *
+ * // Use in component
+ * <button onClick={handleDownloadYes}>Download</button>
+ * ```
  */
 export function useDownload({
   downloadInfo,

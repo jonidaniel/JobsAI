@@ -1,14 +1,21 @@
 import type { ReactNode } from "react";
 
 /**
- * Shared utility for rendering labels with formatting support
- * Used by MultipleChoice and SingleChoice components
+ * Label Rendering Utility
  *
- * Supports:
- * - Line breaks (\n)
- * - Italic text (*text*)
- * - Red asterisk (* at end of line)
- * - Small text ({small}text{/small})
+ * Shared utility for rendering labels with rich formatting support.
+ * Used by MultipleChoice and SingleChoice components to display
+ * question labels with various formatting options.
+ *
+ * Supported Formatting:
+ * - **Line breaks**: `\n` creates line breaks
+ * - **Italic text**: `*text*` renders as italic
+ * - **Red asterisk**: ` *` at end of line renders as red asterisk (required field indicator)
+ * - **Small text**: `{small}text{/small}` renders text in smaller font size
+ *
+ * Formatting can be combined (e.g., `*Italic*{small}small text{/small} *`)
+ *
+ * @module utils/labelRenderer
  */
 
 interface SmallTextPart {
