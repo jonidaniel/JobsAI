@@ -6,7 +6,7 @@ import { TOTAL_QUESTION_SETS } from "../config/questionSet";
 import { GENERAL_QUESTION_KEYS } from "../config/generalQuestions";
 import { SLIDER_DATA } from "../config/sliders";
 import { SCROLL_OFFSET, SCROLL_DELAY } from "../config/constants";
-import type { FormData, ValidationErrors } from "../types";
+import type { FormData, ValidationErrors, FormDataValue } from "../types";
 
 interface QuestionSetListProps {
   onFormDataChange: (formData: FormData) => void;
@@ -134,11 +134,8 @@ export default function QuestionSetList({
       isInitialMount.current = false;
       if (!skipInitialScroll) {
         window.scrollTo({ top: 0, behavior: "smooth" });
-      } else {
-        // If we're skipping scroll, ensure we don't scroll at all
-        // This is a remount after submission, preserve position
-        return;
       }
+      // If skipInitialScroll is true, this is a remount after submission, preserve position
       return;
     }
 
