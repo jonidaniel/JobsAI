@@ -221,7 +221,8 @@ export default function Search() {
       e.stopPropagation();
     }
 
-    // If this is a "Find Again" click while submitting (e.g., during email delivery), just reset UI
+    // If this is a "Find Again" click while submitting, just reset UI
+    // (Note: email delivery should never be in submitting state, but handle it anyway)
     if (isSubmitting) {
       stopPolling();
       resetFormState(true);
@@ -432,14 +433,49 @@ export default function Search() {
       }
 
       const { job_id } = (await startResponse.json()) as { job_id: string };
-      setJobId(job_id);
 
-      // Step 2: Start polling for progress updates
+      // For email delivery: fire-and-forget, no polling, no UI updates
+      if (deliveryMethod === "email") {
+        // Reset UI state immediately - let pipeline run in background
+        setIsSubmitting(false);
+        setShowDeliveryMethodPrompt(false);
+        setDeliveryMethod(null);
+        setEmail("");
+        setEmailError(null);
+        setCurrentPhase(null);
+        setJobId(null);
+        currentJobIdRef.current = null;
+        // Don't track this job at all - completely fire-and-forget
+        return;
+      }
+
+      // For download delivery: track progress with polling
+      setJobId(job_id);
       startPolling(job_id);
     } catch (error) {
-      // Stop polling if it was started
+      // Only handle errors for download delivery or rate limiting
+      // For email delivery errors (except rate limit), fail silently
+      if (deliveryMethod === "email") {
+        // For email, only show rate limit errors, ignore everything else
+        const errorMessage = getErrorMessage(error);
+        if (errorMessage === "RATE_LIMIT_EXCEEDED" || isRateLimited) {
+          setIsRateLimited(true);
+          setError(null);
+        }
+        // Reset UI state even on error (except rate limit)
+        setIsSubmitting(false);
+        setShowDeliveryMethodPrompt(false);
+        setDeliveryMethod(null);
+        setEmail("");
+        setEmailError(null);
+        setCurrentPhase(null);
+        setJobId(null);
+        currentJobIdRef.current = null;
+        return;
+      }
+
+      // For download delivery: handle all errors normally
       stopPolling();
-      // Check if error message indicates rate limit (fallback check)
       const errorMessage = getErrorMessage(error);
       if (errorMessage === "RATE_LIMIT_EXCEEDED") {
         setIsRateLimited(true);
