@@ -222,7 +222,6 @@ export default function Search() {
     }
 
     // If this is a "Find Again" click while submitting, just reset UI
-    // (Note: email delivery should never be in submitting state, but handle it anyway)
     if (isSubmitting) {
       stopPolling();
       resetFormState(true);
@@ -434,18 +433,17 @@ export default function Search() {
 
       const { job_id } = (await startResponse.json()) as { job_id: string };
 
-      // For email delivery: fire-and-forget, no polling, no UI updates
+      // For email delivery: fire-and-forget, no polling, but keep UI state
       if (deliveryMethod === "email") {
-        // Reset UI state immediately - let pipeline run in background
-        setIsSubmitting(false);
+        // Keep isSubmitting and deliveryMethod set to show "Thank you..." message
+        // Hide the delivery method prompt, but keep the rest of the state
         setShowDeliveryMethodPrompt(false);
-        setDeliveryMethod(null);
-        setEmail("");
         setEmailError(null);
         setCurrentPhase(null);
         setJobId(null);
         currentJobIdRef.current = null;
-        // Don't track this job at all - completely fire-and-forget
+        // Don't poll - let pipeline run in background silently
+        // Keep isSubmitting=true and deliveryMethod="email" to persist the UI message
         return;
       }
 
@@ -461,16 +459,24 @@ export default function Search() {
         if (errorMessage === "RATE_LIMIT_EXCEEDED" || isRateLimited) {
           setIsRateLimited(true);
           setError(null);
+          // On rate limit, reset everything
+          setIsSubmitting(false);
+          setShowDeliveryMethodPrompt(false);
+          setDeliveryMethod(null);
+          setEmail("");
+          setEmailError(null);
+          setCurrentPhase(null);
+          setJobId(null);
+          currentJobIdRef.current = null;
+        } else {
+          // For other errors, keep UI state (show "Thank you..." message)
+          // User won't see the error, but UI stays in submitted state
+          setShowDeliveryMethodPrompt(false);
+          setEmailError(null);
+          setCurrentPhase(null);
+          setJobId(null);
+          currentJobIdRef.current = null;
         }
-        // Reset UI state even on error (except rate limit)
-        setIsSubmitting(false);
-        setShowDeliveryMethodPrompt(false);
-        setDeliveryMethod(null);
-        setEmail("");
-        setEmailError(null);
-        setCurrentPhase(null);
-        setJobId(null);
-        currentJobIdRef.current = null;
         return;
       }
 
