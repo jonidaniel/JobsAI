@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useCallback } from "react";
 import { API_ENDPOINTS } from "../config/api";
 
 /**
@@ -39,13 +39,14 @@ export function usePipelinePolling({
 
   /**
    * Stops the polling interval if it's running.
+   * Memoized to ensure stable reference for useEffect dependencies.
    */
-  const stopPolling = () => {
+  const stopPolling = useCallback(() => {
     if (pollingIntervalRef.current) {
       clearInterval(pollingIntervalRef.current);
       pollingIntervalRef.current = null;
     }
-  };
+  }, []);
 
   /**
    * Starts polling for progress updates for a given job ID.
