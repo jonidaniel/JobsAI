@@ -8,11 +8,11 @@
 import type { PipelinePhase } from "../../types";
 
 const PHASE_MESSAGES: Record<PipelinePhase, string> = {
-  profiling: "2/6 Creating your profile...",
-  searching: "3/6 Searching for jobs...",
-  scoring: "4/6 Scoring the jobs...",
-  analyzing: "5/6 Doing analysis...",
-  generating: "6/6 Generating cover letters...",
+  profiling: "2/6 Creating profile...",
+  searching: "3/6 Searching jobs...",
+  scoring: "4/6 Scoring jobs...",
+  analyzing: "5/6 Analyzing jobs...",
+  generating: "6/6 Generating...",
 };
 
 interface ProgressTrackerProps {
