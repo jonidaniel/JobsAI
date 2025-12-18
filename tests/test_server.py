@@ -25,8 +25,8 @@ mock_payload = {
 }
 
 
-@patch("jobsai.api.server.invoke_worker_lambda")
-@patch("jobsai.api.server.store_job_state")
+@patch("jobsai.api.handlers.lambda_invocation.invoke_worker_lambda")
+@patch("jobsai.api.routes.pipeline.store_job_state")
 def test_start_pipeline_success(mock_store_state, mock_invoke_lambda):
     """Test successful pipeline start."""
     response = client.post("/api/start", json=mock_payload)
@@ -43,9 +43,12 @@ def test_start_pipeline_success(mock_store_state, mock_invoke_lambda):
     assert mock_invoke_lambda.called
 
 
-@patch("jobsai.api.server.invoke_worker_lambda", side_effect=Exception("Lambda error"))
-@patch("jobsai.api.server.store_job_state")
-@patch("jobsai.api.server.update_job_status")
+@patch(
+    "jobsai.api.handlers.lambda_invocation.invoke_worker_lambda",
+    side_effect=Exception("Lambda error"),
+)
+@patch("jobsai.api.routes.pipeline.store_job_state")
+@patch("jobsai.api.routes.pipeline.update_job_status")
 def test_start_pipeline_lambda_error(
     mock_update_status, mock_store_state, mock_invoke_lambda
 ):
@@ -73,7 +76,7 @@ def test_start_pipeline_validation_error():
     assert "message" in data
 
 
-@patch("jobsai.api.server.get_job_state")
+@patch("jobsai.api.utils.state_helpers.get_job_state_with_fallback")
 def test_get_progress_running(mock_get_state):
     """Test getting progress for running job."""
     mock_get_state.return_value = {
@@ -90,7 +93,7 @@ def test_get_progress_running(mock_get_state):
     assert data["progress"]["phase"] == "profiling"
 
 
-@patch("jobsai.api.server.get_job_state")
+@patch("jobsai.api.utils.state_helpers.get_job_state_with_fallback")
 def test_get_progress_complete_single(mock_get_state):
     """Test getting progress for completed job (single document)."""
     mock_get_state.return_value = {
@@ -109,7 +112,7 @@ def test_get_progress_complete_single(mock_get_state):
     assert "filename" in data
 
 
-@patch("jobsai.api.server.get_job_state")
+@patch("jobsai.api.utils.state_helpers.get_job_state_with_fallback")
 def test_get_progress_complete_multiple(mock_get_state):
     """Test getting progress for completed job (multiple documents)."""
     mock_get_state.return_value = {
@@ -135,7 +138,7 @@ def test_get_progress_complete_multiple(mock_get_state):
     assert len(data["filenames"]) == 2
 
 
-@patch("jobsai.api.server.get_job_state")
+@patch("jobsai.api.utils.state_helpers.get_job_state_with_fallback")
 def test_get_progress_error(mock_get_state):
     """Test getting progress for failed job."""
     mock_get_state.return_value = {
@@ -152,10 +155,12 @@ def test_get_progress_error(mock_get_state):
     assert "Test error" in data["error"]
 
 
-@patch("jobsai.api.server.get_job_state")
+@patch("jobsai.api.utils.state_helpers.get_job_state_with_fallback")
 def test_get_progress_not_found(mock_get_state):
     """Test getting progress for non-existent job."""
-    mock_get_state.return_value = None
+    from fastapi import HTTPException
+
+    mock_get_state.side_effect = HTTPException(status_code=404, detail="Job not found")
 
     response = client.get("/api/progress/non-existent-job")
 
@@ -164,8 +169,8 @@ def test_get_progress_not_found(mock_get_state):
     assert "not found" in data["detail"].lower()
 
 
-@patch("jobsai.api.server.get_job_state")
-@patch("jobsai.utils.state_manager.update_job_status")
+@patch("jobsai.api.utils.state_helpers.get_job_state_with_fallback")
+@patch("jobsai.api.routes.pipeline.update_job_status")
 def test_cancel_pipeline(mock_update_status, mock_get_state):
     """Test cancelling a pipeline."""
     mock_get_state.return_value = {
@@ -181,8 +186,8 @@ def test_cancel_pipeline(mock_update_status, mock_get_state):
     assert mock_update_status.called
 
 
-@patch("jobsai.api.server.get_job_state")
-@patch("jobsai.utils.state_manager.get_presigned_s3_url")
+@patch("jobsai.api.utils.state_helpers.get_job_state_with_fallback")
+@patch("jobsai.api.routes.download.get_presigned_s3_url")
 def test_download_document_single(mock_get_url, mock_get_state):
     """Test downloading single document."""
     mock_get_state.return_value = {
@@ -202,8 +207,8 @@ def test_download_document_single(mock_get_url, mock_get_state):
     assert "filename" in data
 
 
-@patch("jobsai.api.server.get_job_state")
-@patch("jobsai.utils.state_manager.get_presigned_s3_url")
+@patch("jobsai.api.utils.state_helpers.get_job_state_with_fallback")
+@patch("jobsai.api.routes.download.get_presigned_s3_url")
 def test_download_document_multiple(mock_get_url, mock_get_state):
     """Test downloading multiple documents."""
     mock_get_state.return_value = {
@@ -230,8 +235,8 @@ def test_download_document_multiple(mock_get_url, mock_get_state):
     assert "count" in data
 
 
-@patch("jobsai.api.server.get_job_state")
-@patch("jobsai.utils.state_manager.get_presigned_s3_url")
+@patch("jobsai.api.utils.state_helpers.get_job_state_with_fallback")
+@patch("jobsai.api.routes.download.get_presigned_s3_url")
 def test_download_document_by_index(mock_get_url, mock_get_state):
     """Test downloading specific document by index."""
     mock_get_state.return_value = {
@@ -257,7 +262,7 @@ def test_download_document_by_index(mock_get_url, mock_get_state):
     assert "cover_letter_2.docx" in data["filename"]
 
 
-@patch("jobsai.api.server.get_job_state")
+@patch("jobsai.api.utils.state_helpers.get_job_state_with_fallback")
 def test_download_document_not_ready(mock_get_state):
     """Test downloading when job is not complete."""
     mock_get_state.return_value = {
