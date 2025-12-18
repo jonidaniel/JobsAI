@@ -257,7 +257,7 @@ def _parse_job_card(job_card: BeautifulSoup, config: ScraperConfig) -> Dict[str,
         if company_tag.has_attr("data-company"):
             company = company_tag.get("data-company", "")
         else:
-            # Fallback to text content (Jobly style)
+            # Fallback to text content (Jobly and Indeed style)
             company = company_tag.get_text(strip=True)
     else:
         company = ""
@@ -282,7 +282,11 @@ def _parse_job_card(job_card: BeautifulSoup, config: ScraperConfig) -> Dict[str,
     full_url = urljoin(config.host_url, href) if href else ""
 
     # Parse published date (handle both text and datetime attribute)
-    published_tag = job_card.select_one(config.published_date_selector)
+    published_tag = (
+        job_card.select_one(config.published_date_selector)
+        if config.published_date_selector
+        else None
+    )
     if published_tag:
         if published_tag.has_attr("datetime"):
             published = published_tag.get("datetime", "")
@@ -296,6 +300,13 @@ def _parse_job_card(job_card: BeautifulSoup, config: ScraperConfig) -> Dict[str,
     if config.description_snippet_selector:
         snippet_tag = job_card.select_one(config.description_snippet_selector)
         snippet = snippet_tag.get_text(strip=True) if snippet_tag else None
+
+    logger.info("TITLE: ", title)
+    logger.info("COMPANY: ", company)
+    logger.info("LOCATION: ", location)
+    logger.info("URL: ", full_url)
+    logger.info("SNIPPET: ", snippet)
+    logger.info("PUBLISHED: ", published)
 
     return {
         "title": title,

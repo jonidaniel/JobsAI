@@ -11,7 +11,7 @@ DESCRIPTION:
     3. Returns a list of normalized job dicts (doesn't persist to disk)
 
 URL SCHEME:
-    Template:         https://www.jobly.fi/en/jobs?search={query_slug}&page={page}
+    Template:         https://www.jobly.fi/en/jobs?search={query_encoded}&page={page}
     Example:          https://www.jobly.fi/en/jobs?search=python-developer&page=2
 
 HTML PARSING STRATEGY:

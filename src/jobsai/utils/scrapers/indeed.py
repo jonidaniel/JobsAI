@@ -10,7 +10,7 @@ DESCRIPTION:
     2. Returns a list of normalized job dicts (doesn't persist to disk)
 
 URL SCHEME:
-    Template:         https://www.indeed.com/jobs?q={query_slug}&start={start}
+    Template:         https://www.indeed.com/jobs?q={query_encoded}&start={start}
     Example:          https://www.indeed.com/jobs?q=python+developer&start=10
 
 HTML PARSING STRATEGY:

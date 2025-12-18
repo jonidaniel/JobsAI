@@ -34,7 +34,7 @@ class ScraperConfig:
     """
 
     # Basic identification
-    name: str  # "duunitori" or "jobly"
+    name: str  # "duunitori", "jobly", or "indeed"
     host_url: str
     search_url_template: str
     headers: Dict[str, str]
@@ -51,7 +51,9 @@ class ScraperConfig:
     company_selector: str
     location_selector: str
     url_selector: str
-    published_date_selector: str
+    published_date_selector: Optional[
+        str
+    ]  # Can be None (e.g., Indeed doesn't show dates on search results)
     # Full description selectors (for deep mode) - required, must come before optional fields
     full_description_selectors: List[str]
     # Optional fields (must come after required fields)
@@ -70,55 +72,9 @@ def _jobly_query_encoder(query: str) -> str:
     return quote_plus(query.strip())
 
 
-def _jobly_fallback_description(soup: BeautifulSoup) -> str:
-    """Fallback strategy for Jobly: find longest text block."""
-    divs = soup.find_all(["div", "section", "article"])
-    best_guess = ""
-    longest = 0
-
-    for div in divs:
-        text_content = div.get_text(" ", strip=True)
-        if len(text_content) > longest and len(text_content) > 100:
-            longest = len(text_content)
-            best_guess = text_content
-
-    return best_guess
-
-
 def _indeed_query_encoder(query: str) -> str:
     """Encode query for Indeed: simple URL-encode with plus signs."""
     return quote_plus(query.strip())
-
-
-def _indeed_fallback_description(soup: BeautifulSoup) -> str:
-    """Fallback strategy for Indeed: find job description in common containers."""
-    # Indeed typically uses specific containers for job descriptions
-    selectors = [
-        "#jobDescriptionText",
-        ".jobsearch-jobDescriptionText",
-        "[data-testid='job-description']",
-        ".jobsearch-JobComponent-description",
-    ]
-
-    for selector in selectors:
-        element = soup.select_one(selector)
-        if element:
-            text = element.get_text(" ", strip=True)
-            if len(text) > 100:
-                return text
-
-    # Fallback: find longest text block
-    divs = soup.find_all(["div", "section", "article"])
-    best_guess = ""
-    longest = 0
-
-    for div in divs:
-        text_content = div.get_text(" ", strip=True)
-        if len(text_content) > longest and len(text_content) > 100:
-            longest = len(text_content)
-            best_guess = text_content
-
-    return best_guess
 
 
 # Duunitori scraper configuration
@@ -127,16 +83,21 @@ DUUNITORI_CONFIG = ScraperConfig(
     host_url=HOST_URL_DUUNITORI,
     search_url_template=SEARCH_URL_BASE_DUUNITORI,
     headers=HEADERS_DUUNITORI,
+    # WORKS
     job_card_selector=".grid-sandbox.grid-sandbox--tight-bottom.grid-sandbox--tight-top .grid.grid--middle.job-box.job-box--lg",
     pagination_threshold=20,
     query_encoder=_duunitori_query_encoder,
-    title_selector=".job-box__title",
-    company_selector=".job-box__hover.gtm-search-result",
-    location_selector=".job-box__job-location",
-    url_selector=".job-box__hover.gtm-search-result",
-    published_date_selector=".job-box__job-posted",
+    title_selector=".job-box__title",  # WORKS
+    company_selector=".job-box__hover.gtm-search-result",  # NO WORK !!!
+    location_selector=".job-box__job-location",  # WORKS
+    url_selector=".job-box__hover.gtm-search-result",  # WORKS
+    published_date_selector=".job-box__job-posted",  # WORKS
     description_snippet_selector=None,
-    full_description_selectors=[".description", ".description--jobentry"],
+    full_description_selectors=[  # NO WORK !!!
+        ".gtm-apply-clicks",
+        ".description",
+        ".description--jobentry",
+    ],
     fallback_description_strategy=None,
 )
 
@@ -146,25 +107,17 @@ JOBLY_CONFIG = ScraperConfig(
     host_url=HOST_URL_JOBLY,
     search_url_template=SEARCH_URL_BASE_JOBLY,
     headers=HEADERS_JOBLY,
-    job_card_selector=".job__content.clearfix",
+    job_card_selector=".job__content.clearfix",  # WORKS
     pagination_threshold=10,
     query_encoder=_jobly_query_encoder,
-    title_selector=".node__title",
-    company_selector=".company-name, .company, [data-company], .employer",
-    location_selector=".location, .job-location, [data-location], .city, .region",
-    url_selector="a[href*='/jobs/'], a[href*='/job/']",
-    published_date_selector=".date, .published, .posted, [data-date], .job-date, time",
-    description_snippet_selector=".description, .snippet, .summary, .job-description",
-    full_description_selectors=[
-        ".job-description",
-        ".description",
-        ".job-details",
-        ".content",
-        ".job-content",
-        "main article",
-        "[role='article']",
-    ],
-    fallback_description_strategy=_jobly_fallback_description,
+    title_selector=".node__title a",  # WORKS
+    company_selector=".recruiter-company-profile-job-organization a",  # WORKS
+    location_selector=".location span",  # WORKS
+    url_selector=".node__title a",  # WORKS
+    published_date_selector=".date",  # WORKS
+    description_snippet_selector=None,
+    full_description_selectors=[".field__item.even", "p"],  # NO WORK !!!
+    fallback_description_strategy=None,
 )
 
 # Indeed scraper configuration
@@ -173,21 +126,17 @@ INDEED_CONFIG = ScraperConfig(
     host_url=HOST_URL_INDEED,
     search_url_template=SEARCH_URL_BASE_INDEED,
     headers=HEADERS_INDEED,
-    job_card_selector=".job_seen_beacon, .slider_container, [data-jk]",
+    job_card_selector=".job_seen_beacon",  # WORKS
     pagination_threshold=10,
     query_encoder=_indeed_query_encoder,
-    title_selector=".jobTitle a, .jobTitle span, h2.jobTitle",
-    company_selector=".companyName, [data-testid='company-name'], .company",
-    location_selector=".companyLocation, [data-testid='job-location'], .location",
-    url_selector=".jobTitle a, h2.jobTitle a",
-    published_date_selector=".date, .dateText, [data-testid='job-date']",
-    description_snippet_selector=".summary, .job-snippet",
-    full_description_selectors=[
-        "#jobDescriptionText",
-        ".jobsearch-jobDescriptionText",
-        "[data-testid='job-description']",
-        ".jobsearch-JobComponent-description",
-        ".jobsearch-jobDescriptionText-container",
+    title_selector=".jcs-JobTitle.css-1baag51.eu4oa1w0 span",  # WORKS
+    company_selector=".css-19eicqx.eu4oa1w0",  # WORKS
+    location_selector=".css-1f06pz4.eu4oa1w0",  # WORKS
+    url_selector=".jcs-JobTitle.css-1baag51.eu4oa1w0",  # WORKS
+    published_date_selector=None,
+    description_snippet_selector=None,
+    full_description_selectors=[  # WORKS
+        ".jobsearch-JobComponent-description.css-jsfa0i.eu4oa1w0"
     ],
-    fallback_description_strategy=_indeed_fallback_description,
+    fallback_description_strategy=None,
 )
