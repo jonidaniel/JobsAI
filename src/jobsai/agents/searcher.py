@@ -7,15 +7,22 @@ service supports multiple job boards (Duunitori, Jobly) and can operate in
 "deep mode" to fetch full job descriptions.
 
 The service:
-1. Searches each job board with each keyword query
+1. Searches each job board with each keyword query (job boards scraped in parallel)
 2. Saves raw job listings to disk for debugging
 3. Deduplicates jobs across queries and boards (by URL)
 4. Returns a consolidated list of unique job listings
+
+Performance:
+    Job boards are scraped in parallel for each query using ThreadPoolExecutor,
+    significantly reducing total scraping time when multiple boards are used.
+    Queries are processed sequentially to avoid overwhelming job boards with
+    too many concurrent requests.
 """
 
 import os
 import json
-from typing import List, Dict, Optional, Callable, Any
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import List, Dict, Optional, Callable, Any, Tuple
 
 from jobsai.config.paths import RAW_JOB_LISTING_PATH
 from jobsai.utils.exceptions import CancellationError
@@ -60,6 +67,7 @@ class SearcherService:
         """Search all specified job boards using candidate-generated keywords.
 
         Executes searches across multiple job boards with each keyword query.
+        Job boards are scraped in parallel for each query to improve performance.
         Each search result is saved to disk for debugging, and all results are
         deduplicated before returning.
 
@@ -90,55 +98,27 @@ class SearcherService:
         """
         all_jobs = []
 
-        # Search each job board with each keyword query
+        # Search each keyword query sequentially, but parallelize job boards within each query
         # This creates a cartesian product: all boards × all keywords
+        # Parallelization: For each query, scrape all boards simultaneously
         for query in keywords:
             # Check for cancellation before processing each query
             if cancellation_check and cancellation_check():
                 logger.info(" Job search cancelled by user")
                 raise CancellationError("Pipeline cancelled during job search")
 
-            for job_board in job_boards:
-                # Check for cancellation before processing each job board
-                if cancellation_check and cancellation_check():
-                    logger.info(" Job search cancelled by user")
-                    raise CancellationError("Pipeline cancelled during job search")
+            # Scrape all job boards in parallel for this query
+            query_results = self._scrape_boards_parallel(
+                query, job_boards, deep_mode, cancellation_check
+            )
 
-                logger.info(" Searching %s for query '%s'", job_board, query)
+            # Check for cancellation after parallel scraping
+            if cancellation_check and cancellation_check():
+                logger.info(" Job search cancelled by user")
+                raise CancellationError("Pipeline cancelled during job search")
 
-                # Cache lowercase job board name to avoid repeated .lower() calls
-                job_board_lower = job_board.lower()
-
-                # Route to appropriate scraper based on job board name
-                # Pass cancellation_check to scrapers for checking during long operations
-                if job_board_lower == "duunitori":
-                    jobs = scrape_duunitori(
-                        query,
-                        deep_mode=deep_mode,
-                        cancellation_check=cancellation_check,
-                    )
-                elif job_board_lower == "jobly":
-                    jobs = scrape_jobly(
-                        query,
-                        deep_mode=deep_mode,
-                        cancellation_check=cancellation_check,
-                    )
-                else:
-                    # Unknown job board - skip with empty result
-                    logger.warning(
-                        "Unknown job board",
-                        extra={
-                            "extra_fields": {"job_board": job_board, "query": query}
-                        },
-                    )
-                    jobs = []
-
-                # Check for cancellation after scraping (before saving)
-                if cancellation_check and cancellation_check():
-                    logger.info(" Job search cancelled by user")
-                    raise CancellationError("Pipeline cancelled during job search")
-
-                # Collect jobs and save to disk for debugging (if enabled)
+            # Collect all jobs from this query
+            for job_board, jobs in query_results:
                 all_jobs.extend(jobs)
                 self._save_raw_jobs(jobs, job_board, query)
 
@@ -148,6 +128,139 @@ class SearcherService:
     # ------------------------------
     # Internal functions
     # ------------------------------
+
+    def _scrape_single_board(
+        self,
+        query: str,
+        job_board: str,
+        deep_mode: bool,
+        cancellation_check: Optional[Callable[[], bool]],
+    ) -> Tuple[str, List[Dict]]:
+        """Scrape a single job board with a single query.
+
+        Helper function for parallel execution. Returns the job board name
+        along with the results for proper result association.
+
+        Args:
+            query: Search query string
+            job_board: Job board name (e.g., "Duunitori", "Jobly")
+            deep_mode: Whether to fetch full job descriptions
+            cancellation_check: Optional cancellation check function
+
+        Returns:
+            Tuple[str, List[Dict]]: (job_board_name, list_of_jobs)
+
+        Raises:
+            CancellationError: If cancellation_check returns True
+        """
+        logger.info(" Searching %s for query '%s'", job_board, query)
+
+        # Cache lowercase job board name to avoid repeated .lower() calls
+        job_board_lower = job_board.lower()
+
+        # Route to appropriate scraper based on job board name
+        # Pass cancellation_check to scrapers for checking during long operations
+        if job_board_lower == "duunitori":
+            jobs = scrape_duunitori(
+                query,
+                deep_mode=deep_mode,
+                cancellation_check=cancellation_check,
+            )
+        elif job_board_lower == "jobly":
+            jobs = scrape_jobly(
+                query,
+                deep_mode=deep_mode,
+                cancellation_check=cancellation_check,
+            )
+        else:
+            # Unknown job board - skip with empty result
+            logger.warning(
+                "Unknown job board",
+                extra={"extra_fields": {"job_board": job_board, "query": query}},
+            )
+            jobs = []
+
+        return (job_board, jobs)
+
+    def _scrape_boards_parallel(
+        self,
+        query: str,
+        job_boards: List[str],
+        deep_mode: bool,
+        cancellation_check: Optional[Callable[[], bool]],
+    ) -> List[Tuple[str, List[Dict]]]:
+        """Scrape multiple job boards in parallel for a single query.
+
+        Uses ThreadPoolExecutor to scrape all job boards simultaneously,
+        significantly reducing total scraping time when multiple boards are used.
+
+        Args:
+            query: Search query string
+            job_boards: List of job board names to scrape
+            deep_mode: Whether to fetch full job descriptions
+            cancellation_check: Optional cancellation check function
+
+        Returns:
+            List[Tuple[str, List[Dict]]]: List of (job_board_name, list_of_jobs) tuples
+
+        Raises:
+            CancellationError: If cancellation_check returns True during execution
+        """
+        results = []
+
+        # Use ThreadPoolExecutor to scrape all boards in parallel
+        # max_workers is set to number of boards (typically 2)
+        with ThreadPoolExecutor(max_workers=len(job_boards)) as executor:
+            # Submit all scraping tasks
+            future_to_board = {
+                executor.submit(
+                    self._scrape_single_board,
+                    query,
+                    board,
+                    deep_mode,
+                    cancellation_check,
+                ): board
+                for board in job_boards
+            }
+
+            # Collect results as they complete
+            for future in as_completed(future_to_board):
+                # Check for cancellation before processing each completed result
+                if cancellation_check and cancellation_check():
+                    # Cancel remaining futures
+                    for f in future_to_board:
+                        f.cancel()
+                    logger.info(" Job search cancelled by user")
+                    raise CancellationError("Pipeline cancelled during job search")
+
+                try:
+                    board_name, jobs = future.result()
+                    results.append((board_name, jobs))
+                    logger.info(
+                        " Completed scraping %s for query '%s': %d jobs found",
+                        board_name,
+                        query,
+                        len(jobs),
+                    )
+                except CancellationError:
+                    # Re-raise cancellation errors
+                    for f in future_to_board:
+                        f.cancel()
+                    raise
+                except Exception as e:
+                    # Log errors but continue with other boards
+                    board_name = future_to_board[future]
+                    logger.error(
+                        " Error scraping %s for query '%s': %s",
+                        board_name,
+                        query,
+                        str(e),
+                        exc_info=True,
+                    )
+                    # Add empty result to maintain consistency
+                    results.append((board_name, []))
+
+        return results
 
     def _save_raw_jobs(
         self, jobs: List[Dict[str, Any]], board: str, query: str
