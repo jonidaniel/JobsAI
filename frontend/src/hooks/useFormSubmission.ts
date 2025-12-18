@@ -387,6 +387,9 @@ export function useFormSubmission({
       setEmail("");
       setEmailError(null);
       setError(null);
+
+      // Scroll to Search section after showing delivery method prompt
+      scrollToElement("#search", 150);
     },
     [
       formData,
