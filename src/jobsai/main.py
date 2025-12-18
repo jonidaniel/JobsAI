@@ -38,6 +38,27 @@ from jobsai.utils.logger import get_logger, log_performance
 logger = get_logger(__name__)
 
 
+def check_cancellation(
+    cancellation_check: Optional[Callable[[], bool]], context: str
+) -> None:
+    """Check if pipeline should be cancelled and raise CancellationError if so.
+
+    This helper function centralizes cancellation checking logic to avoid
+    code duplication throughout the pipeline orchestration.
+
+    Args:
+        cancellation_check: Optional callable that returns True if pipeline
+            should be cancelled. If None, no check is performed.
+        context: Descriptive string indicating when/where cancellation is
+            being checked (e.g., "before start", "during profiling").
+
+    Raises:
+        CancellationError: If cancellation_check returns True.
+    """
+    if cancellation_check and cancellation_check():
+        raise CancellationError(f"Pipeline cancelled {context}")
+
+
 def pipeline_step(step_name: str, step_number: int, total_steps: int):
     """Decorator for pipeline steps that provides consistent error handling and logging.
 
@@ -201,8 +222,7 @@ def main(
         raise RuntimeError(error_msg) from e
 
     # Check for cancellation before starting
-    if cancellation_check and cancellation_check():
-        raise CancellationError("Pipeline cancelled before start")
+    check_cancellation(cancellation_check, "before start")
 
     # Step 1: Profile the candidate
     # Uses LLM to extract the candidate's skills and experience from the form submissions
@@ -212,8 +232,7 @@ def main(
 
     @pipeline_step("Profiling candidate", 1, 6)
     def _step1_profile() -> str:
-        if cancellation_check and cancellation_check():
-            raise CancellationError("Pipeline cancelled during profiling")
+        check_cancellation(cancellation_check, "during profiling")
         return profiler.create_profile(form_submissions)
 
     profile = _step1_profile()
@@ -225,13 +244,11 @@ def main(
     # Step 2: Create search keywords
     # Uses LLM to create search keywords from the candidate profile
     # Returns a list of search keywords (e.g. ["ai engineer", "software engineer", "data scientist"])
-    if cancellation_check and cancellation_check():
-        raise CancellationError("Pipeline cancelled before keyword creation")
+    check_cancellation(cancellation_check, "before keyword creation")
 
     @pipeline_step("Creating keywords", 2, 6)
     def _step2_keywords() -> List[str]:
-        if cancellation_check and cancellation_check():
-            raise CancellationError("Pipeline cancelled during keyword creation")
+        check_cancellation(cancellation_check, "during keyword creation")
         return query_builder.create_keywords(profile)
 
     keywords = _step2_keywords()
@@ -244,13 +261,11 @@ def main(
     if progress_callback:
         progress_callback("searching", "Searching for jobs...")
 
-    if cancellation_check and cancellation_check():
-        raise CancellationError("Pipeline cancelled before job search")
+    check_cancellation(cancellation_check, "before job search")
 
     @pipeline_step("Searching jobs", 3, 6)
     def _step3_search() -> List[Dict[str, Any]]:
-        if cancellation_check and cancellation_check():
-            raise CancellationError("Pipeline cancelled during job search")
+        check_cancellation(cancellation_check, "during job search")
         # Pass cancellation_check to searcher for checking during long operations
         return searcher.search_jobs(keywords, job_boards, deep_mode, cancellation_check)
 
@@ -264,13 +279,11 @@ def main(
     if progress_callback:
         progress_callback("scoring", "Scoring the jobs...")
 
-    if cancellation_check and cancellation_check():
-        raise CancellationError("Pipeline cancelled before scoring")
+    check_cancellation(cancellation_check, "before scoring")
 
     @pipeline_step("Scoring jobs", 4, 6)
     def _step4_score() -> List[Dict[str, Any]]:
-        if cancellation_check and cancellation_check():
-            raise CancellationError("Pipeline cancelled during scoring")
+        check_cancellation(cancellation_check, "during scoring")
         # Pass cancellation_check to scorer for checking during job processing loop
         scored = scorer.score_jobs(raw_jobs, tech_stack, cancellation_check)
         if not scored:
@@ -289,13 +302,11 @@ def main(
     if progress_callback:
         progress_callback("analyzing", "Doing analysis...")
 
-    if cancellation_check and cancellation_check():
-        raise CancellationError("Pipeline cancelled before analysis")
+    check_cancellation(cancellation_check, "before analysis")
 
     @pipeline_step("Analyzing jobs", 5, 6)
     def _step5_analyze() -> str:
-        if cancellation_check and cancellation_check():
-            raise CancellationError("Pipeline cancelled during analysis")
+        check_cancellation(cancellation_check, "during analysis")
         # Pass cancellation_check to analyzer for checking during LLM calls in loop
         return analyzer.write_analysis(
             scored_jobs, profile, cover_letter_num, cancellation_check
@@ -310,13 +321,11 @@ def main(
     if progress_callback:
         progress_callback("generating", "Generating cover letters...")
 
-    if cancellation_check and cancellation_check():
-        raise CancellationError("Pipeline cancelled before generation")
+    check_cancellation(cancellation_check, "before generation")
 
     @pipeline_step("Generating cover letters", 6, 6)
     def _step6_generate() -> List[Document]:
-        if cancellation_check and cancellation_check():
-            raise CancellationError("Pipeline cancelled during generation")
+        check_cancellation(cancellation_check, "during generation")
         return generator.generate_letters(
             job_analysis, profile, cover_letter_style, cover_letter_num
         )
