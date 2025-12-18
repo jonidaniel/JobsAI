@@ -29,9 +29,6 @@ export default function ProgressTracker({
           ? PHASE_MESSAGES[currentPhase]
           : "1/6 Starting search..."}
       </h3>
-      <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
-        This might take a few minutes
-      </h3>
     </>
   );
 }
