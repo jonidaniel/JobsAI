@@ -79,7 +79,7 @@ export default function StatusMessages({
         information.
       </h3>
       <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
-        <i>We don't ask you for any personal information.</i>
+        <i>We don't demand you for any personal information.</i>
       </h3>
       <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
         By answering as many questions as possible, you enable us to use all
