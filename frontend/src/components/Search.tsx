@@ -395,7 +395,7 @@ export default function Search() {
   const shouldShowDownloadPrompt = showDownloadPrompt && downloadInfo;
 
   // Show status messages (intro text or other status messages) when:
-  // - Initial state (not submitting, not cancelled, not rate limited, not successful)
+  // - Initial state (not submitting, not cancelled, not rate limited, not successful, not showing delivery prompt)
   // - OR during email submission (to show thank you message)
   // - OR rate limited
   // - OR cancelled
@@ -404,6 +404,7 @@ export default function Search() {
     (!isSubmitting &&
       !isCancelled &&
       !isRateLimited &&
+      !showDeliveryMethodPrompt &&
       !submissionState.current.hasSuccessfulSubmission) ||
     (isSubmitting && deliveryMethod === "email") ||
     isRateLimited ||
@@ -472,7 +473,8 @@ export default function Search() {
       {/* Error message */}
       {error && !isRateLimited && <ErrorMessage message={error} />}
       {/* Submit button and cancel button */}
-      {!isRateLimited && (
+      {/* Hide ActionButtons when delivery method prompt is showing (it has its own buttons) */}
+      {!isRateLimited && !showDeliveryMethodPrompt && (
         <ActionButtons
           isSubmitting={isSubmitting}
           deliveryMethod={deliveryMethod}
