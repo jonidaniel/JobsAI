@@ -50,10 +50,10 @@ class ScraperConfig:
     location_selector: str
     url_selector: str
     published_date_selector: str
-    description_snippet_selector: Optional[str] = None
-
-    # Full description selectors (for deep mode)
+    # Full description selectors (for deep mode) - required, must come before optional fields
     full_description_selectors: List[str]
+    # Optional fields (must come after required fields)
+    description_snippet_selector: Optional[str] = None
     fallback_description_strategy: Optional[Callable] = None
 
 
