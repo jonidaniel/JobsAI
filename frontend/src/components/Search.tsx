@@ -393,9 +393,19 @@ export default function Search() {
     isSubmitting && deliveryMethod !== "email" && !isRateLimited;
   const shouldShowDeliverySelector = showDeliveryMethodPrompt && !isSubmitting;
   const shouldShowDownloadPrompt = showDownloadPrompt && downloadInfo;
+
+  // Show status messages (intro text or other status messages) when:
+  // - Initial state (not submitting, not cancelled, not rate limited, not successful)
+  // - OR during email submission (to show thank you message)
+  // - OR rate limited
+  // - OR cancelled
+  // - OR after successful download
   const shouldShowStatusMessages =
-    !isSubmitting ||
-    deliveryMethod === "email" ||
+    (!isSubmitting &&
+      !isCancelled &&
+      !isRateLimited &&
+      !submissionState.current.hasSuccessfulSubmission) ||
+    (isSubmitting && deliveryMethod === "email") ||
     isRateLimited ||
     isCancelled ||
     (submissionState.current.hasSuccessfulSubmission && hasDownloaded);
