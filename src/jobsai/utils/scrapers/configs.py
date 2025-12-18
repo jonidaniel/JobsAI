@@ -13,12 +13,14 @@ from urllib.parse import quote_plus
 
 from bs4 import BeautifulSoup
 
-from jobsai.config.headers import HEADERS_DUUNITORI, HEADERS_JOBLY
+from jobsai.config.headers import HEADERS_DUUNITORI, HEADERS_JOBLY, HEADERS_INDEED
 from jobsai.config.paths import (
     HOST_URL_DUUNITORI,
     HOST_URL_JOBLY,
+    HOST_URL_INDEED,
     SEARCH_URL_BASE_DUUNITORI,
     SEARCH_URL_BASE_JOBLY,
+    SEARCH_URL_BASE_INDEED,
 )
 
 
@@ -83,6 +85,42 @@ def _jobly_fallback_description(soup: BeautifulSoup) -> str:
     return best_guess
 
 
+def _indeed_query_encoder(query: str) -> str:
+    """Encode query for Indeed: simple URL-encode with plus signs."""
+    return quote_plus(query.strip())
+
+
+def _indeed_fallback_description(soup: BeautifulSoup) -> str:
+    """Fallback strategy for Indeed: find job description in common containers."""
+    # Indeed typically uses specific containers for job descriptions
+    selectors = [
+        "#jobDescriptionText",
+        ".jobsearch-jobDescriptionText",
+        "[data-testid='job-description']",
+        ".jobsearch-JobComponent-description",
+    ]
+
+    for selector in selectors:
+        element = soup.select_one(selector)
+        if element:
+            text = element.get_text(" ", strip=True)
+            if len(text) > 100:
+                return text
+
+    # Fallback: find longest text block
+    divs = soup.find_all(["div", "section", "article"])
+    best_guess = ""
+    longest = 0
+
+    for div in divs:
+        text_content = div.get_text(" ", strip=True)
+        if len(text_content) > longest and len(text_content) > 100:
+            longest = len(text_content)
+            best_guess = text_content
+
+    return best_guess
+
+
 # Duunitori scraper configuration
 DUUNITORI_CONFIG = ScraperConfig(
     name="duunitori",
@@ -127,4 +165,29 @@ JOBLY_CONFIG = ScraperConfig(
         "[role='article']",
     ],
     fallback_description_strategy=_jobly_fallback_description,
+)
+
+# Indeed scraper configuration
+INDEED_CONFIG = ScraperConfig(
+    name="indeed",
+    host_url=HOST_URL_INDEED,
+    search_url_template=SEARCH_URL_BASE_INDEED,
+    headers=HEADERS_INDEED,
+    job_card_selector=".job_seen_beacon, .slider_container, [data-jk]",
+    pagination_threshold=10,
+    query_encoder=_indeed_query_encoder,
+    title_selector=".jobTitle a, .jobTitle span, h2.jobTitle",
+    company_selector=".companyName, [data-testid='company-name'], .company",
+    location_selector=".companyLocation, [data-testid='job-location'], .location",
+    url_selector=".jobTitle a, h2.jobTitle a",
+    published_date_selector=".date, .dateText, [data-testid='job-date']",
+    description_snippet_selector=".summary, .job-snippet",
+    full_description_selectors=[
+        "#jobDescriptionText",
+        ".jobsearch-jobDescriptionText",
+        "[data-testid='job-description']",
+        ".jobsearch-JobComponent-description",
+        ".jobsearch-jobDescriptionText-container",
+    ],
+    fallback_description_strategy=_indeed_fallback_description,
 )

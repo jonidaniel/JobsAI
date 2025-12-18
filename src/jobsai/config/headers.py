@@ -37,3 +37,19 @@ HEADERS_JOBLY = {
     "Connection": "keep-alive",  # Reuse connections for better performance
     "Referer": "https://www.jobly.fi/",  # Indicate we came from Jobly homepage
 }
+
+# ----- INDEED -----
+
+# HTTP headers for Indeed job board scraping
+# Configured to mimic a Chrome browser
+HEADERS_INDEED = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/122.0.0.0 Safari/537.36"
+    ),
+    "Accept-Language": "en-US,en;q=0.9",  # Prefer English
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Connection": "keep-alive",  # Reuse connections for better performance
+    "Referer": "https://www.indeed.com/",  # Indicate we came from Indeed homepage
+}

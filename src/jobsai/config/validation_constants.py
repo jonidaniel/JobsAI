@@ -32,7 +32,7 @@ VALID_GENERAL_KEYS = {
 VALID_JOB_LEVELS = {"Expert-level", "Expert", "Intermediate", "Entry", "Intern"}
 
 # Valid job board options
-VALID_JOB_BOARDS = {"Duunitori", "Jobly"}
+VALID_JOB_BOARDS = {"Duunitori", "Jobly", "Indeed"}
 
 # Valid deep mode options
 VALID_DEEP_MODE = {"Yes", "No"}

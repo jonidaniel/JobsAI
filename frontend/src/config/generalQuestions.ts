@@ -72,6 +72,7 @@ export const NAME_OPTIONS: readonly string[] = [
 export const JOB_BOARD_OPTIONS: readonly string[] = [
   "Duunitori",
   "Jobly",
+  "Indeed",
 ] as const;
 
 /**

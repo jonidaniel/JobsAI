@@ -104,3 +104,10 @@ HOST_URL_JOBLY = "https://www.jobly.fi"
 SEARCH_URL_BASE_JOBLY = (
     "https://www.jobly.fi/en/jobs?search={query_encoded}&page={page}"
 )
+
+# Indeed job board URLs
+HOST_URL_INDEED = "https://www.indeed.com"
+# Search URL template for Indeed
+# {query_encoded}: URL-encoded search query (e.g., "python+developer")
+# {start}: Start index for pagination (0, 10, 20, etc.) - calculated as (page - 1) * 10
+SEARCH_URL_BASE_INDEED = "https://www.indeed.com/jobs?q={query_encoded}&start={start}"

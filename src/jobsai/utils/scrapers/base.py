@@ -74,9 +74,18 @@ def scrape_jobs(
             raise CancellationError("Pipeline cancelled during job search")
 
         # Build search URL using template
-        # Handle different URL template formats (Duunitori uses query_slug, Jobly uses query_encoded)
+        # Handle different URL template formats:
+        # - Duunitori uses {query_slug} and {page}
+        # - Jobly uses {query_encoded} and {page}
+        # - Indeed uses {query_encoded} and {start} (start = (page - 1) * 10)
         try:
-            if "{query_slug}" in config.search_url_template:
+            if "{start}" in config.search_url_template:
+                # Indeed uses start parameter (0, 10, 20, etc.)
+                start = (page - 1) * 10
+                search_url = config.search_url_template.format(
+                    query_encoded=encoded_query, start=start
+                )
+            elif "{query_slug}" in config.search_url_template:
                 search_url = config.search_url_template.format(
                     query_slug=encoded_query, page=page
                 )
