@@ -1,5 +1,25 @@
 # ---------- PROMPTS ----------
 
+# --- OUTPUT SCHEMA FOR PROFILER AGENT ---
+
+OUTPUT_SCHEMA = """{
+  "name": STRING VALUE,
+  "core_languages": [STRING VALUE(S)],
+  "frameworks_and_libraries": [STRING VALUE(S)],
+  "tools_and_platforms": [STRING VALUE(S)],
+  "agentic_ai_experience": [STRING VALUE(S)],
+  "ai_ml_experience": [STRING VALUE(S)],
+  "soft_skills": [STRING VALUE(S)],
+  "projects_mentioned": [STRING VALUE(S)],
+  "experience_level": {
+      "Python": INTEGER VALUE,
+      "JavaScript": INTEGER VALUE,
+      "Agentic AI": INTEGER VALUE,
+      "AI/ML": INTEGER VALUE
+  },
+  "job_search_keywords": [STRING VALUE(S)]
+}"""
+
 # --- PROFILER AGENT PROMPTS ---
 
 PROFILER_SYSTEM_PROMPT = """
