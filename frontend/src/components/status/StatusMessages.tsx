@@ -92,7 +92,7 @@ export default function StatusMessages({
         <i>if there is a job matching your skills, we will find it.</i>
       </h3>
       <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white text-center">
-        <i>Find Jobs</i> let's us start the search.
+        <i>Search</i> let's us start the search.
       </h3>
     </>
   );

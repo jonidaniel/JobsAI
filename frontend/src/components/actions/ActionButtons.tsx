@@ -34,7 +34,9 @@ export default function ActionButtons({
           className="text-lg sm:text-xl md:text-2xl lg:text-3xl px-4 sm:px-6 py-2 sm:py-3 border border-white bg-transparent text-white font-semibold rounded-lg shadow disabled:opacity-50 disabled:cursor-not-allowed"
           aria-label="Start a new job search"
         >
-          Find Again
+          Search
+          <br />
+          again
         </button>
       )}
       {isSubmitting && deliveryMethod === "email" && (
@@ -44,7 +46,9 @@ export default function ActionButtons({
           className="text-lg sm:text-xl md:text-2xl lg:text-3xl px-4 sm:px-6 py-2 sm:py-3 border border-white bg-transparent text-white font-semibold rounded-lg shadow disabled:opacity-50 disabled:cursor-not-allowed"
           aria-label="Start a new job search"
         >
-          Find Again
+          Search
+          <br />
+          again
         </button>
       )}
       {!isSubmitting &&
@@ -66,9 +70,15 @@ export default function ActionButtons({
                   : "Submit form and generate job search document"
               }
             >
-              {hasSuccessfulSubmission && hasRespondedToPrompt
-                ? "Find Again"
-                : "Find Jobs"}
+              {hasSuccessfulSubmission && hasRespondedToPrompt ? (
+                <>
+                  Search
+                  <br />
+                  again
+                </>
+              ) : (
+                "Search"
+              )}
             </button>
           </form>
         )}
