@@ -127,9 +127,14 @@ INDEED_CONFIG = ScraperConfig(
     host_url=HOST_URL_INDEED,
     search_url_template=SEARCH_URL_BASE_INDEED,
     headers=HEADERS_INDEED,
+    # Use data-jk attribute (most stable) with fallback to older selectors
+    # Indeed uses data-jk to identify job listings - this is more stable than CSS classes
+    job_card_selector="[data-jk]",
+    # Fallback options (commented out, uncomment if data-jk doesn't work):
     # job_card_selector=".job_seen_beacon",
-    job_card_selector=".resultContent.css-1o6lhys.eu4oa1w0",
+    # job_card_selector=".resultContent.css-1o6lhys.eu4oa1w0",
     # job_card_selector=".css-1ac2h1w.eu4oa1w0",
+    # job_card_selector=".resultContent",
     pagination_threshold=10,
     query_encoder=_indeed_query_encoder,
     title_selector=".jcs-JobTitle.css-1baag51.eu4oa1w0 span",
