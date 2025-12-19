@@ -400,8 +400,7 @@ def _parse_job_card(job_card: BeautifulSoup, config: ScraperConfig) -> Dict[str,
             },
         )
     else:
-        # Only log in DEBUG mode to avoid flooding logs
-        logger.debug(
+        logger.info(
             "Parsed job card",
             extra={
                 "extra_fields": {
