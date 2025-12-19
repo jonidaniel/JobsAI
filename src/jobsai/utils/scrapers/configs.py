@@ -83,17 +83,16 @@ DUUNITORI_CONFIG = ScraperConfig(
     host_url=HOST_URL_DUUNITORI,
     search_url_template=SEARCH_URL_BASE_DUUNITORI,
     headers=HEADERS_DUUNITORI,
-    # WORKS
     job_card_selector=".grid-sandbox.grid-sandbox--tight-bottom.grid-sandbox--tight-top .grid.grid--middle.job-box.job-box--lg",
     pagination_threshold=20,
     query_encoder=_duunitori_query_encoder,
-    title_selector=".job-box__title",  # WORKS
-    company_selector=".job-box__hover.gtm-search-result",  # NO WORK !!!
-    location_selector=".job-box__job-location",  # WORKS
-    url_selector=".job-box__hover.gtm-search-result",  # WORKS
-    published_date_selector=".job-box__job-posted",  # WORKS
+    title_selector=".job-box__title",
+    company_selector=".job-box__hover.gtm-search-result",
+    location_selector=".job-box__job-location",
+    url_selector=".job-box__hover.gtm-search-result",
+    published_date_selector=".job-box__job-posted",
     description_snippet_selector=None,
-    full_description_selectors=[  # NO WORK !!!
+    full_description_selectors=[
         ".gtm-apply-clicks.description.description--jobentry",
     ],
     fallback_description_strategy=None,
@@ -105,16 +104,16 @@ JOBLY_CONFIG = ScraperConfig(
     host_url=HOST_URL_JOBLY,
     search_url_template=SEARCH_URL_BASE_JOBLY,
     headers=HEADERS_JOBLY,
-    job_card_selector=".job__content.clearfix",  # WORKS
+    job_card_selector=".mobile_job__content .job__content.clearfix",
     pagination_threshold=10,
     query_encoder=_jobly_query_encoder,
-    title_selector=".node__title a",  # WORKS
-    company_selector=".recruiter-company-profile-job-organization a",  # WORKS
-    location_selector=".location span",  # WORKS
-    url_selector=".node__title a",  # WORKS
-    published_date_selector=".date",  # WORKS
+    title_selector=".node__title a",
+    company_selector=".recruiter-company-profile-job-organization a",
+    location_selector=".location span",
+    url_selector=".node__title a",
+    published_date_selector=".date",
     description_snippet_selector=None,
-    full_description_selectors=[".field__item.even"],  # NO WORK !!!
+    full_description_selectors=[".field__item.even"],
     fallback_description_strategy=None,
 )
 
@@ -124,16 +123,17 @@ INDEED_CONFIG = ScraperConfig(
     host_url=HOST_URL_INDEED,
     search_url_template=SEARCH_URL_BASE_INDEED,
     headers=HEADERS_INDEED,
-    job_card_selector=".job_seen_beacon",  # WORKS
+    # job_card_selector=".job_seen_beacon",
+    job_card_selector=".resultContent.css-1o6lhys.eu4oa1w0",
     pagination_threshold=10,
     query_encoder=_indeed_query_encoder,
-    title_selector=".jcs-JobTitle.css-1baag51.eu4oa1w0 span",  # WORKS
-    company_selector=".css-19eicqx.eu4oa1w0",  # WORKS
-    location_selector=".css-1f06pz4.eu4oa1w0",  # WORKS
-    url_selector=".jcs-JobTitle.css-1baag51.eu4oa1w0",  # WORKS
+    title_selector=".jcs-JobTitle.css-1baag51.eu4oa1w0 span",
+    company_selector=".css-19eicqx.eu4oa1w0",
+    location_selector=".css-1f06pz4.eu4oa1w0",
+    url_selector=".jcs-JobTitle.css-1baag51.eu4oa1w0",
     published_date_selector=None,
     description_snippet_selector=None,
-    full_description_selectors=[  # WORKS
+    full_description_selectors=[
         ".jobsearch-JobComponent-description.css-jsfa0i.eu4oa1w0"
     ],
     fallback_description_strategy=None,
