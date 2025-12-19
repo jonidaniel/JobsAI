@@ -152,18 +152,17 @@ def scrape_jobs(
                 try:
                     detail = _fetch_full_job_description(session, job["url"], config)
                     job["full_description"] = detail if detail else ""
-                    # Log full description status
-                    logger.info(
-                        "Job card processing complete",
-                        extra={
-                            "extra_fields": {
-                                "job_board": config.name,
-                                "job_url": job.get("url"),
-                                "has_full_description": bool(detail),
-                                "full_description_length": len(detail) if detail else 0,
-                            }
-                        },
-                    )
+                    # Only log if description fetch failed (empty result)
+                    if not detail:
+                        logger.debug(
+                            "Full description fetch returned empty",
+                            extra={
+                                "extra_fields": {
+                                    "job_board": config.name,
+                                    "job_url": job.get("url"),
+                                }
+                            },
+                        )
                 except Exception as e:
                     logger.warning(
                         "Error fetching detail",
@@ -380,25 +379,44 @@ def _parse_job_card(job_card: BeautifulSoup, config: ScraperConfig) -> Dict[str,
                 },
             )
 
-    # Log all extracted selector values for debugging
-    logger.info(
-        "Parsed job card",
-        extra={
-            "extra_fields": {
-                "job_board": config.name,
-                "title": title,
-                "company": company,
-                "location": location,
-                "url": full_url,
-                "published_date": published,
-                "description_snippet": snippet,
-                "title_length": len(title),
-                "company_length": len(company),
-                "location_length": len(location),
-                "snippet_length": len(snippet) if snippet else 0,
-            }
-        },
-    )
+    # Log extracted selector values only if there are issues (empty fields) or in DEBUG mode
+    # This prevents log flooding when processing hundreds of job cards
+    has_empty_fields = not title or not company or not location or not full_url
+    if has_empty_fields:
+        logger.warning(
+            "Parsed job card with missing fields",
+            extra={
+                "extra_fields": {
+                    "job_board": config.name,
+                    "title": title,
+                    "company": company,
+                    "location": location,
+                    "url": full_url,
+                    "published_date": published,
+                    "title_length": len(title),
+                    "company_length": len(company),
+                    "location_length": len(location),
+                }
+            },
+        )
+    else:
+        # Only log in DEBUG mode to avoid flooding logs
+        logger.debug(
+            "Parsed job card",
+            extra={
+                "extra_fields": {
+                    "job_board": config.name,
+                    "title": title,
+                    "company": company,
+                    "location": location,
+                    "url": full_url,
+                    "published_date": published,
+                    "title_length": len(title),
+                    "company_length": len(company),
+                    "location_length": len(location),
+                }
+            },
+        )
 
     return {
         "title": title,
@@ -445,7 +463,8 @@ def _fetch_full_job_description(
         if description_tag:
             description = description_tag.get_text(strip=True)
             if description:
-                logger.info(
+                # Only log in DEBUG mode to avoid flooding logs with hundreds of successful extractions
+                logger.debug(
                     "Full description extracted",
                     extra={
                         "extra_fields": {
@@ -454,11 +473,6 @@ def _fetch_full_job_description(
                             "selector_index": i,
                             "selector": selector,
                             "description_length": len(description),
-                            "description_preview": (
-                                description[:200] + "..."
-                                if len(description) > 200
-                                else description
-                            ),
                         }
                     },
                 )
@@ -480,18 +494,14 @@ def _fetch_full_job_description(
     if config.fallback_description_strategy:
         description = config.fallback_description_strategy(soup)
         if description:
-            logger.info(
+            # Only log in DEBUG mode to avoid flooding logs
+            logger.debug(
                 "Full description extracted via fallback",
                 extra={
                     "extra_fields": {
                         "job_board": config.name,
                         "job_url": job_url,
                         "description_length": len(description),
-                        "description_preview": (
-                            description[:200] + "..."
-                            if len(description) > 200
-                            else description
-                        ),
                     }
                 },
             )
