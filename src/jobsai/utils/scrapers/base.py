@@ -152,9 +152,29 @@ def scrape_jobs(
                 try:
                     detail = _fetch_full_job_description(session, job["url"], config)
                     job["full_description"] = detail if detail else ""
+                    # Log full description status
+                    logger.info(
+                        "Job card processing complete",
+                        extra={
+                            "extra_fields": {
+                                "job_board": config.name,
+                                "job_url": job.get("url"),
+                                "has_full_description": bool(detail),
+                                "full_description_length": len(detail) if detail else 0,
+                            }
+                        },
+                    )
                 except Exception as e:
                     logger.warning(
-                        " Error fetching detail for %s: %s", job.get("url"), e
+                        "Error fetching detail",
+                        extra={
+                            "extra_fields": {
+                                "job_board": config.name,
+                                "job_url": job.get("url"),
+                                "error": str(e),
+                                "error_type": type(e).__name__,
+                            }
+                        },
                     )
                     job["full_description"] = ""
             else:
@@ -249,6 +269,16 @@ def _parse_job_card(job_card: BeautifulSoup, config: ScraperConfig) -> Dict[str,
     # Parse title
     title_tag = job_card.select_one(config.title_selector)
     title = title_tag.get_text(strip=True) if title_tag else ""
+    if not title:
+        logger.debug(
+            "Title selector did not match",
+            extra={
+                "extra_fields": {
+                    "job_board": config.name,
+                    "selector": config.title_selector,
+                }
+            },
+        )
 
     # Parse company (handle both text and data attributes)
     company_tag = job_card.select_one(config.company_selector)
@@ -261,10 +291,29 @@ def _parse_job_card(job_card: BeautifulSoup, config: ScraperConfig) -> Dict[str,
             company = company_tag.get_text(strip=True)
     else:
         company = ""
+        logger.debug(
+            "Company selector did not match",
+            extra={
+                "extra_fields": {
+                    "job_board": config.name,
+                    "selector": config.company_selector,
+                }
+            },
+        )
 
     # Parse location
     location_tag = job_card.select_one(config.location_selector)
     location = location_tag.get_text(strip=True) if location_tag else ""
+    if not location:
+        logger.debug(
+            "Location selector did not match",
+            extra={
+                "extra_fields": {
+                    "job_board": config.name,
+                    "selector": config.location_selector,
+                }
+            },
+        )
 
     # Parse URL
     url_tag = job_card.select_one(config.url_selector)
@@ -280,6 +329,16 @@ def _parse_job_card(job_card: BeautifulSoup, config: ScraperConfig) -> Dict[str,
 
     href = url_tag.get("href") if url_tag and url_tag.has_attr("href") else ""
     full_url = urljoin(config.host_url, href) if href else ""
+    if not full_url:
+        logger.debug(
+            "URL selector did not match",
+            extra={
+                "extra_fields": {
+                    "job_board": config.name,
+                    "selector": config.url_selector,
+                }
+            },
+        )
 
     # Parse published date (handle both text and datetime attribute)
     published_tag = (
@@ -294,19 +353,52 @@ def _parse_job_card(job_card: BeautifulSoup, config: ScraperConfig) -> Dict[str,
             published = published_tag.get_text(strip=True)
     else:
         published = ""
+        if config.published_date_selector:
+            logger.debug(
+                "Published date selector did not match",
+                extra={
+                    "extra_fields": {
+                        "job_board": config.name,
+                        "selector": config.published_date_selector,
+                    }
+                },
+            )
 
     # Parse description snippet (optional)
     snippet = None
     if config.description_snippet_selector:
         snippet_tag = job_card.select_one(config.description_snippet_selector)
         snippet = snippet_tag.get_text(strip=True) if snippet_tag else None
+        if not snippet:
+            logger.debug(
+                "Description snippet selector did not match",
+                extra={
+                    "extra_fields": {
+                        "job_board": config.name,
+                        "selector": config.description_snippet_selector,
+                    }
+                },
+            )
 
-    # logger.info("TITLE: ", title)
-    # logger.info("COMPANY: ", company)
-    # logger.info("LOCATION: ", location)
-    # logger.info("URL: ", full_url)
-    # logger.info("SNIPPET: ", snippet)
-    # logger.info("PUBLISHED: ", published)
+    # Log all extracted selector values for debugging
+    logger.info(
+        "Parsed job card",
+        extra={
+            "extra_fields": {
+                "job_board": config.name,
+                "title": title,
+                "company": company,
+                "location": location,
+                "url": full_url,
+                "published_date": published,
+                "description_snippet": snippet,
+                "title_length": len(title),
+                "company_length": len(company),
+                "location_length": len(location),
+                "snippet_length": len(snippet) if snippet else 0,
+            }
+        },
+    )
 
     return {
         "title": title,
@@ -348,15 +440,74 @@ def _fetch_full_job_description(
     soup = BeautifulSoup(response.text, "html.parser")
 
     # Try each selector in order
-    for selector in config.full_description_selectors:
+    for i, selector in enumerate(config.full_description_selectors):
         description_tag = soup.select_one(selector)
         if description_tag:
             description = description_tag.get_text(strip=True)
             if description:
+                logger.info(
+                    "Full description extracted",
+                    extra={
+                        "extra_fields": {
+                            "job_board": config.name,
+                            "job_url": job_url,
+                            "selector_index": i,
+                            "selector": selector,
+                            "description_length": len(description),
+                            "description_preview": (
+                                description[:200] + "..."
+                                if len(description) > 200
+                                else description
+                            ),
+                        }
+                    },
+                )
                 return description
+        else:
+            logger.debug(
+                "Selector did not match",
+                extra={
+                    "extra_fields": {
+                        "job_board": config.name,
+                        "job_url": job_url,
+                        "selector_index": i,
+                        "selector": selector,
+                    }
+                },
+            )
 
     # Try fallback strategy if available
     if config.fallback_description_strategy:
-        return config.fallback_description_strategy(soup)
+        description = config.fallback_description_strategy(soup)
+        if description:
+            logger.info(
+                "Full description extracted via fallback",
+                extra={
+                    "extra_fields": {
+                        "job_board": config.name,
+                        "job_url": job_url,
+                        "description_length": len(description),
+                        "description_preview": (
+                            description[:200] + "..."
+                            if len(description) > 200
+                            else description
+                        ),
+                    }
+                },
+            )
+            return description
+
+    # Log warning if no description found
+    logger.warning(
+        "No full description found",
+        extra={
+            "extra_fields": {
+                "job_board": config.name,
+                "job_url": job_url,
+                "selectors_tried": len(config.full_description_selectors),
+                "selectors": config.full_description_selectors,
+            }
+        },
+    )
 
     return ""
