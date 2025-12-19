@@ -94,9 +94,7 @@ DUUNITORI_CONFIG = ScraperConfig(
     published_date_selector=".job-box__job-posted",  # WORKS
     description_snippet_selector=None,
     full_description_selectors=[  # NO WORK !!!
-        ".gtm-apply-clicks",
-        ".description",
-        ".description--jobentry",
+        ".gtm-apply-clicks.description.description--jobentry",
     ],
     fallback_description_strategy=None,
 )
@@ -116,7 +114,7 @@ JOBLY_CONFIG = ScraperConfig(
     url_selector=".node__title a",  # WORKS
     published_date_selector=".date",  # WORKS
     description_snippet_selector=None,
-    full_description_selectors=[".field__item.even", "p"],  # NO WORK !!!
+    full_description_selectors=[".field__item.even"],  # NO WORK !!!
     fallback_description_strategy=None,
 )
 

@@ -301,12 +301,12 @@ def _parse_job_card(job_card: BeautifulSoup, config: ScraperConfig) -> Dict[str,
         snippet_tag = job_card.select_one(config.description_snippet_selector)
         snippet = snippet_tag.get_text(strip=True) if snippet_tag else None
 
-    logger.info("TITLE: ", title)
-    logger.info("COMPANY: ", company)
-    logger.info("LOCATION: ", location)
-    logger.info("URL: ", full_url)
-    logger.info("SNIPPET: ", snippet)
-    logger.info("PUBLISHED: ", published)
+    # logger.info("TITLE: ", title)
+    # logger.info("COMPANY: ", company)
+    # logger.info("LOCATION: ", location)
+    # logger.info("URL: ", full_url)
+    # logger.info("SNIPPET: ", snippet)
+    # logger.info("PUBLISHED: ", published)
 
     return {
         "title": title,
