@@ -114,7 +114,10 @@ JOBLY_CONFIG = ScraperConfig(
     url_selector=".node__title a",
     published_date_selector=".date",
     description_snippet_selector=None,
-    full_description_selectors=[".field__item.even"],
+    # full_description_selectors=[".field__item.even"],
+    full_description_selectors=[
+        ".field.field--name-body.field--type-text-with-summary.field--label-hidden"
+    ],
     fallback_description_strategy=None,
 )
 
