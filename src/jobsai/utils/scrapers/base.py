@@ -60,6 +60,17 @@ def scrape_jobs(
         session = requests.Session()
     session.headers.update(config.headers)
 
+    # For Indeed specifically, visit homepage first to establish session/cookies
+    # This helps bypass initial bot detection
+    if config.name == "indeed":
+        try:
+            logger.debug(" Visiting Indeed homepage to establish session")
+            session.get(config.host_url, timeout=5)
+            time.sleep(0.5)  # Small delay to appear more human-like
+        except Exception as e:
+            logger.debug(" Failed to visit Indeed homepage: %s", str(e))
+            # Continue anyway - not critical
+
     # Encode query using scraper-specific encoder
     encoded_query = config.query_encoder(query)
 
