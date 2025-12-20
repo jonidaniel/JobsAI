@@ -60,16 +60,37 @@ def scrape_jobs(
         session = requests.Session()
     session.headers.update(config.headers)
 
-    # For Indeed specifically, visit homepage first to establish session/cookies
-    # This helps bypass initial bot detection
+    # For Indeed specifically, implement anti-detection measures
     if config.name == "indeed":
         try:
+            # Step 1: Visit homepage first to establish session/cookies
             logger.debug(" Visiting Indeed homepage to establish session")
-            session.get(config.host_url, timeout=5)
-            time.sleep(0.5)  # Small delay to appear more human-like
+            homepage_response = session.get(config.host_url, timeout=10)
+            if homepage_response.status_code == 200:
+                logger.debug(" Successfully visited Indeed homepage")
+            time.sleep(1.5)  # Delay to appear more human-like
+
+            # Step 2: Visit a search page with a generic query to warm up
+            # This makes subsequent requests look more legitimate
+            warmup_url = f"{config.host_url}/jobs?q=software&start=0"
+            logger.debug(" Warming up with generic search")
+            warmup_response = session.get(warmup_url, timeout=10)
+            if warmup_response.status_code == 200:
+                logger.debug(" Successfully warmed up Indeed session")
+            elif warmup_response.status_code == 403:
+                logger.warning(
+                    " Indeed returned 403 on warmup - bot detection active",
+                    extra={
+                        "extra_fields": {
+                            "url": warmup_url,
+                            "status_code": warmup_response.status_code,
+                        }
+                    },
+                )
+            time.sleep(2.0)  # Longer delay before actual scraping
         except Exception as e:
-            logger.debug(" Failed to visit Indeed homepage: %s", str(e))
-            # Continue anyway - not critical
+            logger.warning(" Failed to initialize Indeed session: %s", str(e))
+            # Continue anyway - not critical, but scraping may fail
 
     # Encode query using scraper-specific encoder
     encoded_query = config.query_encoder(query)
@@ -273,7 +294,9 @@ def scrape_jobs(
                 return results
 
         # Add delay to avoid hammering the website
-        time.sleep(0.8)
+        # Indeed requires longer delays to avoid 403 blocking
+        delay = 2.5 if config.name == "indeed" else 0.8
+        time.sleep(delay)
 
         # Break if fewer cards than threshold (likely no next page)
         if len(job_cards) < config.pagination_threshold:
@@ -308,6 +331,14 @@ def _fetch_page(
     last_exception = None
     for attempt in range(1, retries + 1):
         try:
+            # For Indeed, add a small random delay to appear more human-like
+            # This helps avoid rate limiting and bot detection
+            if "indeed.com" in url and attempt > 1:
+                import random
+
+                delay = random.uniform(1.0, 2.5)
+                time.sleep(delay)
+
             response = session.get(url, timeout=timeout)
             last_response = response
 
