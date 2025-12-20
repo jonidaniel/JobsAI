@@ -112,28 +112,99 @@ def scrape_jobs(
         response = _fetch_page(session, search_url)
 
         if not response:
-            logger.warning(" Failed to fetch search page %s — stopping", search_url)
+            logger.warning(
+                " Failed to fetch search page %s — stopping",
+                search_url,
+                extra={
+                    "extra_fields": {
+                        "job_board": config.name,
+                        "page": page,
+                        "query": query,
+                        "url": search_url,
+                    }
+                },
+            )
             break
         if response.status_code != 200:
             logger.warning(
                 " Non-200 status (%s) for %s — stopping",
                 response.status_code,
                 search_url,
+                extra={
+                    "extra_fields": {
+                        "job_board": config.name,
+                        "page": page,
+                        "query": query,
+                        "status_code": response.status_code,
+                        "url": search_url,
+                        "response_preview": (
+                            response.text[:500] if response.text else None
+                        ),
+                    }
+                },
             )
             break
 
         # Parse HTML
         soup = BeautifulSoup(response.text, "html.parser")
 
+        # Diagnostic logging for debugging selector issues
+        html_length = len(response.text)
+        html_preview = response.text[:500] if html_length > 500 else response.text
+
+        # Check for common blocking/error indicators
+        blocking_indicators = [
+            "captcha",
+            "blocked",
+            "access denied",
+            "please enable javascript",
+            "cloudflare",
+            "verify you are human",
+        ]
+        html_lower = response.text.lower()
+        found_blocking = [
+            indicator for indicator in blocking_indicators if indicator in html_lower
+        ]
+
+        if found_blocking:
+            logger.warning(
+                " Possible blocking detected on %s page %s",
+                config.name.capitalize(),
+                page,
+                extra={
+                    "extra_fields": {
+                        "job_board": config.name,
+                        "page": page,
+                        "query": query,
+                        "blocking_indicators": found_blocking,
+                        "html_length": html_length,
+                        "html_preview": html_preview,
+                    }
+                },
+            )
+
         # Select job cards using scraper-specific selector
         job_cards = soup.select(config.job_card_selector)
 
         # Break if no results
         if not job_cards:
-            logger.info(
-                " No job cards found on page %s for query '%s' — stopping pagination",
+            # Log diagnostic information when no cards found
+            logger.warning(
+                " No job cards found on page %s for query '%s'",
                 page,
                 query,
+                extra={
+                    "extra_fields": {
+                        "job_board": config.name,
+                        "page": page,
+                        "query": query,
+                        "selector": config.job_card_selector,
+                        "html_length": html_length,
+                        "html_preview": html_preview,
+                        "has_blocking_indicators": bool(found_blocking),
+                        "blocking_indicators": found_blocking,
+                    }
+                },
             )
             break
 
