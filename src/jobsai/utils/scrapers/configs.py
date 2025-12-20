@@ -130,8 +130,8 @@ INDEED_CONFIG = ScraperConfig(
     # Use data-jk attribute (most stable) with fallback to older selectors
     # Indeed uses data-jk to identify job listings - this is more stable than CSS classes
     # job_card_selector="[data-jk]",
-    job_card_selector=".mainContentTable.css-131ju4w.eu4oa1w0",
-    # job_card_selector="div[data-jk], .jobsearch-SerpJobCard[data-jk], [data-jk]",
+    # job_card_selector=".mainContentTable.css-131ju4w.eu4oa1w0",
+    job_card_selector="div[data-jk], .jobsearch-SerpJobCard[data-jk], [data-jk]",
     # Fallback options (commented out, uncomment if data-jk doesn't work):
     # job_card_selector=".job_seen_beacon",
     # job_card_selector=".resultContent.css-1o6lhys.eu4oa1w0",
