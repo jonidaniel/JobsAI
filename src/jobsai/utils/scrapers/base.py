@@ -60,54 +60,6 @@ def scrape_jobs(
         session = requests.Session()
     session.headers.update(config.headers)
 
-    # For Indeed specifically, implement anti-detection measures
-    if config.name == "indeed":
-        try:
-            # Step 1: Visit homepage first to establish session/cookies
-            logger.debug(" Visiting Indeed homepage to establish session")
-            homepage_response = session.get(config.host_url, timeout=10)
-            if homepage_response.status_code == 200:
-                logger.debug(" Successfully visited Indeed homepage")
-            elif homepage_response.status_code == 403:
-                logger.warning(
-                    " Indeed returned 403 on homepage - bot detection active, skipping Indeed",
-                    extra={
-                        "extra_fields": {
-                            "url": config.host_url,
-                            "status_code": homepage_response.status_code,
-                        }
-                    },
-                )
-                # Return empty results early if homepage is blocked
-                logger.info(" Skipping Indeed scraping due to bot detection")
-                return []
-            time.sleep(1.5)  # Delay to appear more human-like
-
-            # Step 2: Visit a search page with a generic query to warm up
-            # This makes subsequent requests look more legitimate
-            warmup_url = f"{config.host_url}/jobs?q=software&start=0"
-            logger.debug(" Warming up with generic search")
-            warmup_response = session.get(warmup_url, timeout=10)
-            if warmup_response.status_code == 200:
-                logger.debug(" Successfully warmed up Indeed session")
-            elif warmup_response.status_code == 403:
-                logger.warning(
-                    " Indeed returned 403 on warmup - bot detection active, skipping Indeed",
-                    extra={
-                        "extra_fields": {
-                            "url": warmup_url,
-                            "status_code": warmup_response.status_code,
-                        }
-                    },
-                )
-                # Return empty results early if warmup is blocked
-                logger.info(" Skipping Indeed scraping due to bot detection on warmup")
-                return []
-            time.sleep(2.0)  # Longer delay before actual scraping
-        except Exception as e:
-            logger.warning(" Failed to initialize Indeed session: %s", str(e))
-            # Continue anyway - not critical, but scraping may fail
-
     # Encode query using scraper-specific encoder
     encoded_query = config.query_encoder(query)
 
@@ -125,15 +77,8 @@ def scrape_jobs(
         # Handle different URL template formats:
         # - Duunitori uses {query_slug} and {page}
         # - Jobly uses {query_encoded} and {page}
-        # - Indeed uses {query_encoded} and {start} (start = (page - 1) * 10)
         try:
-            if "{start}" in config.search_url_template:
-                # Indeed uses start parameter (0, 10, 20, etc.)
-                start = (page - 1) * 10
-                search_url = config.search_url_template.format(
-                    query_encoded=encoded_query, start=start
-                )
-            elif "{query_slug}" in config.search_url_template:
+            if "{query_slug}" in config.search_url_template:
                 search_url = config.search_url_template.format(
                     query_slug=encoded_query, page=page
                 )
@@ -174,23 +119,6 @@ def scrape_jobs(
             )
             break
         if response.status_code != 200:
-            # For Indeed, if we get 403 on the first page, skip entirely
-            if config.name == "indeed" and response.status_code == 403 and page == 1:
-                logger.warning(
-                    " Indeed returned 403 on first search page - bot detection active, skipping Indeed for this query",
-                    extra={
-                        "extra_fields": {
-                            "job_board": config.name,
-                            "page": page,
-                            "query": query,
-                            "status_code": response.status_code,
-                            "url": search_url,
-                        }
-                    },
-                )
-                # Return empty results early
-                return []
-
             logger.warning(
                 " Non-200 status (%s) for %s — stopping",
                 response.status_code,
@@ -327,8 +255,7 @@ def scrape_jobs(
                 return results
 
         # Add delay to avoid hammering the website
-        # Indeed requires longer delays to avoid 403 blocking
-        delay = 2.5 if config.name == "indeed" else 0.8
+        delay = 0.8
         time.sleep(delay)
 
         # Break if fewer cards than threshold (likely no next page)
@@ -364,14 +291,6 @@ def _fetch_page(
     last_exception = None
     for attempt in range(1, retries + 1):
         try:
-            # For Indeed, add a small random delay to appear more human-like
-            # This helps avoid rate limiting and bot detection
-            if "indeed.com" in url and attempt > 1:
-                import random
-
-                delay = random.uniform(1.0, 2.5)
-                time.sleep(delay)
-
             response = session.get(url, timeout=timeout)
             last_response = response
 
@@ -487,7 +406,7 @@ def _parse_job_card(job_card: BeautifulSoup, config: ScraperConfig) -> Dict[str,
         if company_tag.has_attr("data-company"):
             company = company_tag.get("data-company", "")
         else:
-            # Fallback to text content (Jobly and Indeed style)
+            # Fallback to text content (Jobly style)
             company = company_tag.get_text(strip=True)
     else:
         company = ""

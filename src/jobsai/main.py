@@ -289,7 +289,7 @@ def main(
             error_msg = (
                 "No jobs were found from any job board. "
                 "This may indicate that: "
-                "1) All job boards are blocking requests (e.g., Indeed bot detection), "
+                "1) All job boards are blocking requests, "
                 "2) The search queries didn't match any available jobs, or "
                 "3) There's a connectivity issue. "
                 f"Searched {len(job_boards)} job board(s): {', '.join(job_boards)}. "

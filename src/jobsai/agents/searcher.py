@@ -28,7 +28,6 @@ from jobsai.config.paths import RAW_JOB_LISTING_PATH
 from jobsai.utils.exceptions import CancellationError
 from jobsai.utils.scrapers.duunitori import scrape_duunitori
 from jobsai.utils.scrapers.jobly import scrape_jobly
-from jobsai.utils.scrapers.indeed import scrape_indeed
 from jobsai.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -169,12 +168,6 @@ class SearcherService:
             )
         elif job_board_lower == "jobly":
             jobs = scrape_jobly(
-                query,
-                deep_mode=deep_mode,
-                cancellation_check=cancellation_check,
-            )
-        elif job_board_lower == "indeed":
-            jobs = scrape_indeed(
                 query,
                 deep_mode=deep_mode,
                 cancellation_check=cancellation_check,

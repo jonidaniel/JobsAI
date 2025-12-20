@@ -13,14 +13,12 @@ from urllib.parse import quote_plus
 
 from bs4 import BeautifulSoup
 
-from jobsai.config.headers import HEADERS_DUUNITORI, HEADERS_JOBLY, HEADERS_INDEED
+from jobsai.config.headers import HEADERS_DUUNITORI, HEADERS_JOBLY
 from jobsai.config.paths import (
     HOST_URL_DUUNITORI,
     HOST_URL_JOBLY,
-    HOST_URL_INDEED,
     SEARCH_URL_BASE_DUUNITORI,
     SEARCH_URL_BASE_JOBLY,
-    SEARCH_URL_BASE_INDEED,
 )
 
 
@@ -34,7 +32,7 @@ class ScraperConfig:
     """
 
     # Basic identification
-    name: str  # "duunitori", "jobly", or "indeed"
+    name: str  # "duunitori" or "jobly"
     host_url: str
     search_url_template: str
     headers: Dict[str, str]
@@ -51,9 +49,7 @@ class ScraperConfig:
     company_selector: str
     location_selector: str
     url_selector: str
-    published_date_selector: Optional[
-        str
-    ]  # Can be None (e.g., Indeed doesn't show dates on search results)
+    published_date_selector: Optional[str]
     # Full description selectors (for deep mode) - required, must come before optional fields
     full_description_selectors: List[str]
     # Optional fields (must come after required fields)
@@ -69,11 +65,6 @@ def _duunitori_query_encoder(query: str) -> str:
 
 def _jobly_query_encoder(query: str) -> str:
     """Encode query for Jobly: simple URL-encode."""
-    return quote_plus(query.strip())
-
-
-def _indeed_query_encoder(query: str) -> str:
-    """Encode query for Indeed: simple URL-encode with plus signs."""
     return quote_plus(query.strip())
 
 
@@ -117,37 +108,6 @@ JOBLY_CONFIG = ScraperConfig(
     # full_description_selectors=[".field__item.even"],
     full_description_selectors=[
         ".field.field--name-body.field--type-text-with-summary.field--label-hidden"
-    ],
-    fallback_description_strategy=None,
-)
-
-# Indeed scraper configuration
-INDEED_CONFIG = ScraperConfig(
-    name="indeed",
-    host_url=HOST_URL_INDEED,
-    search_url_template=SEARCH_URL_BASE_INDEED,
-    headers=HEADERS_INDEED,
-    # Use data-jk attribute (most stable) with fallback to older selectors
-    # Indeed uses data-jk to identify job listings - this is more stable than CSS classes
-    # job_card_selector="[data-jk]",
-    # job_card_selector=".mainContentTable.css-131ju4w.eu4oa1w0",
-    # job_card_selector="div[data-jk], .jobsearch-SerpJobCard[data-jk], [data-jk]",
-    # job_card_selector=".cardOutline.tapItem.dd-privacy-allow.result.sponTapItem.desktop.hasSection.hasSection-default.nonRecommendation-section.vjs-highlight.eu4oa1w0",
-    # Fallback options (commented out, uncomment if data-jk doesn't work):
-    # job_card_selector=".job_seen_beacon",
-    # job_card_selector=".resultContent.css-1o6lhys.eu4oa1w0",
-    # job_card_selector=".css-1ac2h1w.eu4oa1w0",
-    job_card_selector=".resultContent",
-    pagination_threshold=10,
-    query_encoder=_indeed_query_encoder,
-    title_selector=".jcs-JobTitle.css-1baag51.eu4oa1w0 span",
-    company_selector=".css-19eicqx.eu4oa1w0",
-    location_selector=".css-1f06pz4.eu4oa1w0",
-    url_selector=".jcs-JobTitle.css-1baag51.eu4oa1w0",
-    published_date_selector=None,
-    description_snippet_selector=None,
-    full_description_selectors=[
-        ".jobsearch-JobComponent-description.css-jsfa0i.eu4oa1w0"
     ],
     fallback_description_strategy=None,
 )
