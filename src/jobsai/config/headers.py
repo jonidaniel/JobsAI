@@ -3,6 +3,10 @@ JobsAI HTTP Headers Configuration
 
 This module defines HTTP headers used when scraping job boards.
 Headers are configured to mimic browser requests and avoid blocking.
+
+Supported job boards:
+    - Duunitori: Finnish-focused headers with Finnish language preference
+    - Jobly: English-focused headers with English language preference
 """
 
 # ---------- HEADERS ----------

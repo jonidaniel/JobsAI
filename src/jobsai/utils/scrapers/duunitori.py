@@ -3,7 +3,7 @@ Functions for scraping the Duunitori job board.
 
 This module provides a backward-compatible interface to the Duunitori scraper.
 The actual scraping logic is implemented in the unified base scraper, which uses
-a configuration-driven approach to support multiple job boards.
+a configuration-driven approach to support multiple job boards (Duunitori and Jobly).
 
 DESCRIPTION:
     1. When given a query, fetches the job detail page and extracts the full description for each listing (deep mode)

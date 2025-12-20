@@ -12,7 +12,6 @@ from typing import Dict, List, Optional
 from jobsai.utils.scrapers.configs import (
     DUUNITORI_CONFIG,
     JOBLY_CONFIG,
-    INDEED_CONFIG,
 )
 
 
@@ -200,15 +199,6 @@ def test_jobly_selectors():
     return None
 
 
-def test_indeed_selectors():
-    """Test Indeed selectors - requires fixture file."""
-    # Note: You'll need to create an indeed_page_1.html fixture
-    # results = test_all_selectors_on_fixture("indeed_page_1.html", INDEED_CONFIG)
-    # print_test_results(results)
-    print("Indeed fixture not found. Create tests/fixtures/indeed_page_1.html first.")
-    return None
-
-
 if __name__ == "__main__":
     # Run tests
     print("Testing Duunitori selectors...")
@@ -216,6 +206,3 @@ if __name__ == "__main__":
 
     print("\n\nTesting Jobly selectors...")
     test_jobly_selectors()
-
-    print("\n\nTesting Indeed selectors...")
-    test_indeed_selectors()

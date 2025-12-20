@@ -6,7 +6,7 @@ configuration. It handles pagination, cancellation checks, deep mode, and all
 common scraping patterns.
 
 The scraper is configuration-driven: pass a ScraperConfig object to customize
-behavior for different job boards.
+behavior for different job boards (currently supports Duunitori and Jobly).
 """
 
 import time

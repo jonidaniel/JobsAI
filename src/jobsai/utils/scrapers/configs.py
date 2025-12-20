@@ -4,14 +4,16 @@ Scraper Configuration Module.
 Defines configuration dataclasses and pre-configured settings for each job board scraper.
 This allows the unified scraper to work with different job boards by simply changing
 the configuration.
+
+Currently supports:
+    - Duunitori: Finnish job board (duunitori.fi)
+    - Jobly: Finnish job board (jobly.fi)
 """
 
 import re
 from dataclasses import dataclass
 from typing import Callable, Dict, List, Optional
 from urllib.parse import quote_plus
-
-from bs4 import BeautifulSoup
 
 from jobsai.config.headers import HEADERS_DUUNITORI, HEADERS_JOBLY
 from jobsai.config.paths import (

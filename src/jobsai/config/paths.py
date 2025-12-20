@@ -21,7 +21,9 @@ Directory Structure:
 
 URL Templates:
     - Duunitori: Search URL template with query slug and page number
+      Format: https://duunitori.fi/tyopaikat/haku/{query_slug}?sivu={page}
     - Jobly: Search URL template with encoded query and page number
+      Format: https://www.jobly.fi/en/jobs?search={query_encoded}&page={page}
 
 Note:
     All directories are created automatically on module import. In Lambda, directory
