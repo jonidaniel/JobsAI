@@ -68,6 +68,19 @@ def scrape_jobs(
             homepage_response = session.get(config.host_url, timeout=10)
             if homepage_response.status_code == 200:
                 logger.debug(" Successfully visited Indeed homepage")
+            elif homepage_response.status_code == 403:
+                logger.warning(
+                    " Indeed returned 403 on homepage - bot detection active, skipping Indeed",
+                    extra={
+                        "extra_fields": {
+                            "url": config.host_url,
+                            "status_code": homepage_response.status_code,
+                        }
+                    },
+                )
+                # Return empty results early if homepage is blocked
+                logger.info(" Skipping Indeed scraping due to bot detection")
+                return []
             time.sleep(1.5)  # Delay to appear more human-like
 
             # Step 2: Visit a search page with a generic query to warm up
@@ -79,7 +92,7 @@ def scrape_jobs(
                 logger.debug(" Successfully warmed up Indeed session")
             elif warmup_response.status_code == 403:
                 logger.warning(
-                    " Indeed returned 403 on warmup - bot detection active",
+                    " Indeed returned 403 on warmup - bot detection active, skipping Indeed",
                     extra={
                         "extra_fields": {
                             "url": warmup_url,
@@ -87,6 +100,9 @@ def scrape_jobs(
                         }
                     },
                 )
+                # Return empty results early if warmup is blocked
+                logger.info(" Skipping Indeed scraping due to bot detection on warmup")
+                return []
             time.sleep(2.0)  # Longer delay before actual scraping
         except Exception as e:
             logger.warning(" Failed to initialize Indeed session: %s", str(e))
@@ -158,6 +174,23 @@ def scrape_jobs(
             )
             break
         if response.status_code != 200:
+            # For Indeed, if we get 403 on the first page, skip entirely
+            if config.name == "indeed" and response.status_code == 403 and page == 1:
+                logger.warning(
+                    " Indeed returned 403 on first search page - bot detection active, skipping Indeed for this query",
+                    extra={
+                        "extra_fields": {
+                            "job_board": config.name,
+                            "page": page,
+                            "query": query,
+                            "status_code": response.status_code,
+                            "url": search_url,
+                        }
+                    },
+                )
+                # Return empty results early
+                return []
+
             logger.warning(
                 " Non-200 status (%s) for %s — stopping",
                 response.status_code,

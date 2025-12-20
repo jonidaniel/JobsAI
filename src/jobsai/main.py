@@ -284,6 +284,18 @@ def main(
     @pipeline_step("Scoring jobs", 4, 6)
     def _step4_score() -> List[Dict[str, Any]]:
         check_cancellation(cancellation_check, "during scoring")
+        # Check if we have any jobs before attempting to score
+        if not raw_jobs:
+            error_msg = (
+                "No jobs were found from any job board. "
+                "This may indicate that: "
+                "1) All job boards are blocking requests (e.g., Indeed bot detection), "
+                "2) The search queries didn't match any available jobs, or "
+                "3) There's a connectivity issue. "
+                f"Searched {len(job_boards)} job board(s): {', '.join(job_boards)}. "
+                f"Used {len(keywords)} search keyword(s)."
+            )
+            raise ValueError(error_msg)
         # Pass cancellation_check to scorer for checking during job processing loop
         scored = scorer.score_jobs(raw_jobs, tech_stack, cancellation_check)
         if not scored:
