@@ -132,9 +132,9 @@ INDEED_CONFIG = ScraperConfig(
     # job_card_selector="[data-jk]",
     # job_card_selector=".mainContentTable.css-131ju4w.eu4oa1w0",
     # job_card_selector="div[data-jk], .jobsearch-SerpJobCard[data-jk], [data-jk]",
-    job_card_selector=".cardOutline.tapItem.dd-privacy-allow.result.sponTapItem.desktop.hasSection.hasSection-default.nonRecommendation-section.vjs-highlight.eu4oa1w0",
+    # job_card_selector=".cardOutline.tapItem.dd-privacy-allow.result.sponTapItem.desktop.hasSection.hasSection-default.nonRecommendation-section.vjs-highlight.eu4oa1w0",
     # Fallback options (commented out, uncomment if data-jk doesn't work):
-    # job_card_selector=".job_seen_beacon",
+    job_card_selector=".job_seen_beacon",
     # job_card_selector=".resultContent.css-1o6lhys.eu4oa1w0",
     # job_card_selector=".css-1ac2h1w.eu4oa1w0",
     # job_card_selector=".resultContent",
