@@ -136,8 +136,8 @@ INDEED_CONFIG = ScraperConfig(
     # Fallback options (commented out, uncomment if data-jk doesn't work):
     # job_card_selector=".job_seen_beacon",
     # job_card_selector=".resultContent.css-1o6lhys.eu4oa1w0",
-    job_card_selector=".css-1ac2h1w.eu4oa1w0",
-    # job_card_selector=".resultContent",
+    # job_card_selector=".css-1ac2h1w.eu4oa1w0",
+    job_card_selector=".resultContent",
     pagination_threshold=10,
     query_encoder=_indeed_query_encoder,
     title_selector=".jcs-JobTitle.css-1baag51.eu4oa1w0 span",
