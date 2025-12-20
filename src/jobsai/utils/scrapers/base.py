@@ -112,15 +112,15 @@ def scrape_jobs(
         response = _fetch_page(session, search_url)
 
         if not response:
-            logger.warning(
-                " Failed to fetch search page %s — stopping",
-                search_url,
+            logger.error(
+                " Failed to fetch search page after all retries — stopping",
                 extra={
                     "extra_fields": {
                         "job_board": config.name,
                         "page": page,
                         "query": query,
                         "url": search_url,
+                        "issue": "All retry attempts failed - check _fetch_page logs for exception details",
                     }
                 },
             )
@@ -294,6 +294,7 @@ def _fetch_page(
         Optional[requests.Response]: Response object if successful, None if all retries failed
     """
     last_response = None
+    last_exception = None
     for attempt in range(1, retries + 1):
         try:
             response = session.get(url, timeout=timeout)
@@ -306,20 +307,74 @@ def _fetch_page(
                     " Rate-limited or service unavailable (status %s) for %s. Backing off",
                     response.status_code,
                     url,
+                    extra={
+                        "extra_fields": {
+                            "url": url,
+                            "status_code": response.status_code,
+                            "attempt": attempt,
+                        }
+                    },
                 )
                 if attempt < retries:
                     time.sleep(backoff * attempt)
             else:
-                logger.debug(" Non-200 status %s for %s", response.status_code, url)
+                logger.warning(
+                    " Non-200 status %s for %s",
+                    response.status_code,
+                    url,
+                    extra={
+                        "extra_fields": {
+                            "url": url,
+                            "status_code": response.status_code,
+                            "attempt": attempt,
+                            "response_preview": (
+                                response.text[:500] if response.text else None
+                            ),
+                        }
+                    },
+                )
                 return response  # Return to allow caller to handle non-200
         except requests.RequestException as e:
+            last_exception = e
             logger.warning(
-                " Request failed (attempt %s/%s) for %s: %s", attempt, retries, url, e
+                " Request failed (attempt %s/%s) for %s: %s",
+                attempt,
+                retries,
+                url,
+                str(e),
+                extra={
+                    "extra_fields": {
+                        "url": url,
+                        "attempt": attempt,
+                        "max_retries": retries,
+                        "error": str(e),
+                        "error_type": type(e).__name__,
+                    }
+                },
+                exc_info=True,  # Include full traceback
             )
             if attempt < retries:
                 time.sleep(backoff * attempt)
 
     # Return last response if we have one (e.g., 429 after retries), otherwise None
+    if last_response is None:
+        logger.error(
+            " All retry attempts failed for %s",
+            url,
+            extra={
+                "extra_fields": {
+                    "url": url,
+                    "retries": retries,
+                    "last_exception": str(last_exception) if last_exception else None,
+                    "last_exception_type": (
+                        type(last_exception).__name__ if last_exception else None
+                    ),
+                    "issue": "All retry attempts failed - no response received",
+                }
+            },
+            exc_info=last_exception
+            is not None,  # Include traceback if we have an exception
+        )
     return last_response
 
 
