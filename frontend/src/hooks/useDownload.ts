@@ -19,11 +19,6 @@ interface UseDownloadOptions {
 }
 
 interface UseDownloadReturn {
-  downloadDocument: (
-    jobId: string,
-    filenameOrFilenames: string | string[]
-  ) => Promise<void>;
-  downloadFromS3: (s3Url: string, filename: string) => Promise<void>;
   handleDownloadYes: () => Promise<void>;
 }
 
@@ -57,9 +52,7 @@ interface DownloadResponse {
  * 6. Updates UI state after completion
  *
  * @param options - Configuration object with state setters and refs
- * @returns Object with download functions:
- *   - downloadDocument: Download from API endpoint
- *   - downloadFromS3: Download from S3 presigned URL
+ * @returns Object with download function:
  *   - handleDownloadYes: Handler for "Download" button click
  *
  * @example
@@ -87,6 +80,20 @@ export function useDownload({
   setHasRespondedToPrompt,
   setError,
 }: UseDownloadOptions): UseDownloadReturn {
+  /**
+   * Extracts filename from filenameOrFilenames (handles both string and array)
+   * Falls back to default if not provided
+   */
+  const extractFilename = (
+    filenameOrFilenames: string | string[],
+    defaultFilename: string = "cover_letter.docx"
+  ): string => {
+    if (Array.isArray(filenameOrFilenames)) {
+      return filenameOrFilenames[0] || defaultFilename;
+    }
+    return filenameOrFilenames || defaultFilename;
+  };
+
   /**
    * Downloads a single document from S3 using a presigned URL.
    *
@@ -130,10 +137,6 @@ export function useDownload({
         throw new Error(`Download failed: ${response.status}`);
       }
 
-      // Save scroll position before download
-      submissionState.current.savedScrollPosition =
-        window.scrollY || window.pageYOffset;
-
       // Check if response contains presigned S3 URL(s)
       const contentType = response.headers.get("content-type");
       if (contentType && contentType.includes("application/json")) {
@@ -157,12 +160,7 @@ export function useDownload({
 
         // Handle single document
         if (data.download_url) {
-          const filename =
-            data.filename ||
-            (Array.isArray(filenameOrFilenames)
-              ? filenameOrFilenames[0]
-              : filenameOrFilenames) ||
-            "cover_letter.docx";
+          const filename = data.filename || extractFilename(filenameOrFilenames);
           await downloadFromS3(data.download_url, filename);
           return;
         }
@@ -170,9 +168,7 @@ export function useDownload({
 
       // Fallback: Get the response as a blob (direct download from API Gateway)
       const blob = await response.blob();
-      const filename = Array.isArray(filenameOrFilenames)
-        ? filenameOrFilenames[0]
-        : filenameOrFilenames;
+      const filename = extractFilename(filenameOrFilenames);
       downloadBlob(blob, response.headers, filename);
     } catch (error) {
       console.error("Error downloading document:", error);
@@ -189,19 +185,15 @@ export function useDownload({
 
     try {
       // Save scroll position before download
-      submissionState.current.savedScrollPosition =
-        window.scrollY || window.pageYOffset;
+      submissionState.current.savedScrollPosition = window.scrollY;
 
       // Download the document(s)
       if (downloadInfo.filenames.length > 1) {
         // Multiple documents
         await downloadDocument(downloadInfo.jobId, downloadInfo.filenames);
-      } else if (
-        downloadInfo.filenames.length === 1 &&
-        downloadInfo.filenames[0]
-      ) {
+      } else if (downloadInfo.filenames.length === 1) {
         // Single document
-        await downloadDocument(downloadInfo.jobId, downloadInfo.filenames[0]);
+        await downloadDocument(downloadInfo.jobId, downloadInfo.filenames[0]!);
       }
 
       // Close the prompt and mark as downloaded
@@ -218,8 +210,6 @@ export function useDownload({
   };
 
   return {
-    downloadDocument,
-    downloadFromS3,
     handleDownloadYes,
   };
 }

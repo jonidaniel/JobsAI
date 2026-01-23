@@ -104,7 +104,7 @@ export default function Search() {
 
   // Validation errors for general questions
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>(
-    {}
+    {},
   );
 
   // Active question set index (for navigating to error location)
@@ -131,7 +131,7 @@ export default function Search() {
         }
       }, delay);
     },
-    []
+    [],
   );
 
   /**
@@ -147,8 +147,7 @@ export default function Search() {
     setHasRespondedToPrompt(false);
     setShowDeliveryMethodPrompt(false);
     setDeliveryMethod(null);
-    setEmail("");
-    setEmailError(null);
+    clearEmailState();
     setIsCancelled(false);
     setIsRateLimited(false);
     if (includeSubmissionState) {
@@ -162,9 +161,9 @@ export default function Search() {
   /**
    * Handles form data changes from QuestionSetList component
    */
-  const handleFormDataChange = useCallback((newFormData: FormData): void => {
+  const handleFormDataChange = (newFormData: FormData): void => {
     setFormData(newFormData);
-  }, []);
+  };
 
   /**
    * Clears validation errors when user fixes them
@@ -253,10 +252,26 @@ export default function Search() {
   });
 
   /**
+   * Clears email-related state
+   */
+  const clearEmailState = (): void => {
+    setEmail("");
+    setEmailError(null);
+  };
+
+  /**
+   * Navigates to the first question set (used for "Find Again" functionality)
+   */
+  const navigateToFirstQuestionSet = (): void => {
+    setActiveQuestionSetIndex(0);
+    scrollToElement('[data-index="0"]');
+  };
+
+  /**
    * Handles form submission or button click (wrapper for "Find Again" logic)
    */
   const handleSubmit = async (
-    e?: React.FormEvent<HTMLFormElement> | React.MouseEvent<HTMLButtonElement>
+    e?: React.FormEvent<HTMLFormElement> | React.MouseEvent<HTMLButtonElement>,
   ): Promise<void> => {
     if (e) {
       e.preventDefault();
@@ -267,16 +282,14 @@ export default function Search() {
     if (isSubmitting) {
       stopPolling();
       resetFormState(true);
-      setActiveQuestionSetIndex(0);
-      scrollToElement('[data-index="0"]');
+      navigateToFirstQuestionSet();
       return;
     }
 
     // If this is a "Find Again" click (from successful submission or cancellation), navigate to question set 1 and reset
     if (submissionState.current.hasSuccessfulSubmission || isCancelled) {
       resetFormState(false);
-      setActiveQuestionSetIndex(0);
-      scrollToElement('[data-index="0"]');
+      navigateToFirstQuestionSet();
       return;
     }
 
@@ -379,13 +392,9 @@ export default function Search() {
       }
     }
 
-    setIsSubmitting(false);
-    setCurrentPhase(null);
-    setJobId(null);
-    currentJobIdRef.current = null;
+    resetFormState(true);
     setShowDeliveryMethodPrompt(false);
     setIsCancelled(true);
-    setError(null);
   };
 
   // Determine what to render based on state
@@ -431,14 +440,13 @@ export default function Search() {
           onEmailSubmit={handleEmailSubmit}
           onBack={() => {
             setDeliveryMethod(null);
-            setEmail("");
-            setEmailError(null);
+            clearEmailState();
           }}
         />
       )}
-      {shouldShowDownloadPrompt && downloadInfo && (
+      {shouldShowDownloadPrompt && (
         <DownloadPrompt
-          filenameCount={downloadInfo.filenames.length}
+          filenameCount={downloadInfo!.filenames.length}
           onDownload={handleDownloadYes}
         />
       )}

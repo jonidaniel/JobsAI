@@ -51,8 +51,6 @@ const API_BASE_URL = getApiBaseUrl();
  * across environments.
  */
 export const API_ENDPOINTS = {
-  /** Legacy endpoint for submitting form data (kept for backward compatibility) */
-  SUBMIT_FORM: `${API_BASE_URL}/api/endpoint`,
   /** Start pipeline asynchronously and get job_id */
   START: `${API_BASE_URL}/api/start`,
   /** Get current progress (poll this endpoint periodically) */

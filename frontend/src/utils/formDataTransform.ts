@@ -4,7 +4,7 @@ import {
   GENERAL_QUESTIONS_INDEX,
 } from "../config/generalQuestions";
 import { SLIDER_DATA } from "../config/sliders";
-import type { FormData, GroupedFormData } from "../types";
+import type { FormData, FormDataValue, GroupedFormData } from "../types";
 
 /**
  * Transforms flat form data into grouped structure for backend API.
@@ -63,7 +63,7 @@ export function transformFormData(formData: FormData): GroupedFormData {
       .map(([key, value]) => [
         key,
         typeof value === "string" ? value.trim() : value,
-      ])
+      ]),
   ) as FormData;
 
   /**
@@ -77,7 +77,7 @@ export function transformFormData(formData: FormData): GroupedFormData {
   // Use formData directly to ensure we have the values (validation ensures they're present)
   // Convert cover-letter-num to integer for backend
   const generalQuestions = GENERAL_QUESTION_KEYS.map((key) => {
-    let value: FormDataValue = formData[key];
+    let value: FormDataValue = formData[key] ?? "";
 
     // Convert cover-letter-num from string to integer
     // Radio buttons return strings, but backend expects integer
@@ -87,7 +87,7 @@ export function transformFormData(formData: FormData): GroupedFormData {
       // Validate conversion was successful
       if (isNaN(intValue) || intValue < 1 || intValue > 10) {
         console.warn(
-          `Invalid cover-letter-num value: ${formData[key]}, defaulting to 5`
+          `Invalid cover-letter-num value: ${formData[key]}, defaulting to 5`,
         );
         value = 5;
       } else {
@@ -98,7 +98,10 @@ export function transformFormData(formData: FormData): GroupedFormData {
     return { [key]: value };
   });
   // Backend requires exactly 5 items, so always include the array even if some values are empty
-  result[QUESTION_SET_NAMES[GENERAL_QUESTIONS_INDEX]] = generalQuestions;
+  const generalKey = QUESTION_SET_NAMES[GENERAL_QUESTIONS_INDEX];
+  if (generalKey) {
+    result[generalKey] = generalQuestions;
+  }
 
   // Group slider question sets (indices 1-8)
   // Each set includes default sliders and optional "Other" custom fields
@@ -107,25 +110,40 @@ export function transformFormData(formData: FormData): GroupedFormData {
       // Include default sliders that have non-zero values
       ...Object.keys(SLIDER_DATA[i - 1] ?? {})
         .filter((key) => filtered[key] !== undefined)
-        .map((key) => ({ [key]: filtered[key] })),
+        .map((key) => {
+          const value = filtered[key];
+          return value !== undefined ? { [key]: value } : null;
+        })
+        .filter((item): item is Record<string, FormDataValue> => item !== null),
       // Include custom "Other" fields if they have values
       ...(filtered[`text-field${i}`] !== undefined
-        ? [{ [`text-field${i}`]: filtered[`text-field${i}`] }]
+        ? (() => {
+            const textFieldValue = filtered[`text-field${i}`];
+            return textFieldValue !== undefined
+              ? [{ [`text-field${i}`]: textFieldValue }]
+              : [];
+          })()
         : []),
     ];
 
     // Only include question set if it has at least one field with data
     if (questionSetData.length > 0) {
-      result[QUESTION_SET_NAMES[i]] = questionSetData;
+      const questionSetKey = QUESTION_SET_NAMES[i];
+      if (questionSetKey) {
+        result[questionSetKey] = questionSetData;
+      }
     }
   }
 
   // Group text-only question set (index 9)
   // Always include additional-info (required by backend)
   // Use formData directly to ensure we have the value (validation ensures it's present)
-  result[QUESTION_SET_NAMES[9]] = [
-    { "additional-info": formData["additional-info"] || "" },
-  ];
+  const additionalInfoKey = QUESTION_SET_NAMES[9];
+  if (additionalInfoKey) {
+    result[additionalInfoKey] = [
+      { "additional-info": formData["additional-info"] || "" },
+    ];
+  }
 
   return result;
 }

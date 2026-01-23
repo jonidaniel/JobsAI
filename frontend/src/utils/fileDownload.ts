@@ -44,7 +44,11 @@ export function downloadBlob(
         if (rfc5987Value.includes("''")) {
           // Extract and decode: UTF-8''test%20file.docx -> test file.docx
           const encoded = rfc5987Value.split("''")[1];
-          filename = decodeURIComponent(encoded);
+          if (encoded) {
+            filename = decodeURIComponent(encoded);
+          } else {
+            filename = rfc5987Value;
+          }
         } else {
           filename = rfc5987Value;
         }
@@ -79,7 +83,7 @@ export function downloadBlob(
   document.body.appendChild(download_link);
 
   // Save scroll position right before click to restore if download causes scroll
-  const scrollBeforeClick = window.scrollY || window.pageYOffset;
+  const scrollBeforeClick = window.scrollY;
 
   download_link.click();
 

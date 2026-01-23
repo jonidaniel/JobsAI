@@ -113,9 +113,6 @@ export default function QuestionSetList({
       initial[`text-field${i}`] = "";
     }
 
-    // Set default value for text-only question set (index 9, question set 10/10)
-    // No default value for question set 10
-
     return initial;
   });
 

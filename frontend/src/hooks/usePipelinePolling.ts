@@ -80,6 +80,25 @@ export function usePipelinePolling({
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   /**
+   * Helper function to check if the current job is still active
+   * Prevents race conditions when a new job starts while old job is still polling
+   */
+  const isCurrentJob = (job_id: string): boolean => {
+    return currentJobIdRef.current === job_id;
+  };
+
+  /**
+   * Helper function to reset submission state
+   * Used when job completes, errors, or is cancelled
+   */
+  const resetSubmissionState = (): void => {
+    setIsSubmitting(false);
+    setCurrentPhase(null);
+    setJobId(null);
+    currentJobIdRef.current = null;
+  };
+
+  /**
    * Stops the polling interval if it's running.
    * Memoized to ensure stable reference for useEffect dependencies.
    */
@@ -107,7 +126,7 @@ export function usePipelinePolling({
     const pollProgress = async (): Promise<void> => {
       try {
         // Check if this job is still the current one - ignore if job was replaced
-        if (currentJobIdRef.current !== job_id) {
+        if (!isCurrentJob(job_id)) {
           // This polling is for an old job, stop it
           stopPolling();
           return;
@@ -118,12 +137,9 @@ export function usePipelinePolling({
         if (!response.ok) {
           if (response.status === 404) {
             // Only update state if this is still the current job
-            if (currentJobIdRef.current === job_id) {
+            if (isCurrentJob(job_id)) {
               setError("Job not found");
-              setIsSubmitting(false);
-              setCurrentPhase(null);
-              setJobId(null);
-              currentJobIdRef.current = null;
+              resetSubmissionState();
             }
             stopPolling();
             return;
@@ -134,7 +150,7 @@ export function usePipelinePolling({
         const data = (await response.json()) as ProgressResponse;
 
         // Only update state if this is still the current job
-        if (currentJobIdRef.current !== job_id) {
+        if (!isCurrentJob(job_id)) {
           return; // Job was replaced, ignore this response
         }
 
@@ -146,7 +162,7 @@ export function usePipelinePolling({
         // Handle completion
         if (data.status === "complete") {
           // Only process completion if this is still the current job
-          if (currentJobIdRef.current !== job_id) {
+          if (!isCurrentJob(job_id)) {
             return; // Job was replaced, ignore this response
           }
 
@@ -168,38 +184,29 @@ export function usePipelinePolling({
           setError(null);
           submissionState.current.justCompleted = true;
           submissionState.current.hasSuccessfulSubmission = true;
-          setIsSubmitting(false);
-          setCurrentPhase(null);
-          setJobId(null);
-          currentJobIdRef.current = null;
+          resetSubmissionState();
         }
         // Handle errors
         else if (data.status === "error") {
           // Only process error if this is still the current job
-          if (currentJobIdRef.current !== job_id) {
+          if (!isCurrentJob(job_id)) {
             return; // Job was replaced, ignore this response
           }
 
           stopPolling();
           setError(data.error || "An error occurred during processing");
-          setIsSubmitting(false);
-          setCurrentPhase(null);
-          setJobId(null);
-          currentJobIdRef.current = null;
+          resetSubmissionState();
         }
         // Handle cancellation
         else if (data.status === "cancelled") {
           // Only process cancellation if this is still the current job
-          if (currentJobIdRef.current !== job_id) {
+          if (!isCurrentJob(job_id)) {
             return; // Job was replaced, ignore this response
           }
 
           stopPolling();
           setError("Pipeline was cancelled");
-          setIsSubmitting(false);
-          setCurrentPhase(null);
-          setJobId(null);
-          currentJobIdRef.current = null;
+          resetSubmissionState();
         }
         // Continue polling if still running
       } catch (error) {
