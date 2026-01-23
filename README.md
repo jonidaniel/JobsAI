@@ -28,17 +28,14 @@ The system uses a **serverless architecture** deployed on AWS:
 #### Agents (LLM-Powered)
 
 1. **ProfilerAgent** (`src/jobsai/agents/profiler.py`)
-
    - Uses LLM to extract and structure candidate skills from form submissions
    - Creates a comprehensive text profile describing skills, experience, and professional characteristics
 
 2. **QueryBuilderAgent** (`src/jobsai/agents/query_builder.py`)
-
    - Generates search keywords from the candidate profile
    - Creates optimized queries for job board searches
 
 3. **AnalyzerAgent** (`src/jobsai/agents/analyzer.py`)
-
    - Analyzes top-scoring job listings
    - Generates personalized cover letter writing instructions for each position
 
@@ -50,7 +47,6 @@ The system uses a **serverless architecture** deployed on AWS:
 #### Services (Deterministic)
 
 5. **SearcherService** (`src/jobsai/agents/searcher.py`)
-
    - Scrapes job boards (Duunitori, Jobly) for relevant positions
    - Supports "deep mode" for fetching full job descriptions
    - Deduplicates jobs across queries and boards
@@ -76,10 +72,12 @@ The system uses a **serverless architecture** deployed on AWS:
 
 ### Frontend
 
-- **React 19** - UI framework
-- **Vite** - Build tool and dev server
-- **Tailwind CSS** - Utility-first CSS framework
-- **Modern JavaScript (ES6+)** - Language features
+- **React 19.2.0** - UI framework
+- **TypeScript 5.9.3** - Type-safe JavaScript
+- **Vite 7.2.4** - Build tool and dev server
+- **Tailwind CSS 3.4.18** - Utility-first CSS framework
+- **Vitest** - Unit testing framework
+- **React Testing Library** - Component testing utilities
 
 ### Infrastructure
 
@@ -96,12 +94,22 @@ JobsAI/
 ├── frontend/                    # React frontend application
 │   ├── src/
 │   │   ├── components/         # React components
-│   │   │   ├── questions/      # Question components (Slider, MultipleChoice, etc.)
-│   │   │   ├── messages/       # Success/Error message components
-│   │   │   └── Search.jsx      # Main search/questionnaire component
-│   │   ├── config/             # Configuration files (API endpoints, questions)
+│   │   │   ├── actions/        # Action components (buttons)
+│   │   │   ├── delivery/       # Delivery method selection
+│   │   │   ├── download/       # Download prompt components
+│   │   │   ├── messages/       # Error message components
+│   │   │   ├── progress/        # Progress tracking components
+│   │   │   ├── questions/       # Question input components
+│   │   │   ├── status/         # Status message components
+│   │   │   ├── QuestionSet.tsx # Single question set renderer
+│   │   │   ├── QuestionSetList.tsx # Question set manager
+│   │   │   └── Search.tsx      # Main search/questionnaire component
+│   │   ├── config/             # Configuration files
+│   │   ├── hooks/              # Custom React hooks
 │   │   ├── styles/             # CSS files
-│   │   └── utils/               # Utility functions (validation, file download)
+│   │   ├── types/              # TypeScript type definitions
+│   │   ├── utils/              # Utility functions
+│   │   └── test/               # Test configuration
 │   ├── public/                 # Static assets
 │   └── package.json
 ├── src/
@@ -114,16 +122,22 @@ JobsAI/
 │       │   ├── analyzer.py     # Job analysis agent
 │       │   └── generator.py    # Cover letter generation agent
 │       ├── api/                # FastAPI server
-│       │   └── server.py      # API endpoints and middleware
+│       │   ├── routes/         # API route handlers
+│       │   ├── middleware/     # Request middleware
+│       │   ├── handlers/       # Request handlers
+│       │   └── server.py       # FastAPI application
 │       ├── config/             # Configuration and schemas
-│       │   ├── schemas.py      # Pydantic models for validation
-│       │   ├── prompts.py     # LLM prompts
-│       │   └── paths.py        # File system paths
+│       │   ├── request_schemas.py # Request validation models
+│       │   ├── profile_schemas.py  # Profile data schemas
+│       │   ├── prompts.py      # LLM prompts
+│       │   └── validation_constants.py # Validation constants
 │       ├── utils/              # Utility functions
 │       │   ├── llms.py         # OpenAI API integration
 │       │   ├── state_manager.py # DynamoDB/S3 state management
 │       │   ├── form_data.py    # Form data extraction
-│       │   └── scrapers/       # Job board scrapers
+│       │   ├── scrapers/       # Job board scrapers
+│       │   ├── email_service.py # AWS SES email service
+│       │   └── rate_limiter.py  # Rate limiting utilities
 │       └── main.py             # Pipeline orchestration
 ├── lambda_handler.py            # Lambda entry point (API Gateway)
 ├── lambda_worker.py            # Lambda worker (async pipeline execution)
@@ -131,7 +145,7 @@ JobsAI/
 │   └── workflows/
 │       └── deploy.yml          # GitHub Actions deployment workflow
 ├── docs/                       # Project documentation
-├── tests/                      # Test files
+├── tests/                      # Backend test files
 └── README.md                   # This file
 ```
 
@@ -191,7 +205,7 @@ JobsAI/
    npm run dev
    ```
 
-   The frontend will be available at `http://localhost:3000`
+   The frontend will be available at `http://localhost:5173` (Vite default port)
 
 ### AWS Deployment
 
@@ -215,11 +229,20 @@ The project includes automated deployment via GitHub Actions. See the deployment
 - `VITE_API_BASE_URL` (API Gateway/Function URL)
 - `CLOUDFRONT_DISTRIBUTION_ID` (optional, for CDN)
 
-**Lambda Environment Variables (for rate limiting):**
+**Lambda Environment Variables:**
 
+- `OPENAI_API_KEY` (required) - OpenAI API key
+- `OPENAI_MODEL` (required) - OpenAI model name (e.g., "gpt-4")
+- `DYNAMODB_TABLE_NAME` (required) - DynamoDB table for job state
+- `S3_DOCUMENTS_BUCKET` (required) - S3 bucket for document storage
+- `WORKER_LAMBDA_FUNCTION_NAME` (required) - Lambda function name for async worker
+- `FRONTEND_URL` (optional) - Frontend domain for CORS
 - `RATE_LIMIT_REQUESTS` (optional, default: 5) - Max requests per window
 - `RATE_LIMIT_WINDOW_SECONDS` (optional, default: 3600) - Time window in seconds
 - `RATE_LIMIT_ENABLED` (optional, default: true) - Enable/disable rate limiting
+- `SES_REGION` (optional) - AWS region for SES (default: eu-north-1)
+- `SES_FROM_EMAIL` (optional) - Verified sender email for SES
+- `EMAIL_ENABLED` (optional, default: false) - Enable/disable email delivery
 
 For detailed deployment instructions, see the documentation in `docs/`.
 
@@ -228,14 +251,15 @@ For detailed deployment instructions, see the documentation in `docs/`.
 ### Local Development
 
 1. **Start both servers** (backend and frontend)
-2. **Open the frontend** in your browser (`http://localhost:3000`)
+2. **Open the frontend** in your browser (`http://localhost:5173`)
 3. **Fill out the questionnaire:**
    - General questions (job level, job boards, deep mode, cover letter preferences)
    - Technology experience levels (8 sets: languages, databases, cloud, frameworks, etc.)
    - Personal description
-4. **Click "Find Jobs"** to trigger the pipeline
-5. **Monitor progress** via the progress messages
-6. **Download** the generated cover letter document (.docx) when complete
+4. **Click "Search"** to trigger the pipeline
+5. **Choose delivery method** (email or browser download)
+6. **Monitor progress** via the progress messages (for download delivery)
+7. **Download** the generated cover letter document(s) (.docx) when complete, or receive via email
 
 ### Production (Deployed)
 
@@ -251,42 +275,69 @@ The deployed application works the same way, but:
 ### Async Pipeline (Recommended)
 
 - `POST /api/start` - Start pipeline, returns `job_id`
+  - Supports both email and download delivery methods
+  - Validates form data before starting pipeline
 - `GET /api/progress/{job_id}` - Poll for progress updates
-- `GET /api/download/{job_id}` - Get presigned S3 URL for document download
+  - Returns current pipeline phase and status
+  - Used for download delivery method (not for email)
+- `GET /api/download/{job_id}` - Get presigned S3 URL(s) for document download
+  - Supports single and multiple document downloads
+  - Returns presigned URLs valid for 1 hour
 - `POST /api/cancel/{job_id}` - Cancel a running pipeline
+  - Stops pipeline execution and updates job status
 
-### Legacy Synchronous Endpoint
+### Email Delivery
 
-- `POST /api/endpoint` - Run pipeline synchronously (returns document directly)
+When email delivery is selected:
+
+- Pipeline runs asynchronously (no progress polling)
+- Documents are sent via AWS SES to the provided email address
+- User sees a "Thank you" message immediately after submission
+- Errors are handled silently (except rate limits)
 
 ## Documentation
 
 Comprehensive documentation is available in the `docs/` directory:
 
-- **API**: `docs/api.md` - API endpoint documentation
 - **Architecture**: `docs/architecture.md` - System architecture overview
 - **Configuration**: `docs/configuration.md` - Environment variables and settings
 - **Deployment**: `docs/deployment.md` - AWS deployment guide
-- **Rate Limiting**: `docs/rate-limiting.md` - Rate limiting configuration and usage
-- **Logging**: `docs/logging.md` - CloudWatch structured logging guide
 - **Frontend**: `docs/frontend.md` - Frontend architecture and components
-- **User Guide**: `docs/user-guide.md` - End-user instructions
-- **How-To**: `docs/how-to.md` - Development and setup guides
 - **Project Structure**: `docs/project-structure.md` - Detailed file organization
+- **Rate Limiting**: `docs/rate-limiting.md` - Rate limiting configuration and usage
+- **Changelog**: `docs/changelog.md` - Version history
+- **Dev Diary**: `docs/dev_diary.md` - Development history
 
 ## Development
 
 ### Running Tests
 
+**Backend Tests:**
+
 ```bash
 uv run pytest
+```
+
+**Frontend Tests:**
+
+```bash
+cd frontend
+npm test
+```
+
+**Frontend Tests with Coverage:**
+
+```bash
+cd frontend
+npm run test:coverage
 ```
 
 ### Code Style
 
 - **Python**: Follow PEP 8 conventions, Google-style docstrings
-- **JavaScript**: ESLint configuration included
+- **TypeScript/JavaScript**: ESLint configuration included, TypeScript for type safety
 - **Frontend**: Uses Tailwind CSS for styling
+- **Comments**: JSDoc-style comments for frontend, Google-style docstrings for backend
 
 ### Key Design Decisions
 
@@ -295,6 +346,9 @@ uv run pytest
 - **State Persistence**: DynamoDB ensures state survives across Lambda containers
 - **Presigned S3 URLs**: Direct downloads bypass API Gateway binary encoding issues
 - **Polling over SSE**: More reliable with API Gateway's 29-second timeout limit
+- **Dual Delivery Methods**: Email (fire-and-forget) and browser download (with progress tracking)
+- **TypeScript Migration**: Full TypeScript adoption for type safety and better developer experience
+- **Comprehensive Testing**: Vitest for frontend, pytest for backend with integration tests
 
 ## License
 
