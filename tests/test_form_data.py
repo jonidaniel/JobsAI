@@ -1,4 +1,17 @@
-# ---------- TESTS FOR FORM DATA EXTRACTION ----------
+"""
+Tests for Form Data Extraction.
+
+Tests the extract_form_data function which transforms frontend form submission
+data into a structured format suitable for the pipeline.
+
+Test Coverage:
+- Basic form data extraction (general questions, tech stack)
+- Tech stack structure validation (nested lists)
+- Missing optional categories handling
+- Single vs multiple selections (job boards, styles)
+- Data type preservation (integers, strings, lists)
+- All categories populated scenario
+"""
 
 import pytest
 

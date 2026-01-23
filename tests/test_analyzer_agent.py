@@ -1,4 +1,17 @@
-# ---------- TESTS FOR ANALYZER AGENT ----------
+"""
+Tests for Analyzer Agent.
+
+Tests the AnalyzerAgent class which analyzes top-scoring job listings and
+generates personalized cover letter instructions.
+
+Test Coverage:
+- Job analysis generation from scored jobs
+- LLM integration and prompt formatting
+- File saving (job analysis to disk)
+- Cancellation handling during analysis
+- Multiple job processing
+- Error handling
+"""
 
 import os
 import pytest

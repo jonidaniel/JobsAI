@@ -112,15 +112,25 @@ export default function QuestionSet({
   const [addMoreClicked, setAddMoreClicked] = useState(false);
 
   /**
-   * Generates field key for a given index
-   * First field uses base key, subsequent fields append index (e.g., "text-field1-2")
+   * Generates field key for a given index.
+   *
+   * First field uses the base key (e.g., "text-field1"), subsequent fields
+   * append the index (e.g., "text-field1-2", "text-field1-3").
+   *
+   * @param fieldIndex - Field index (1-based)
+   * @returns Field key string for form data
    */
   const getFieldKey = (fieldIndex: number): string =>
     fieldIndex === 1 ? baseOtherFieldKey : `${baseOtherFieldKey}-${fieldIndex}`;
 
   /**
-   * Renders a general question based on its index
-   * Uses configuration array to determine component type and props
+   * Renders a general question based on its index.
+   *
+   * Uses a configuration array to determine the component type (MultipleChoice
+   * or SingleChoice) and props for each of the 5 general questions.
+   *
+   * @param j - Question index (0-4)
+   * @returns ReactNode with the rendered question component
    */
   const renderGeneralQuestion = (j: number): ReactNode => {
     const keyName = GENERAL_QUESTION_KEYS[j] as string;
@@ -207,8 +217,16 @@ export default function QuestionSet({
   }
 
   /**
-   * Memoized validation check for duplicate experiences
-   * Only recalculates when relevant dependencies change
+   * Memoized validation check for duplicate experiences.
+   *
+   * Validates the last "Other" field to ensure:
+   * - Field is not empty
+   * - Slider value is not zero
+   * - Experience name doesn't duplicate existing entries (case-insensitive)
+   *
+   * Only recalculates when relevant dependencies change (otherFieldCount, formData, index).
+   *
+   * @returns ValidationResult object with validation flags
    */
   const validationResult = useMemo((): ValidationResult => {
     // Only calculate if we have fields to validate
@@ -270,11 +288,16 @@ export default function QuestionSet({
   }, [otherFieldCount, formData, index]);
 
   /**
-   * Renders the "Add more" button with validation logic for existing fields
+   * Renders the "Add more" button with validation logic for existing fields.
+   *
    * Validates that:
    * - The last field is filled (not empty)
    * - The slider is not zero
    * - No duplicate experiences exist (case-insensitive)
+   *
+   * Shows a warning message if validation fails when user clicks the button.
+   *
+   * @returns ReactNode with the "Add more" button and optional warning message
    */
   const renderAddMoreButtonWithValidation = (): ReactNode => {
     const { isDuplicate, shouldShowWarning } = validationResult;

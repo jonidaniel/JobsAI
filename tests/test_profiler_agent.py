@@ -1,4 +1,16 @@
-# ---------- TESTS FOR PROFILER AGENT ----------
+"""
+Tests for Profiler Agent.
+
+Tests the ProfilerAgent class which uses an LLM to create candidate profiles
+from form submission data.
+
+Test Coverage:
+- Profile creation from form submissions
+- LLM integration and prompt formatting
+- Return value validation (string type, non-empty)
+- Error handling (LLM API errors)
+- Edge cases (short responses, empty tech stack)
+"""
 
 import pytest
 from unittest.mock import patch, MagicMock

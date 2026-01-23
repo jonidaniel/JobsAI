@@ -1,4 +1,16 @@
-# ---------- TESTS FOR MAIN PIPELINE ORCHESTRATION ----------
+"""
+Tests for Main Pipeline Orchestration.
+
+Tests the main pipeline function and pipeline_step decorator which orchestrate
+the complete JobsAI workflow from form submissions to cover letter generation.
+
+Test Coverage:
+- Complete pipeline execution (all 6 steps)
+- Pipeline step decorator (logging, error handling)
+- Cancellation handling during pipeline execution
+- Error propagation and handling
+- Document generation and return values
+"""
 
 import pytest
 from unittest.mock import patch, MagicMock

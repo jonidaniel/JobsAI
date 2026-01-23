@@ -1,4 +1,17 @@
-# ---------- TESTS FOR STATE MANAGER ----------
+"""
+Tests for State Manager.
+
+Tests the state management utilities which handle job state persistence in
+DynamoDB and document storage in S3.
+
+Test Coverage:
+- Job state storage and retrieval (DynamoDB)
+- Progress updates
+- Document storage and retrieval (S3)
+- Presigned URL generation
+- Cancellation flag management
+- Status updates
+"""
 
 import json
 import pytest

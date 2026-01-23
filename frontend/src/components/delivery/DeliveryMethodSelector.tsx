@@ -9,6 +9,21 @@
  * - Email input form with validation
  * - Back button to return to method selection
  * - Email format validation
+ *
+ * Flow:
+ * 1. User sees method selection buttons (email or download)
+ * 2. If email selected: Shows email input form
+ * 3. User enters email and clicks "Continue"
+ * 4. Email is validated before submission
+ *
+ * @param deliveryMethod - Currently selected delivery method (null, "email", or "download")
+ * @param email - Email address input value
+ * @param emailError - Email validation error message (if any)
+ * @param coverLetterCount - Number of cover letters being generated
+ * @param onMethodSelect - Callback when user selects a delivery method
+ * @param onEmailChange - Callback when email input changes
+ * @param onEmailSubmit - Callback when user submits email form
+ * @param onBack - Callback when user clicks back button
  */
 
 import type { DeliveryMethod } from "./types.js";

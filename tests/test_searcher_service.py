@@ -1,4 +1,18 @@
-# ---------- TESTS FOR SEARCHER SERVICE ----------
+"""
+Tests for Searcher Service.
+
+Tests the SearcherService class which searches job boards using candidate-generated
+keywords and collects job listings.
+
+Test Coverage:
+- Multi-board searching (Duunitori, Jobly)
+- Multiple keyword queries per board
+- Job deduplication across queries and boards
+- Deep mode (full description fetching)
+- File saving (raw job listings to disk)
+- Cancellation handling during search
+- Error handling
+"""
 
 import os
 import json

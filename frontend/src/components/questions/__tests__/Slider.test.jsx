@@ -1,6 +1,20 @@
+/**
+ * Slider Component Tests
+ *
+ * Tests for the Slider component which renders range inputs for experience
+ * level selection (0-7 years).
+ *
+ * Test Coverage:
+ * - Component rendering (label, slider, year indicators)
+ * - User interaction (value changes, onChange callbacks)
+ * - Min/max value constraints
+ * - Disabled state
+ * - Accessibility attributes (ARIA labels, values)
+ * - Data attributes
+ */
+
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import Slider from "../Slider";
 import { SLIDER_MIN, SLIDER_MAX } from "../../../config/sliders";
 

@@ -1,4 +1,15 @@
-# ---------- TESTS FOR API SERVER ----------
+"""
+Tests for API Server.
+
+Tests the FastAPI application server setup, middleware, and basic routing.
+
+Test Coverage:
+- Server initialization
+- Middleware configuration
+- Basic route availability
+- CORS configuration
+- Error handling
+"""
 
 import pytest
 from unittest.mock import patch, MagicMock

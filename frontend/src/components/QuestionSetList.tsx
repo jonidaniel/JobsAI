@@ -117,8 +117,10 @@ export default function QuestionSetList({
   });
 
   /**
-   * Notify parent component when form data changes
-   * This allows Search component to collect form data for submission
+   * Notifies parent component when form data changes.
+   *
+   * Syncs form data with parent Search component via callback whenever formData
+   * changes. This allows the parent to collect form data for submission.
    */
   useEffect(() => {
     if (onFormDataChange) {
@@ -127,18 +129,25 @@ export default function QuestionSetList({
   }, [formData, onFormDataChange]);
 
   /**
-   * Handles form input changes
-   * Updates formData state and triggers parent notification via useEffect
+   * Handles form input changes.
+   *
+   * Updates formData state with the new value for the given key. The parent
+   * component is automatically notified via the useEffect hook that watches formData.
+   *
+   * @param key - Form field key (e.g., "job-level", "javascript", "text-field1")
+   * @param value - New value for the field (string, number, or string array)
    */
   const handleFormChange = (key: string, value: FormDataValue): void => {
     setFormData((prev) => ({ ...prev, [key]: value }));
   };
 
   /**
-   * Scroll to active question set when navigation changes
-   * - On page refresh: scroll to top of page
-   * - On arrow click: scroll to top of question set
-   * - On remount after submission: skip scrolling (preserve position)
+   * Scrolls to active question set when navigation changes.
+   *
+   * Handles different scroll scenarios:
+   * - On page refresh: Scrolls to top of page
+   * - On arrow click: Scrolls to top of active question set with offset
+   * - On remount after submission: Skips scrolling to preserve position
    */
   useEffect(() => {
     if (isInitialMount.current) {
@@ -174,8 +183,10 @@ export default function QuestionSetList({
   }, [currentIndex, skipInitialScroll]);
 
   /**
-   * Navigates to previous question set
-   * Wraps around to last question set if currently at first (0)
+   * Navigates to the previous question set.
+   *
+   * Wraps around to the last question set (index 9) if currently at the first (index 0).
+   * Marks navigation as user-initiated for proper scroll behavior.
    */
   const handlePrevious = (): void => {
     const newIndex =
@@ -189,8 +200,10 @@ export default function QuestionSetList({
   };
 
   /**
-   * Navigates to next question set
-   * Wraps around to first question set (0) if currently at last
+   * Navigates to the next question set.
+   *
+   * Wraps around to the first question set (index 0) if currently at the last (index 9).
+   * Marks navigation as user-initiated for proper scroll behavior.
    */
   const handleNext = (): void => {
     const newIndex = (currentIndex + 1) % TOTAL_QUESTION_SETS;

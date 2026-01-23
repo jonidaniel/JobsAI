@@ -3,6 +3,13 @@
  *
  * Displays the download prompt after pipeline completion.
  * Shows the number of generated cover letters and a download button.
+ *
+ * This component appears when the pipeline completes successfully and documents
+ * are ready for download. The user can click the download button to retrieve
+ * the generated cover letter(s).
+ *
+ * @param filenameCount - Number of cover letter documents generated
+ * @param onDownload - Callback when user clicks the download button
  */
 
 interface DownloadPromptProps {

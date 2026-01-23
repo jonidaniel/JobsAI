@@ -28,13 +28,14 @@ async def rate_limit_middleware(request: Request, call_next: Any) -> Any:
     Returns:
         Response: The response from the next middleware/handler, or HTTP 429 if rate limited.
     """
-    # TEMPORARILY DISABLED FOR TESTING - bypass rate limiting
-    # TODO: Re-enable rate limiting after testing
+    # Rate limiting is currently disabled for /api/start endpoint
+    # The rate limiting logic is commented out below and can be re-enabled when needed
+    # To re-enable: uncomment the code block below and remove this bypass
     if request.url.path == "/api/start" and request.method == "POST":
-        # Bypass rate limiting - just pass through to next handler
+        # Bypass rate limiting - pass through to next handler
         return await call_next(request)
 
-    # Only apply rate limiting to /api/start endpoint (DISABLED FOR TESTING)
+    # Rate limiting implementation (currently disabled - see comment above)
     # if request.url.path == "/api/start" and request.method == "POST":
     #     client_ip = get_client_ip(request)
     #     allowed, remaining, reset_at = check_rate_limit(client_ip)

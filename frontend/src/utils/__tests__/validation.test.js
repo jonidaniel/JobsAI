@@ -1,3 +1,20 @@
+/**
+ * Form Validation Utility Tests
+ *
+ * Tests for the validateGeneralQuestions function which performs client-side
+ * validation of required form fields before submission.
+ *
+ * Test Coverage:
+ * - Job level validation (required, max 2, adjacency requirement)
+ * - Job boards validation (required, at least one)
+ * - Deep mode validation (required)
+ * - Cover letter number validation (required)
+ * - Cover letter style validation (required, max 2)
+ * - Additional info validation (required, non-empty)
+ * - Complete form validation (all fields valid)
+ * - Empty form validation (all errors)
+ */
+
 import { describe, it, expect } from "vitest";
 import { validateGeneralQuestions } from "../validation";
 import { GENERAL_QUESTION_KEYS } from "../../config/generalQuestions";

@@ -2,7 +2,18 @@
  * ProgressTracker Component
  *
  * Displays pipeline progress messages during job search execution.
- * Shows the current phase and a message indicating the process may take time.
+ * Shows the current phase with a step indicator (e.g., "2/6 Creating profile...").
+ *
+ * Pipeline Phases:
+ * - profiling: "2/6 Creating profile..."
+ * - searching: "3/6 Searching jobs..."
+ * - scoring: "4/6 Scoring jobs..."
+ * - analyzing: "5/6 Analyzing jobs..."
+ * - generating: "6/6 Generating..."
+ *
+ * If no phase is provided, shows "1/6 Starting search..." as default.
+ *
+ * @param currentPhase - Current pipeline phase, or null if not started
  */
 
 import type { PipelinePhase } from "../../types";

@@ -30,13 +30,24 @@ frontend/
 │   │   └── imgs/
 │   │       └── face.png
 │   ├── components/          # React components
+│   │   ├── actions/         # Action components
+│   │   │   └── ActionButtons.tsx
+│   │   ├── delivery/        # Delivery method components
+│   │   │   ├── DeliveryMethodSelector.tsx
+│   │   │   └── types.ts
+│   │   ├── download/        # Download components
+│   │   │   └── DownloadPrompt.tsx
 │   │   ├── messages/        # Message/alert components
 │   │   │   └── ErrorMessage.tsx
+│   │   ├── progress/        # Progress components
+│   │   │   └── ProgressTracker.tsx
 │   │   ├── questions/       # Form input components
 │   │   │   ├── MultipleChoice.tsx
 │   │   │   ├── SingleChoice.tsx
 │   │   │   ├── Slider.tsx
 │   │   │   └── TextField.tsx
+│   │   ├── status/          # Status components
+│   │   │   └── StatusMessages.tsx
 │   │   ├── Contact.tsx
 │   │   ├── ErrorBoundary.tsx
 │   │   ├── Hero.tsx
@@ -52,6 +63,7 @@ frontend/
 │   │   └── sliders.ts
 │   ├── hooks/               # Custom React hooks
 │   │   ├── useDownload.ts
+│   │   ├── useFormSubmission.ts
 │   │   └── usePipelinePolling.ts
 │   ├── styles/              # CSS stylesheets
 │   │   ├── App.css
@@ -781,6 +793,39 @@ const { handleDownloadYes } = useDownload({
 });
 ```
 
+### `useFormSubmission`
+
+Custom hook for handling form submission logic.
+
+**Features:**
+
+- Form validation before submission
+- API calls to start pipeline
+- Error handling (rate limits, network errors, etc.)
+- Delivery method handling (email vs download)
+
+**Usage:**
+
+```typescript
+const { handleFormSubmit } = useFormSubmission({
+  formData,
+  deliveryMethod,
+  email,
+  currentQuestionSetIndex,
+  isRateLimited,
+  setError,
+  setValidationErrors,
+  setActiveQuestionSetIndex,
+  setIsRateLimited,
+  setJobId,
+  setDownloadInfo,
+  setShowDownloadPrompt,
+  startPolling,
+  setCurrentPhase,
+  setIsSubmitting,
+});
+```
+
 ## Type Definitions
 
 All TypeScript types are centralized in `src/types/index.ts`:
@@ -799,7 +844,7 @@ All TypeScript types are centralized in `src/types/index.ts`:
 Potential enhancements:
 
 1. **State Management**: Consider Redux/Zustand for complex state management
-2. **Component Splitting**: Break down `Search.tsx` (802 lines) into smaller components
+2. **Component Splitting**: Break down `Search.tsx` (~500 lines) into smaller components
 3. **Testing**: Expand integration and E2E test coverage
 4. **Accessibility**: Improve ARIA labels and keyboard navigation
 5. **Internationalization**: Add i18n support for multiple languages

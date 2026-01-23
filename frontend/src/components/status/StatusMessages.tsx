@@ -1,12 +1,24 @@
 /**
  * StatusMessages Component
  *
- * Displays various status messages based on the current application state:
- * - Rate limit exceeded
- * - Email delivery confirmation
- * - Cancellation confirmation
- * - Success message after download
- * - Default intro message
+ * Displays various status messages based on the current application state.
+ * Shows different messages depending on pipeline status, delivery method, and
+ * user actions.
+ *
+ * Message Types:
+ * - Rate limit: "You've made too many searches lately. Try again later"
+ * - Email delivery: "Thank you... Expect the cover letter(s) to drop in your inbox shortly"
+ * - Cancelled: "You cancelled the job search"
+ * - Success (after download): "Thank you... Feel free to do another search"
+ * - Default: Intro message explaining the service
+ *
+ * @param isRateLimited - Whether user has exceeded rate limit
+ * @param isSubmitting - Whether pipeline is currently running
+ * @param deliveryMethod - Selected delivery method ("email" or "download")
+ * @param coverLetterCount - Number of cover letters being generated
+ * @param isCancelled - Whether pipeline was cancelled
+ * @param hasSuccessfulSubmission - Whether a submission completed successfully
+ * @param hasDownloaded - Whether user has downloaded the documents
  */
 
 interface StatusMessagesProps {

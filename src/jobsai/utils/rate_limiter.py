@@ -37,11 +37,16 @@ RATE_LIMIT_TABLE_NAME = os.environ.get(
 _dynamodb_client: Optional[Any] = None
 
 
-def get_dynamodb_client():
+def get_dynamodb_client() -> Optional[Any]:
     """Get or create DynamoDB client using lazy initialization.
+
+    Uses global variable to cache the client instance across function calls.
+    This avoids creating multiple clients and improves performance.
 
     Returns:
         boto3.client: DynamoDB client instance, or None if boto3 is not available.
+            Returns None in local development environments where boto3 may not
+            be installed.
     """
     global _dynamodb_client
     if _dynamodb_client is None:
@@ -55,7 +60,7 @@ def get_dynamodb_client():
     return _dynamodb_client
 
 
-def get_client_ip(request) -> str:
+def get_client_ip(request: Any) -> str:
     """Extract client IP address from FastAPI request.
 
     Checks common headers for real IP (X-Forwarded-For, X-Real-IP) to handle

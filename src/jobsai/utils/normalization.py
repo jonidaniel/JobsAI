@@ -26,14 +26,19 @@ from jobsai.config.aliases import SKILL_ALIAS_MAP
 
 
 def normalize_parsed(profile_dict: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Normalize the parsed JSON.
+    """Normalize and validate parsed skill profile dictionary.
+
+    Processes the JSON dictionary returned by the LLM to ensure all expected
+    keys are present and properly formatted. Adds missing keys with empty
+    defaults to maintain consistent structure.
 
     Args:
-        profile_dict: Parsed skills JSON dictionary from LLM
+        profile_dict: Parsed skills JSON dictionary from LLM containing
+            candidate profile data (name, skills, experience levels, etc.).
 
     Returns:
-        Dict[str, Any]: The normalized parsed skills JSON
+        Dict[str, Any]: Normalized profile dictionary with all expected keys
+            present, even if originally missing (filled with empty defaults).
     """
 
     keys = [
@@ -98,14 +103,18 @@ def normalize_parsed(profile_dict: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def normalize_list(skill_items: List[str]) -> List[str]:
-    """
-    Normalize list of skill items by deduplicating and standardizing capitalization.
+    """Normalize list of skill items by deduplicating and standardizing capitalization.
+
+    Processes a list of skill/item strings to remove duplicates and apply consistent
+    capitalization. Uses skill aliases to map variations to canonical names.
 
     Args:
-        skill_items: List of skill/item strings to normalize
+        skill_items: List of skill/item strings to normalize. May contain duplicates
+            and inconsistent capitalization.
 
     Returns:
-        List[str]: Normalized list with duplicates removed and proper capitalization
+        List[str]: Normalized list with duplicates removed, proper capitalization
+            applied, and aliases resolved to canonical names.
     """
 
     normalized = []
@@ -123,16 +132,24 @@ def normalize_list(skill_items: List[str]) -> List[str]:
 
 
 def normalize_text(text: str) -> str:
-    """
-    Safely normalize LLM-generated text by:
-    - trimming leading/trailing whitespace
-    - collapsing repeated blank lines
-    - removing excessive indentation
-    - normalizing line breaks
-    - ensuring the text is readable and clean
+    """Safely normalize LLM-generated text.
+
+    Cleans and formats text output from LLM calls by:
+    - Trimming leading/trailing whitespace
+    - Collapsing repeated blank lines
+    - Normalizing line breaks (CRLF → LF)
+    - Removing trailing spaces from lines
+    - Ensuring the text is readable and clean
 
     This function is intentionally conservative so it won't
     distort structured formats (like JSON or YAML).
+
+    Args:
+        text: Raw text string from LLM that may contain formatting inconsistencies.
+
+    Returns:
+        str: Normalized text with consistent formatting. Returns the input unchanged
+            if it's not a string.
     """
 
     if not isinstance(text, str):
@@ -157,14 +174,19 @@ def normalize_text(text: str) -> str:
 # Internal function
 # ------------------------------
 def _normalize_token(token: str) -> str:
-    """
-    Normalize token
+    """Normalize a single token string.
+
+    Applies normalization rules to a single token:
+    - Strips whitespace
+    - Maps aliases to canonical names (via SKILL_ALIAS_MAP)
+    - Applies title case capitalization
 
     Args:
-        token (str): The token string to normalize
+        token: The token string to normalize.
 
     Returns:
-        str: The normalized token (capitalized or mapped via alias)
+        str: The normalized token with proper capitalization and alias resolution.
+            Returns empty string if token is empty after stripping.
     """
 
     token = token.strip()

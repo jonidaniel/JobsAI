@@ -1,4 +1,16 @@
-# ---------- TESTS FOR QUERY BUILDER AGENT ----------
+"""
+Tests for Query Builder Agent.
+
+Tests the QueryBuilderAgent class which generates job search keywords from
+candidate profiles using an LLM.
+
+Test Coverage:
+- Keyword generation from candidate profiles
+- JSON extraction from LLM responses (with markdown code blocks)
+- Retry logic for invalid JSON responses
+- Return value validation (list of strings)
+- Error handling
+"""
 
 import pytest
 from unittest.mock import patch, MagicMock

@@ -1,3 +1,20 @@
+/**
+ * TextField Component Tests
+ *
+ * Tests for the TextField component which renders text inputs and textareas
+ * for user text responses.
+ *
+ * Test Coverage:
+ * - Component rendering (label, input/textarea)
+ * - User interaction (typing, onChange callbacks)
+ * - Character limit enforcement
+ * - Validation warnings (when showValidation is true)
+ * - Required field indicator
+ * - Error message display
+ * - Multi-line support (textarea when height provided)
+ * - Data attributes
+ */
+
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";

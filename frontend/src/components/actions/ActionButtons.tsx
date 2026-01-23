@@ -4,6 +4,21 @@
  * Renders submit and cancel buttons based on the current application state.
  * Handles different button states: normal submission, "Find Again" after completion,
  * and cancellation during pipeline execution.
+ *
+ * Button States:
+ * - Normal: Shows "Search" button for form submission
+ * - Submitting (download): Shows "Cancel" button to stop pipeline
+ * - Submitting (email): Shows "Search again" button
+ * - Completed: Shows "Search again" button after successful submission
+ * - Cancelled: Shows "Search again" button to start over
+ *
+ * @param isSubmitting - Whether pipeline is currently running
+ * @param deliveryMethod - Selected delivery method ("email" or "download")
+ * @param isCancelled - Whether pipeline was cancelled
+ * @param hasSuccessfulSubmission - Whether a submission completed successfully
+ * @param hasRespondedToPrompt - Whether user responded to download prompt
+ * @param onSubmit - Callback when submit/"Search again" button is clicked
+ * @param onCancel - Callback when cancel button is clicked
  */
 
 interface ActionButtonsProps {

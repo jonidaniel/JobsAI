@@ -4,6 +4,8 @@
 
 JobsAI implements IP-based rate limiting to prevent abuse and control Lambda execution costs. Rate limiting is applied to the `/api/start` endpoint, which triggers expensive pipeline executions.
 
+**Note**: Rate limiting is currently disabled by default in the codebase for testing purposes. To enable it, uncomment the rate limiting logic in `src/jobsai/api/middleware/rate_limiting.py` and set `RATE_LIMIT_ENABLED=true`.
+
 ## How It Works
 
 - **IP-based tracking**: Each client IP address is tracked separately

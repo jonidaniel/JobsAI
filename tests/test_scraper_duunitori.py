@@ -1,4 +1,17 @@
-# ---------- DUUNITORI SCRAPER TEST ----------
+"""
+Tests for Duunitori Scraper.
+
+Tests the Duunitori job board scraper which extracts job listings from
+duunitori.fi search results.
+
+Test Coverage:
+- Job listing extraction from search results
+- Pagination handling
+- Full job description fetching (deep mode)
+- HTML parsing and data extraction
+- Error handling (network errors, parsing errors)
+- Cancellation handling
+"""
 
 import pytest
 from unittest.mock import patch, MagicMock, Mock

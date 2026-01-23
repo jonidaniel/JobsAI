@@ -1,4 +1,16 @@
-# ---------- TESTS FOR SCORER SERVICE ----------
+"""
+Tests for Scorer Service.
+
+Tests the ScorerService class which scores job listings based on how well
+they match the candidate's technology stack.
+
+Test Coverage:
+- Job scoring algorithm (match percentage calculation)
+- Matched and missing skills identification
+- Score enrichment (adding scores, matched_skills, missing_skills to jobs)
+- File saving (scored jobs to disk)
+- Edge cases (empty tech stack, no matches)
+"""
 
 import pytest
 from datetime import datetime

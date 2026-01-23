@@ -1,3 +1,19 @@
+/**
+ * Search Component Tests
+ *
+ * Tests for the main Search component which manages the complete user flow
+ * from questionnaire completion through pipeline execution to document download.
+ *
+ * Test Coverage:
+ * - Form submission and validation
+ * - Progress polling
+ * - Download handling (single and multiple documents)
+ * - Pipeline cancellation
+ * - Find Again functionality
+ * - Error handling
+ * - Delivery method selection
+ */
+
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";

@@ -1,4 +1,17 @@
-import { describe, it, expect, vi } from "vitest";
+/**
+ * ErrorBoundary Component Tests
+ *
+ * Tests for the ErrorBoundary component which catches JavaScript errors
+ * in child components and displays a fallback UI.
+ *
+ * Test Coverage:
+ * - Normal rendering (no errors)
+ * - Error catching and fallback UI display
+ * - Error message and refresh button
+ * - Page reload functionality
+ */
+
+import { describe, it, expect, vi, beforeAll, afterAll } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import ErrorBoundary from "../ErrorBoundary";
@@ -12,7 +25,7 @@ const ThrowError = ({ shouldThrow }) => {
 };
 
 describe("ErrorBoundary", () => {
-  // Suppress console.error for error boundary tests
+  // Suppress console.error for error boundary tests (React logs errors to console)
   const originalError = console.error;
   beforeAll(() => {
     console.error = vi.fn();

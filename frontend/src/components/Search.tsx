@@ -66,7 +66,7 @@ interface SubmissionState {
  * - usePipelinePolling: Polls backend for pipeline progress
  * - useDownload: Handles document downloads from S3
  *
- * Note: This component is large (800+ lines) and could benefit from being split
+ * Note: This component is large (~500 lines) and could benefit from being split
  * into smaller components (FormSubmission, DeliveryMethodSelector, ProgressTracker, etc.)
  */
 export default function Search() {
@@ -115,7 +115,14 @@ export default function Search() {
   const [currentQuestionSetIndex, setCurrentQuestionSetIndex] = useState(0);
 
   /**
-   * Scrolls to an element by selector with offset
+   * Scrolls to an element by CSS selector with offset.
+   *
+   * Calculates the target scroll position using the element's bounding rect
+   * and applies a scroll offset to ensure proper visibility. Uses a configurable
+   * delay to ensure DOM is ready before scrolling.
+   *
+   * @param selector - CSS selector string to find the target element
+   * @param delay - Delay in milliseconds before scrolling (default: SCROLL_DELAY)
    */
   const scrollToElement = useCallback(
     (selector: string, delay: number = SCROLL_DELAY): void => {
@@ -135,7 +142,13 @@ export default function Search() {
   );
 
   /**
-   * Resets all form and submission state
+   * Resets all form and submission state to initial values.
+   *
+   * Clears all form-related state including errors, download info, delivery method,
+   * and optionally submission state (isSubmitting, currentPhase, jobId).
+   *
+   * @param includeSubmissionState - If true, also resets submission state
+   *   (isSubmitting, currentPhase, jobId). Default: false.
    */
   const resetFormState = useCallback((includeSubmissionState = false): void => {
     setError(null);
@@ -252,7 +265,10 @@ export default function Search() {
   });
 
   /**
-   * Clears email-related state
+   * Clears email-related state (email address and error).
+   *
+   * Resets both the email input value and any email validation errors.
+   * Used when resetting forms or changing delivery methods.
    */
   const clearEmailState = (): void => {
     setEmail("");
@@ -260,7 +276,10 @@ export default function Search() {
   };
 
   /**
-   * Navigates to the first question set (used for "Find Again" functionality)
+   * Navigates to the first question set (index 0).
+   *
+   * Used for "Find Again" functionality to reset the form and return the user
+   * to the beginning of the questionnaire.
    */
   const navigateToFirstQuestionSet = (): void => {
     setActiveQuestionSetIndex(0);
@@ -268,7 +287,13 @@ export default function Search() {
   };
 
   /**
-   * Handles form submission or button click (wrapper for "Find Again" logic)
+   * Handles form submission or button click.
+   *
+   * Wrapper function that handles both form submission and "Find Again" button
+   * clicks. If the form is already submitting or has completed successfully,
+   * clicking the button resets the form and navigates to the first question set.
+   *
+   * @param e - Optional form event or button click event
    */
   const handleSubmit = async (
     e?: React.FormEvent<HTMLFormElement> | React.MouseEvent<HTMLButtonElement>,
@@ -298,7 +323,12 @@ export default function Search() {
   };
 
   /**
-   * Handles the delivery method selection.
+   * Handles the delivery method selection (email or browser download).
+   *
+   * Updates the delivery method state and initiates the pipeline if download
+   * is selected. For email delivery, shows the email input prompt.
+   *
+   * @param method - Delivery method: "email" or "download"
    */
   const handleDeliveryMethod = (method: "email" | "download"): void => {
     setDeliveryMethod(method);
@@ -311,7 +341,10 @@ export default function Search() {
   };
 
   /**
-   * Handles email submission when user clicks "Continue" after entering email
+   * Handles email submission when user clicks "Continue" after entering email.
+   *
+   * Validates the email address format and starts the pipeline with email
+   * delivery method. Shows validation errors if email is invalid.
    */
   const handleEmailSubmit = async (): Promise<void> => {
     // Validate email
@@ -377,7 +410,10 @@ export default function Search() {
   }, [stopPolling]);
 
   /**
-   * Handles pipeline cancellation
+   * Handles pipeline cancellation.
+   *
+   * Stops polling, sends cancellation request to backend, and resets all
+   * submission state. Marks the pipeline as cancelled in UI.
    */
   const handleCancel = async (): Promise<void> => {
     stopPolling();

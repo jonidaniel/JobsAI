@@ -1,4 +1,17 @@
-# ---------- TESTS FOR GENERATOR AGENT ----------
+"""
+Tests for Generator Agent.
+
+Tests the GeneratorAgent class which generates personalized cover letter
+documents for multiple job applications.
+
+Test Coverage:
+- Cover letter generation from job analysis
+- Multiple document generation (up to num_letters)
+- Document formatting (Word .docx format)
+- Style handling (Professional, Friendly, Confident)
+- File saving (generated documents to disk)
+- Error handling
+"""
 
 import os
 import pytest

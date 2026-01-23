@@ -1,3 +1,19 @@
+/**
+ * MultipleChoice Component Tests
+ *
+ * Tests for the MultipleChoice component which renders checkbox groups
+ * for multi-selection questions.
+ *
+ * Test Coverage:
+ * - Component rendering (label, options)
+ * - User interaction (check/uncheck, onChange callbacks)
+ * - Visual state (checked/unchecked)
+ * - Error message display
+ * - Max selections limit enforcement
+ * - Adjacent selection requirement (for job level)
+ * - Data attributes and accessibility
+ */
+
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";

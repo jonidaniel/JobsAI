@@ -1,3 +1,18 @@
+/**
+ * SingleChoice Component Tests
+ *
+ * Tests for the SingleChoice component which renders radio button groups
+ * for single-selection questions.
+ *
+ * Test Coverage:
+ * - Component rendering (label, options)
+ * - User interaction (selection, onChange callbacks)
+ * - Visual state (checked/unchecked)
+ * - Error message display
+ * - Option splitting (multi-column layout)
+ * - Data attributes and accessibility
+ */
+
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";

@@ -1,3 +1,19 @@
+/**
+ * File Download Utility Tests
+ *
+ * Tests for the downloadBlob utility function which handles downloading
+ * blob files to the user's device.
+ *
+ * Test Coverage:
+ * - Default filename handling
+ * - Filename extraction from Content-Disposition headers
+ * - RFC 5987 encoded filename support
+ * - Filename priority (defaultFilename vs header)
+ * - DOM manipulation (anchor element creation/removal)
+ * - Scroll position preservation
+ * - Blob URL creation and cleanup
+ */
+
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { downloadBlob } from "../fileDownload";
 
