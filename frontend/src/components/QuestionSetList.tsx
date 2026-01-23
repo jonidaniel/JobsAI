@@ -83,8 +83,7 @@ export default function QuestionSetList({
    *
    * Sets defaults for:
    * - All 5 mandatory general questions
-   * - First 3 sliders in each technology set (sets 1-8)
-   * - Additional info text field
+   * - First 3 sliders in each technology set (sets 3-8, excluding sets 1-2)
    */
   const [formData, setFormData] = useState<FormData>(() => {
     const initial: FormData = {};
@@ -99,31 +98,22 @@ export default function QuestionSetList({
 
     // Set default values for sliders in each technology set (question sets 1-8)
     // SLIDER_DATA[0] = languages, SLIDER_DATA[1] = databases, etc.
-    // Most sliders default to 0 (0 yrs), but some have specific defaults
+    // Note: Question sets 1 and 2 have no default values
+    // For other sets (3-8), first 3 sliders default to 0 (0 yrs)
     SLIDER_DATA.forEach((sliderSet, setIndex) => {
+      // Skip default values for question set 1 (languages, setIndex 0) and question set 2 (databases, setIndex 1)
+      if (setIndex === 0 || setIndex === 1) {
+        // No default values for these sets
+        return;
+      }
+
       // Get all technology keys from this set
       const technologyKeys = Object.keys(sliderSet);
 
-      // For languages set (index 0, which is question set 2/10)
-      if (setIndex === 0) {
-        // Set specific defaults for JavaScript, HTML/CSS, SQL, and Python to 7 (> 3 yrs)
-        const defaultToThreePlus = ["javascript", "html-css", "sql", "python"];
-        technologyKeys.forEach((key) => {
-          if (defaultToThreePlus.includes(key)) {
-            initial[key] = 7; // > 3 yrs
-          } else {
-            // First 3 sliders default to 0 (0 yrs) for other languages
-            if (technologyKeys.indexOf(key) < 3) {
-              initial[key] = 0;
-            }
-          }
-        });
-      } else {
-        // For other sets, first 3 sliders default to 0 (0 yrs)
-        technologyKeys.slice(0, 3).forEach((key) => {
-          initial[key] = 0; // Default slider value is 0 (0 yrs)
-        });
-      }
+      // For other sets, first 3 sliders default to 0 (0 yrs)
+      technologyKeys.slice(0, 3).forEach((key) => {
+        initial[key] = 0; // Default slider value is 0 (0 yrs)
+      });
     });
 
     // Set default values for "Other" text fields in slider question sets (question sets 1-8)
@@ -132,8 +122,7 @@ export default function QuestionSetList({
     }
 
     // Set default value for text-only question set (index 9, question set 10/10)
-    initial["additional-info"] =
-      "I'm highly motivated and fairly competitive. I'm also good with all kinds of people.";
+    // No default value for question set 10
 
     return initial;
   });
