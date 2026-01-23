@@ -3,7 +3,6 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import QuestionSet from "./QuestionSet";
 
 import { TOTAL_QUESTION_SETS } from "../config/questionSet";
-import { GENERAL_QUESTION_KEYS } from "../config/generalQuestions";
 import { SLIDER_DATA } from "../config/sliders";
 import { SCROLL_OFFSET, SCROLL_DELAY } from "../config/constants";
 import type { FormData, ValidationErrors, FormDataValue } from "../types";
@@ -82,19 +81,12 @@ export default function QuestionSetList({
    * Runs once on component mount using lazy initialization
    *
    * Sets defaults for:
-   * - All 5 mandatory general questions
    * - First 3 sliders in each technology set (sets 3-8, excluding sets 1-2)
    */
   const [formData, setFormData] = useState<FormData>(() => {
     const initial: FormData = {};
 
-    // Set default values for general questions (question set 0)
-    // All 5 questions are mandatory and have default values
-    initial[GENERAL_QUESTION_KEYS[0] as string] = ["Expert-level"]; // job-level
-    initial[GENERAL_QUESTION_KEYS[1] as string] = ["Duunitori"]; // job-boards
-    initial[GENERAL_QUESTION_KEYS[2] as string] = "Yes"; // deep-mode
-    initial[GENERAL_QUESTION_KEYS[3] as string] = "1"; // cover-letter-num
-    initial[GENERAL_QUESTION_KEYS[4] as string] = ["Professional"]; // cover-letter-style
+    // General questions (question set 0) have no default values
 
     // Set default values for sliders in each technology set (question sets 1-8)
     // SLIDER_DATA[0] = languages, SLIDER_DATA[1] = databases, etc.
