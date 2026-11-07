@@ -2,7 +2,7 @@
 
 An agentic AI system for end-to-end automated job finding and cover letter generation. Enter your skills and preferences once, and get personalized job recommendations with AI-generated cover letters tailored to each position.
 
-https://github.com/user-attachments/assets/2c7999e5-47fe-4360-b0d4-ad9ac14fbf8e
+https://github.com/user-attachments/assets/986a1fbd-0e88-44c5-b77c-5c7e69a6bb21
 
 ## Overview
 
